@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, AuthError } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { supabase, initializeUserProgress } from '../lib/supabase';
 
 interface AuthContextType {
   user: User | null;
@@ -18,15 +18,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Verifica hash da URL para auth com OAuth
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get('access_token');
+    if (accessToken) {
+      window.location.hash = '';
+    }
+
     // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+      const newUser = session?.user ?? null;
+      setUser(newUser);
+      
+      // Inicializa progresso do usuário se necessário
+      if (newUser) {
+        initializeUserProgress(newUser.id).catch(console.error);
+      }
+      
       setLoading(false);
     });
 
-    // Listen for changes on auth state (sign in, sign out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    // Listen for changes on auth state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const newUser = session?.user ?? null;
+      setUser(newUser);
+
+      // Inicializa progresso para novos usuários
+      if (newUser && _event === 'SIGNED_IN') {
+        try {
+          await initializeUserProgress(newUser.id);
+        } catch (error) {
+          console.error('Erro ao inicializar progresso:', error);
+        }
+      }
+
       setLoading(false);
     });
 
@@ -45,8 +70,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       });
+
+      if (!error) {
+        // Opcional: adicione lógica adicional após login bem-sucedido
+        console.log('Login com Google iniciado');
+      }
+
       return { error };
     } catch (error) {
+      console.error('Erro no login com Google:', error);
       return { error: error as AuthError };
     }
   };
@@ -55,16 +87,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     loading,
     signIn: async (email: string, password: string) => {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { error };
+      try {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        return { error };
+      } catch (error) {
+        console.error('Erro no login:', error);
+        return { error: error as AuthError };
+      }
     },
     signUp: async (email: string, password: string) => {
-      const { error } = await supabase.auth.signUp({ email, password });
-      return { error };
+      try {
+        const { error } = await supabase.auth.signUp({ email, password });
+        return { error };
+      } catch (error) {
+        console.error('Erro no cadastro:', error);
+        return { error: error as AuthError };
+      }
     },
     signOut: async () => {
-      const { error } = await supabase.auth.signOut();
-      return { error };
+      try {
+        const { error } = await supabase.auth.signOut();
+        return { error };
+      } catch (error) {
+        console.error('Erro no logout:', error);
+        return { error: error as AuthError };
+      }
     },
     signInWithGoogle,
   };
