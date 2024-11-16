@@ -10,38 +10,38 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
+    autoRefreshToken: true,
     persistSession: true,
+    detectSessionInUrl: true,
     storageKey: 'cepac-auth-token',
-  }}
-// Auth helpers
-export const signIn = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  return { data, error };
-};
+    storage: window.localStorage
+  },
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
 
-export const signUp = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-  return { data, error };
-};
-
+// Auth helpers permanece igual, mas atualize o signInWithGoogle:
 export const signInWithGoogle = async () => {
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: window.location.origin,
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
+  try {
+    // Força logout antes do novo login
+    await supabase.auth.signOut();
+    
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent'
+        }
       }
-    }
-  });
-  return { data, error };
+    });
+    return { data, error };
+  } catch (error) {
+    console.error('Erro no login com Google:', error);
+    return { data: null, error };
+  }
 };
 
 export const signOut = async () => {
