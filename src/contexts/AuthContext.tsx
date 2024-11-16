@@ -18,40 +18,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verifica hash da URL para auth com OAuth
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = hashParams.get('access_token');
-    if (accessToken) {
-      window.location.hash = '';
-    }
-
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const newUser = session?.user ?? null;
-      setUser(newUser);
-      
-      // Inicializa progresso do usuário se necessário
-      if (newUser) {
-        initializeUserProgress(newUser.id).catch(console.error);
+    // Função para inicializar usuário
+    const initializeUser = async (userId: string) => {
+      try {
+        await initializeUserProgress(userId);
+      } catch (error) {
+        console.error('Erro ao inicializar usuário:', error);
       }
-      
+    };
+
+    // Verificar sessão inicial
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user);
+        initializeUser(session.user.id);
+      }
       setLoading(false);
     });
 
-    // Listen for changes on auth state
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const newUser = session?.user ?? null;
-      setUser(newUser);
+    // Ouvir mudanças de auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth event:', event, 'Session:', session); // Debug
 
-      // Inicializa progresso para novos usuários
-      if (newUser && _event === 'SIGNED_IN') {
-        try {
-          await initializeUserProgress(newUser.id);
-        } catch (error) {
-          console.error('Erro ao inicializar progresso:', error);
+      if (session?.user) {
+        setUser(session.user);
+        if (event === 'SIGNED_IN') {
+          await initializeUser(session.user.id);
         }
+      } else {
+        setUser(null);
       }
-
+      
       setLoading(false);
     });
 
@@ -60,10 +57,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: `${window.location.origin}/auth/callback`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -71,12 +68,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
-      if (!error) {
-        // Opcional: adicione lógica adicional após login bem-sucedido
-        console.log('Login com Google iniciado');
-      }
-
-      return { error };
+      if (error) throw error;
+      
+      return { error: null };
     } catch (error) {
       console.error('Erro no login com Google:', error);
       return { error: error as AuthError };
@@ -87,31 +81,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     loading,
     signIn: async (email: string, password: string) => {
-      try {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        return { error };
-      } catch (error) {
-        console.error('Erro no login:', error);
-        return { error: error as AuthError };
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return { error };
     },
     signUp: async (email: string, password: string) => {
-      try {
-        const { error } = await supabase.auth.signUp({ email, password });
-        return { error };
-      } catch (error) {
-        console.error('Erro no cadastro:', error);
-        return { error: error as AuthError };
-      }
+      const { error } = await supabase.auth.signUp({ email, password });
+      return { error };
     },
     signOut: async () => {
-      try {
-        const { error } = await supabase.auth.signOut();
-        return { error };
-      } catch (error) {
-        console.error('Erro no logout:', error);
-        return { error: error as AuthError };
-      }
+      const { error } = await supabase.auth.signOut();
+      return { error };
     },
     signInWithGoogle,
   };
