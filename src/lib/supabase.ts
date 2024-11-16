@@ -27,6 +27,20 @@ export const signUp = async (email: string, password: string) => {
   return { data, error };
 };
 
+export const signInWithGoogle = async () => {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin,
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      }
+    }
+  });
+  return { data, error };
+};
+
 export const signOut = async () => {
   const { error } = await supabase.auth.signOut();
   return { error };
@@ -50,10 +64,14 @@ export const subscribeToUserProgress = (userId: string, callback: (payload: any)
 };
 
 // Database operations
-export const updateUserProgress = async (userId: string, data: any) => {
+export const updateUserProgress = async (userId: string, data: Partial<Database['public']['Tables']['user_progress']['Update']>) => {
   const { data: result, error } = await supabase
     .from('user_progress')
-    .upsert({ user_id: userId, ...data })
+    .upsert({ 
+      user_id: userId,
+      ...data,
+      updated_at: new Date().toISOString()
+    })
     .select()
     .single();
   
@@ -67,5 +85,35 @@ export const getUserProgress = async (userId: string) => {
     .eq('user_id', userId)
     .single();
   
+  return { data, error };
+};
+
+// Aqui está a função que faltava
+export const initializeUserProgress = async (userId: string) => {
+  // Primeiro verifica se já existe
+  const { data: existingProgress } = await getUserProgress(userId);
+  
+  // Se já existe, retorna sem fazer nada
+  if (existingProgress) {
+    return { data: existingProgress, error: null };
+  }
+
+  // Se não existe, cria novo progresso
+  const { data, error } = await supabase
+    .from('user_progress')
+    .insert({
+      user_id: userId,
+      xp: 0,
+      level: 1,
+      coins: 0,
+      streak: 0,
+      achievements: [],
+      inventory: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .select()
+    .single();
+
   return { data, error };
 };
