@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function AuthForm() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, signInWithGoogle } = useAuth();
   const { t } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -13,7 +13,7 @@ export default function AuthForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,7 +22,24 @@ export default function AuthForm() {
     setLoading(true);
 
     try {
-      const { error } = await (isLogin ? signIn : signUp)(formData.email, formData.password);
+      const { error } = await (isLogin ? signIn : signUp)(
+        formData.email,
+        formData.password
+      );
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError(null);
+    setLoading(true);
+
+    try {
+      const { error } = await signInWithGoogle();
       if (error) throw error;
     } catch (err: any) {
       setError(err.message);
@@ -47,6 +64,33 @@ export default function AuthForm() {
           </p>
         </div>
 
+        <div className="space-y-6">
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            className="w-full flex justify-center items-center gap-2 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <img
+              src="https://www.google.com/favicon.ico"
+              alt="Google"
+              className="w-5 h-5"
+            />
+            {t('auth.continueWithGoogle')}
+          </button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white dark:bg-gray-800 text-gray-500">
+                {t('auth.or')}
+              </span>
+            </div>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <AnimatePresence mode="wait">
             {error && (
@@ -67,14 +111,19 @@ export default function AuthForm() {
                 {t('auth.email')}
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <Mail
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={20}
+                />
                 <input
                   id="email"
                   name="email"
                   type="email"
                   required
                   value={formData.email}
-                  onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, email: e.target.value }))
+                  }
                   className="pl-10 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent dark:bg-gray-700 dark:text-white"
                   placeholder={t('auth.email')}
                 />
@@ -86,14 +135,22 @@ export default function AuthForm() {
                 {t('auth.password')}
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <Lock
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={20}
+                />
                 <input
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={formData.password}
-                  onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      password: e.target.value,
+                    }))
+                  }
                   className="pl-10 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent dark:bg-gray-700 dark:text-white"
                   placeholder={t('auth.password')}
                 />
@@ -116,8 +173,10 @@ export default function AuthForm() {
             >
               {loading ? (
                 <Loader className="animate-spin" size={20} />
+              ) : isLogin ? (
+                t('auth.signIn')
               ) : (
-                isLogin ? t('auth.signIn') : t('auth.signUp')
+                t('auth.signUp')
               )}
             </button>
           </div>
