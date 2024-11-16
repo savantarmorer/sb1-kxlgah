@@ -34,19 +34,24 @@ export default function AuthForm() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setError(null);
-    setLoading(true);
-
-    try {
-      const { error } = await signInWithGoogle();
-      if (error) throw error;
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleGoogleLogin = async () => {
+  setError(null);
+  setLoading(true);
+  
+  try {
+    const { error } = await signInWithGoogle();
+    if (error) throw error;
+    
+    // Opcional: adicione um estado de sucesso
+    console.log('Login com Google bem sucedido');
+    
+  } catch (err: any) {
+    setError(err.message);
+    console.error('Erro no login com Google:', err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
