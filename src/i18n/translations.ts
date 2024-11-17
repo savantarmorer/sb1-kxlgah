@@ -113,15 +113,23 @@ export const translations = {
     battle: {
       title: 'Legal Battle Mode',
       findOpponent: 'Find Opponent',
+<<<<<<< HEAD
       searching: 'Searching for opponent...',
       searchingDesc: 'Finding a worthy challenger...',
       getReady: 'Get Ready!',
       victory: 'Victory!',
       defeat: 'Better luck next time!',
+=======
+      searching: 'Searching for worthy opponent...',
+      getReady: 'Get ready!',
+      victory: 'Victory!',
+      defeat: 'Better Luck Next Time!',
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
       rewards: 'Rewards Earned',
       quickBattle: 'Quick Battle',
       correctAnswer: 'Correct Answer',
       victoryBonus: 'Victory Bonus',
+<<<<<<< HEAD
       participation: 'Battle Participation',
       results: {
         title: 'Battle Results'
@@ -129,6 +137,9 @@ export const translations = {
       correctAnswers: 'Correct Answers',
       xpGained: 'XP Gained',
       coinsGained: 'Coins Gained'
+=======
+      participation: 'Battle Participation'
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
     },
     achievements: {
       perfectScholar: {
@@ -263,8 +274,12 @@ export const translations = {
     battle: {
       title: 'Modo Batalha Jurídica',
       findOpponent: 'Encontrar Oponente',
+<<<<<<< HEAD
       searching: 'Procurando oponente...',
       searchingDesc: 'Encontrando um desafiante à altura...',
+=======
+      searching: 'Procurando oponente à altura...',
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
       getReady: 'Prepare-se!',
       victory: 'Vitória!',
       defeat: 'Mais sorte na próxima!',
@@ -272,6 +287,7 @@ export const translations = {
       quickBattle: 'Batalha Rápida',
       correctAnswer: 'Resposta Correta',
       victoryBonus: 'Bônus de Vitória',
+<<<<<<< HEAD
       participation: 'Participação na Batalha',
       results: {
         title: 'Resultados da Batalha'
@@ -279,6 +295,9 @@ export const translations = {
       correctAnswers: 'Respostas Corretas',
       xpGained: 'XP Ganho',
       coinsGained: 'Moedas Ganhas'
+=======
+      participation: 'Participação em Batalha'
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
     },
     achievements: {
       perfectScholar: {

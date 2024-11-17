@@ -1,6 +1,7 @@
 import { LEVEL_CONFIG } from './gameConfig';
 import { User } from '../types';
 
+<<<<<<< HEAD
 interface LevelUpReward {
   type: string;
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
@@ -38,6 +39,9 @@ export class LevelSystem {
     return ((xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
   }
 
+=======
+export class LevelSystem {
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
   static calculateXPForLevel(level: number): number {
     return Math.floor(LEVEL_CONFIG.baseXP * Math.pow(LEVEL_CONFIG.scalingFactor, level - 1));
   }
@@ -50,6 +54,23 @@ export class LevelSystem {
     return total;
   }
 
+<<<<<<< HEAD
+=======
+  static calculateLevel(xp: number): number {
+    let level = 1;
+    let totalXP = 0;
+    
+    while (level < LEVEL_CONFIG.maxLevel) {
+      const nextLevelXP = this.calculateXPForLevel(level);
+      if (totalXP + nextLevelXP > xp) break;
+      totalXP += nextLevelXP;
+      level++;
+    }
+    
+    return Math.min(level, LEVEL_CONFIG.maxLevel);
+  }
+
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
   static calculateProgress(xp: number): number {
     const currentLevel = this.calculateLevel(xp);
     const totalXPForCurrentLevel = this.calculateTotalXPForLevel(currentLevel);
@@ -70,11 +91,23 @@ export class LevelSystem {
 
   static getLevelUpRewards(level: number): {
     coins: number;
+<<<<<<< HEAD
     items: LevelUpReward[];
   } {
     const rewards = {
       coins: LEVEL_CONFIG.bonusPerLevel * level,
       items: [] as LevelUpReward[]
+=======
+    items: Array<{
+      type: string;
+      rarity: 'common' | 'rare' | 'epic' | 'legendary';
+      value: string;
+    }>;
+  } {
+    const rewards = {
+      coins: LEVEL_CONFIG.bonusPerLevel * level,
+      items: []
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
     };
 
     // Base rewards for every level

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * PremiumRewards Component
  * 
@@ -29,11 +30,20 @@ interface PremiumReward {
   icon: JSX.Element;
   available: boolean;
 }
+=======
+import React, { useState } from 'react';
+import { Crown, Book, Users, Video, Star, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useGame } from '../../contexts/GameContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import LootBox from '../LootBox';
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
 
 export function PremiumRewards() {
   const { state, dispatch } = useGame();
   const { t } = useLanguage();
   const [showLootBox, setShowLootBox] = useState(false);
+<<<<<<< HEAD
   const [selectedReward, setSelectedReward] = useState<PremiumReward | null>(null);
 
   /**
@@ -41,6 +51,11 @@ export function PremiumRewards() {
    * Each reward has unique properties and requirements
    */
   const PREMIUM_REWARDS: PremiumReward[] = [
+=======
+  const [selectedReward, setSelectedReward] = useState<any>(null);
+
+  const PREMIUM_REWARDS = [
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
     {
       id: 'mock_exam_bundle',
       title: t('store.items.studyMaterial.title'),
@@ -63,11 +78,15 @@ export function PremiumRewards() {
     }
   ];
 
+<<<<<<< HEAD
   /**
    * Handles the purchase of a premium reward
    * Checks coin balance, dispatches purchase action, and shows reward animation
    */
   const handlePurchase = (reward: PremiumReward) => {
+=======
+  const handlePurchase = (reward: any) => {
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
     if (state.user.coins < reward.cost) return;
 
     dispatch({
@@ -84,7 +103,10 @@ export function PremiumRewards() {
 
   return (
     <div className="card">
+<<<<<<< HEAD
       {/* Header Section */}
+=======
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-2">
           <Crown className="text-yellow-500" />
@@ -98,7 +120,10 @@ export function PremiumRewards() {
         </div>
       </div>
 
+<<<<<<< HEAD
       {/* Rewards Grid */}
+=======
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {PREMIUM_REWARDS.map(reward => (
           <motion.div
@@ -111,6 +136,7 @@ export function PremiumRewards() {
             } transition-all`}
           >
             <div className="flex items-start space-x-4">
+<<<<<<< HEAD
               {/* Reward Icon */}
               <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
                 {reward.icon}
@@ -126,10 +152,21 @@ export function PremiumRewards() {
                 </p>
 
                 {/* Purchase Section */}
+=======
+              <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                {reward.icon}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 dark:text-white">{reward.title}</h3>
+                <p className="text-sm text-muted mt-1">
+                  {reward.description}
+                </p>
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
                 <div className="flex items-center justify-between mt-3">
                   <span className="text-sm font-medium text-primary">
                     {reward.cost} {t('common.coins')}
                   </span>
+<<<<<<< HEAD
                   <Button
                     variant={state.user.coins >= reward.cost ? 'primary' : 'secondary'}
                     size="sm"
@@ -138,6 +175,19 @@ export function PremiumRewards() {
                   >
                     {t('common.purchase')}
                   </Button>
+=======
+                  <button
+                    onClick={() => handlePurchase(reward)}
+                    disabled={state.user.coins < reward.cost}
+                    className={`btn ${
+                      state.user.coins >= reward.cost
+                        ? 'btn-primary'
+                        : 'btn-secondary opacity-50 cursor-not-allowed'
+                    }`}
+                  >
+                    {t('common.purchase')}
+                  </button>
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
                 </div>
               </div>
             </div>
@@ -145,7 +195,10 @@ export function PremiumRewards() {
         ))}
       </div>
 
+<<<<<<< HEAD
       {/* Reward Animation */}
+=======
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
       {selectedReward && (
         <LootBox
           isOpen={showLootBox}
@@ -158,12 +211,17 @@ export function PremiumRewards() {
               type: selectedReward.type,
               value: selectedReward.title,
               rarity: selectedReward.rarity
+<<<<<<< HEAD
             } as Reward
+=======
+            }
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
           ]}
         />
       )}
     </div>
   );
+<<<<<<< HEAD
 }
 
 /**
@@ -187,3 +245,6 @@ export function PremiumRewards() {
  * - Monetization system
  * - Reward distribution
  */
+=======
+}
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d

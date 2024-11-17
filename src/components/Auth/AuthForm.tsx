@@ -5,7 +5,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function AuthForm() {
+<<<<<<< HEAD
   const { signIn, signUp } = useAuth();
+=======
+  const { signIn, signUp, signInWithGoogle } = useAuth();
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
   const { t } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -13,7 +17,11 @@ export default function AuthForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
+<<<<<<< HEAD
     password: ''
+=======
+    password: '',
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,12 +30,20 @@ export default function AuthForm() {
     setLoading(true);
 
     try {
+<<<<<<< HEAD
       // For development, accept any credentials
       await new Promise(resolve => setTimeout(resolve, 1000));
       const { error } = await (isLogin ? signIn : signUp)(formData.email, formData.password);
       if (error) {
         setError(error.message);
       }
+=======
+      const { error } = await (isLogin ? signIn : signUp)(
+        formData.email,
+        formData.password
+      );
+      if (error) throw error;
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -35,6 +51,28 @@ export default function AuthForm() {
     }
   };
 
+<<<<<<< HEAD
+=======
+const handleGoogleLogin = async () => {
+  setError(null);
+  setLoading(true);
+  
+  try {
+    const { error } = await signInWithGoogle();
+    if (error) throw error;
+    
+    // Opcional: adicione um estado de sucesso
+    console.log('Login com Google bem sucedido');
+    
+  } catch (err: any) {
+    setError(err.message);
+    console.error('Erro no login com Google:', err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
       <motion.div
@@ -51,6 +89,36 @@ export default function AuthForm() {
           </p>
         </div>
 
+<<<<<<< HEAD
+=======
+        <div className="space-y-6">
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            className="w-full flex justify-center items-center gap-2 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <img
+              src="https://www.google.com/favicon.ico"
+              alt="Google"
+              className="w-5 h-5"
+            />
+            {t('auth.continueWithGoogle')}
+          </button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white dark:bg-gray-800 text-gray-500">
+                {t('auth.or')}
+              </span>
+            </div>
+          </div>
+        </div>
+
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <AnimatePresence mode="wait">
             {error && (
@@ -71,14 +139,27 @@ export default function AuthForm() {
                 {t('auth.email')}
               </label>
               <div className="relative">
+<<<<<<< HEAD
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+=======
+                <Mail
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={20}
+                />
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
                 <input
                   id="email"
                   name="email"
                   type="email"
                   required
                   value={formData.email}
+<<<<<<< HEAD
                   onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
+=======
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, email: e.target.value }))
+                  }
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
                   className="pl-10 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent dark:bg-gray-700 dark:text-white"
                   placeholder={t('auth.email')}
                 />
@@ -90,14 +171,30 @@ export default function AuthForm() {
                 {t('auth.password')}
               </label>
               <div className="relative">
+<<<<<<< HEAD
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+=======
+                <Lock
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={20}
+                />
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
                 <input
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={formData.password}
+<<<<<<< HEAD
                   onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))}
+=======
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      password: e.target.value,
+                    }))
+                  }
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
                   className="pl-10 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent dark:bg-gray-700 dark:text-white"
                   placeholder={t('auth.password')}
                 />
@@ -120,8 +217,15 @@ export default function AuthForm() {
             >
               {loading ? (
                 <Loader className="animate-spin" size={20} />
+<<<<<<< HEAD
               ) : (
                 isLogin ? t('auth.signIn') : t('auth.signUp')
+=======
+              ) : isLogin ? (
+                t('auth.signIn')
+              ) : (
+                t('auth.signUp')
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
               )}
             </button>
           </div>
@@ -139,4 +243,8 @@ export default function AuthForm() {
       </motion.div>
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d

@@ -6,20 +6,32 @@ import {
   ScrollText, 
   Store, 
   Users, 
+<<<<<<< HEAD
   X
+=======
+  X,
+  BarChart 
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
 } from 'lucide-react';
 import QuestManager from './QuestManager';
 import ItemManager from './ItemManager';
 import ShopManager from './ShopManager';
 import UserManager from './UserManager';
 import Statistics from './Statistics';
+<<<<<<< HEAD
 import Button from '../Button';
+=======
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
 
 interface AdminDashboardProps {
   onClose: () => void;
 }
 
+<<<<<<< HEAD
 type Tab = 'overview' | 'quests' | 'items' | 'shop' | 'users' | 'achievements';
+=======
+type Tab = 'overview' | 'quests' | 'items' | 'shop' | 'users';
+>>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
 
 export default function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
