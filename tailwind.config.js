@@ -32,12 +32,24 @@ export default {
           }
         }
       },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+      animation: {
+        'pulse-scale': 'pulse-scale 2s infinite',
+        'float': 'float 6s ease-in-out infinite',
+        'glow': 'glow 2s ease-in-out infinite'
       },
-      boxShadow: {
-        'inner-lg': 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
+      keyframes: {
+        'pulse-scale': {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.05)' }
+        },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-10px)' }
+        },
+        'glow': {
+          '0%, 100%': { filter: 'brightness(1) blur(0px)' },
+          '50%': { filter: 'brightness(1.2) blur(4px)' }
+        }
       }
     },
   },
