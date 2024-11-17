@@ -2,7 +2,6 @@
 /node_modules
 /.pnp
 .pnp.js
-<<<<<<< HEAD
 yarn.lock
 package-lock.json
 
@@ -19,13 +18,10 @@ package-lock.json
 .next
 .nuxt
 .output
-=======
->>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
 
 # Environment files
 .env
 .env.local
-<<<<<<< HEAD
 .env.development
 .env.development.local
 .env.test
@@ -33,34 +29,18 @@ package-lock.json
 .env.production
 .env.production.local
 
-=======
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Build files
-/dist
-/build
-
->>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
 # Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-<<<<<<< HEAD
 debug.log
 *.log
 
 # IDE and Editor files
-=======
-
-# IDE files
->>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
 .idea/
 .vscode/
 *.swp
 *.swo
-<<<<<<< HEAD
 *.swn
 *.bak
 *.sublime-workspace
@@ -113,9 +93,3 @@ bundle-analysis.html
 Thumbs.db
 ehthumbs.db
 Icon?
-=======
-
-# OS files
-.DS_Store
-Thumbs.db
->>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d

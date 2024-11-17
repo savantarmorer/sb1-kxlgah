@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Settings } from 'lucide-react';
@@ -14,26 +13,10 @@ interface QuestManagerState {
   showEditor: boolean;
   selectedQuest?: QuestWithId;
   isLoading: boolean;
-=======
-import React, { useState } from 'react';
-import { useGame } from '../../contexts/GameContext';
-import { Plus, Trash2, Save } from 'lucide-react';
-
-interface Quest {
-  id: string;
-  title: string;
-  description: string;
-  xpReward: number;
-  coinReward: number;
-  deadline: Date;
-  type: 'daily' | 'weekly' | 'epic';
-  requirements?: string[];
->>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
 }
 
 export default function QuestManager() {
   const { state } = useGame();
-<<<<<<< HEAD
   const { saveQuest } = useAdminActions();
   const [localState, setLocalState] = useState<QuestManagerState>({
     showEditor: false,
@@ -79,7 +62,6 @@ export default function QuestManager() {
         isLoading: false
       });
     }
-=======
   const [quests, setQuests] = useState<Quest[]>(() => {
     const saved = localStorage.getItem('quests');
     return saved ? JSON.parse(saved) : [];
@@ -120,12 +102,10 @@ export default function QuestManager() {
 
   const saveQuests = () => {
     localStorage.setItem('quests', JSON.stringify(quests));
->>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
   };
 
   return (
     <div className="space-y-6">
-<<<<<<< HEAD
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold dark:text-white">Quest Management</h2>
         <Button
@@ -184,7 +164,6 @@ export default function QuestManager() {
           })}
         />
       )}
-=======
       <div className="bg-white dark:bg-gray-700 p-6 rounded-lg shadow-sm">
         <h3 className="text-lg font-semibold mb-4 dark:text-white">Add New Quest</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -287,7 +266,6 @@ export default function QuestManager() {
           ))}
         </div>
       </div>
->>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
     </div>
   );
 }

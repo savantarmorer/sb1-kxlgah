@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Swords, Timer, Trophy, XCircle, Star, Flame } from 'lucide-react';
@@ -7,7 +6,6 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useBattle } from '../hooks/useBattle';
 import Confetti from 'react-confetti';
 import Button from './Button';
-=======
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Swords, Timer, Trophy, XCircle } from 'lucide-react';
@@ -57,74 +55,12 @@ const SAMPLE_QUESTIONS: Question[] = [
     correctAnswer: 0
   }
 ];
->>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
 
 interface BattleModeProps {
   onClose: () => void;
 }
 
 export default function BattleMode({ onClose }: BattleModeProps) {
-<<<<<<< HEAD
-  const { t } = useLanguage();
-  const { state } = useGame();
-  const { battleState, handleAnswer, endBattle } = useBattle();
-  const [showConfetti, setShowConfetti] = useState(false);
-
-  const renderBattleContent = () => {
-    switch (battleState.status) {
-      case 'searching':
-        return (
-          <div className="text-center py-8">
-            <Swords size={48} className="mx-auto mb-4 text-brand-teal-500 dark:text-brand-teal-400 animate-pulse" />
-            <h2 className="heading text-2xl mb-2">{t('battle.searching')}</h2>
-            <p className="text-muted">{t('battle.searchingDesc')}</p>
-          </div>
-        );
-
-      case 'ready':
-        return (
-          <div className="text-center py-8">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 0.5 }}
-            >
-              <h2 className="heading text-4xl text-brand-teal-600 dark:text-brand-teal-400">
-                {t('battle.getReady')}
-              </h2>
-            </motion.div>
-          </div>
-        );
-
-      case 'battle':
-        return (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-4">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {battleState.score.player} - {battleState.score.opponent}
-                </div>
-                {state.user.streak > 0 && (
-                  <div className="flex items-center space-x-1 text-orange-500">
-                    <Flame size={20} />
-                    <span className="font-medium">{state.user.streak}</span>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center space-x-2 text-lg">
-                <Timer className="text-red-500" />
-                <span className="text-gray-900 dark:text-white">{battleState.timeLeft}s</span>
-              </div>
-            </div>
-
-            {battleState.questions[battleState.currentQuestion] && (
-              <div className="card">
-                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                  {battleState.questions[battleState.currentQuestion].question}
-                </h3>
-                <div className="grid grid-cols-1 gap-3">
-                  {battleState.questions[battleState.currentQuestion].answers.map((answer, index) => (
-=======
   const { dispatch } = useGame();
   const { t } = useLanguage();
   const [battleState, setBattleState] = useState<'searching' | 'ready' | 'battle' | 'completed'>('searching');
@@ -280,7 +216,6 @@ export default function BattleMode({ onClose }: BattleModeProps) {
                 </h3>
                 <div className="grid grid-cols-1 gap-3">
                   {SAMPLE_QUESTIONS[currentQuestion].answers.map((answer, index) => (
->>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
                     <motion.button
                       key={index}
                       onClick={() => handleAnswer(index)}
@@ -293,7 +228,6 @@ export default function BattleMode({ onClose }: BattleModeProps) {
                   ))}
                 </div>
               </div>
-<<<<<<< HEAD
             )}
           </div>
         );
@@ -395,7 +329,6 @@ export default function BattleMode({ onClose }: BattleModeProps) {
           className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4"
         >
           {renderBattleContent()}
-=======
             </div>
           )}
 
@@ -463,7 +396,6 @@ export default function BattleMode({ onClose }: BattleModeProps) {
               </motion.button>
             </div>
           )}
->>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
         </motion.div>
       </motion.div>
     </AnimatePresence>
