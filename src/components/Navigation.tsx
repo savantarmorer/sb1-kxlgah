@@ -71,11 +71,7 @@ function NavItem({ icon, label, isActive, onClick }: NavItemProps) {
     <motion.button
       onClick={onClick}
       whileTap={{ scale: 0.95 }}
-<<<<<<< HEAD
       className={`relative flex flex-col items-center justify-center w-16 ${
-=======
-      className={`relative flex flex-col items-center justify-center w-16 h-16 ${
->>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
         isActive 
           ? 'text-indigo-600 dark:text-indigo-400' 
           : 'text-gray-500 dark:text-gray-400'
@@ -95,11 +91,7 @@ function NavItem({ icon, label, isActive, onClick }: NavItemProps) {
       {isActive && (
         <motion.div
           layoutId="activeIndicator"
-<<<<<<< HEAD
           className="absolute -top-1 w-8 h-0.5 bg-indigo-600 dark:bg-indigo-400"
-=======
-          className="absolute bottom-0 w-8 h-0.5 bg-indigo-600 dark:bg-indigo-400"
->>>>>>> 161a49f523d659b828aff32646c54b4d64a35f0d
           transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
         />
       )}
