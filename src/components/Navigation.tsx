@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, Scroll, Store, User2, Home, Package } from 'lucide-react';
+import { Trophy, Scroll, Store, User2, Home, Package, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 type View = 'home' | 'leaderboard' | 'quests' | 'store' | 'profile' | 'inventory' | 'admin';
@@ -8,93 +8,61 @@ interface NavigationProps {
   currentView: View;
   onViewChange: (view: View) => void;
   showInventory?: boolean;
+  isAdmin?: boolean;
 }
 
-export default function Navigation({ currentView, onViewChange, showInventory = false }: NavigationProps) {
+export default function Navigation({ currentView, onViewChange, showInventory, isAdmin }: NavigationProps) {
+  const navItems = [
+    { id: 'home', icon: Home, label: 'Home' },
+    { id: 'leaderboard', icon: Trophy, label: 'Leaderboard' },
+    { id: 'quests', icon: Scroll, label: 'Quests' },
+    { id: 'store', icon: Store, label: 'Store' },
+    { id: 'profile', icon: User2, label: 'Profile' },
+    ...(showInventory ? [{ id: 'inventory', icon: Package, label: 'Inventory' }] : []),
+    ...(isAdmin ? [{ id: 'admin', icon: Shield, label: 'Admin' }] : [])
+  ];
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50">
-      <div className="max-w-screen-xl mx-auto px-4">
-        <div className="flex justify-around items-center h-16">
-          <NavItem
-            icon={<Home />}
-            label="Home"
-            isActive={currentView === 'home'}
-            onClick={() => onViewChange('home')}
-          />
-          <NavItem
-            icon={<Trophy />}
-            label="Ranking"
-            isActive={currentView === 'leaderboard'}
-            onClick={() => onViewChange('leaderboard')}
-          />
-          <NavItem
-            icon={<Scroll />}
-            label="Missões"
-            isActive={currentView === 'quests'}
-            onClick={() => onViewChange('quests')}
-          />
-          <NavItem
-            icon={<Store />}
-            label="Loja"
-            isActive={currentView === 'store'}
-            onClick={() => onViewChange('store')}
-          />
-          {showInventory && (
-            <NavItem
-              icon={<Package />}
-              label="Inventário"
-              isActive={currentView === 'inventory'}
-              onClick={() => onViewChange('inventory')}
-            />
-          )}
-          <NavItem
-            icon={<User2 />}
-            label="Perfil"
-            isActive={currentView === 'profile'}
-            onClick={() => onViewChange('profile')}
-          />
+    <>
+      <div className="h-16"></div>
+      
+      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex justify-around py-2">
+            {navItems.map((item) => (
+              <NavItem
+                key={item.id}
+                icon={item.icon}
+                label={item.label}
+                isActive={currentView === item.id}
+                onClick={() => onViewChange(item.id as View)}
+              />
+            ))}
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+    </>
   );
 }
 
-interface NavItemProps {
-  icon: React.ReactNode;
+function NavItem({ icon: Icon, label, isActive, onClick }: {
+  icon: typeof Home;
   label: string;
   isActive: boolean;
   onClick: () => void;
-}
-
-function NavItem({ icon, label, isActive, onClick }: NavItemProps) {
+}) {
   return (
     <motion.button
-      onClick={onClick}
       whileTap={{ scale: 0.95 }}
-      className={`relative flex flex-col items-center justify-center w-16 ${
+      onClick={onClick}
+      className={`${
         isActive 
           ? 'text-indigo-600 dark:text-indigo-400' 
-          : 'text-gray-500 dark:text-gray-400'
-      }`}
+          : 'text-gray-500 dark:text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-300'
+      } nav-item`}
     >
-      <div className="relative">
-        {isActive && (
-          <motion.div
-            layoutId="activeTab"
-            className="absolute -inset-2 bg-indigo-100/50 dark:bg-indigo-900/30 rounded-lg -z-10"
-            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-          />
-        )}
-        {icon}
-      </div>
-      <span className="text-xs mt-1 font-medium">{label}</span>
-      {isActive && (
-        <motion.div
-          layoutId="activeIndicator"
-          className="absolute -top-1 w-8 h-0.5 bg-indigo-600 dark:bg-indigo-400"
-          transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-        />
-      )}
+      <Icon size={24} />
+      <span className="text-xs">{label}</span>
     </motion.button>
   );
 }

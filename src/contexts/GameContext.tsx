@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect } from 'react';
-import { User, InventoryItem } from '../types';
+import { User, InventoryItem, Challenge } from '../types';
 import { Achievement } from '../types/achievements';
 import { LevelSystem } from '../lib/levelSystem';
 import { XP_MULTIPLIERS } from '../lib/gameConfig';
@@ -7,16 +7,34 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useAuth } from './AuthContext';
 import { getUserProgress, updateUserProgress } from '../lib/supabase';
 import { formatISO } from 'date-fns';
-import { Quest, QuestType, QuestRequirement, QuestRequirementType } from '../types/quests';
+import { Quest } from '../types/quests';
 import { GameItem } from '../types/items';
 import { GameAction } from '../types/actions';
-import { RewardRarity } from '../types/rewards';
+import { Reward, RewardRarity, isNumericReward } from '../types/rewards';
 import { notifyAchievementUnlock } from '../utils/achievementSubscription';
 import { supabase } from '../lib/supabase';
+import { ACHIEVEMENT_CATEGORIES } from '../components/Achievements/AchievementSystem';
+import { NotificationSystem } from '../utils/notificationSystem';
+
+/**
+ * Interface for reward multipliers
+ * Used by:
+ * - XP calculations
+ * - Coin calculations
+ * - Streak bonus system
+ */
+interface RewardMultipliers {
+  xp: number;
+  coins: number;
+}
 
 /**
  * Interface for game statistics
- * Used for admin dashboard metrics
+ * Used by:
+ * - Admin dashboard
+ * - Analytics system
+ * Dependencies:
+ * - Supabase for data storage
  */
 interface GameStatistics {
   lastUpdated: string;
@@ -27,6 +45,11 @@ interface GameStatistics {
 
 /**
  * Interface for level up rewards
+ * Used by:
+ * - Level system
+ * - Reward notifications
+ * Dependencies:
+ * - RewardRarity from rewards.ts
  */
 interface LevelUpReward {
   type: string;
@@ -36,14 +59,38 @@ interface LevelUpReward {
 
 /**
  * Interface for game state
+ * Core state interface used throughout the application
+ * Dependencies:
+ * - User interface
+ * - Achievement system
+ * - Quest system
+ * - Inventory system
  */
 interface GameState {
-  user: User & {
-    rewardMultipliers?: {
+  user: {
+    rewardMultipliers: {
       xp: number;
       coins: number;
     };
-    streakMultiplier?: number;
+    streakMultiplier: number;
+    id: string;
+    name: string;
+    email: string;
+    level: number;
+    xp: number;
+    streak: number;
+    coins: number;
+    achievements: Achievement[];
+    inventory: any[];
+    studyTime: number;
+    constitutionalScore: number;
+    civilScore: number;
+    criminalScore: number;
+    administrativeScore: number;
+    sharedAchievements: any[];
+    roles: string[];
+    avatar: string | null;
+    title: string | null;
   };
   achievements: Achievement[];
   recentXPGains: {
@@ -68,6 +115,7 @@ interface GameState {
   lastLoginDate: string | null;
   items: GameItem[];
   statistics: GameStatistics;
+  debugMode: boolean;
 }
 
 const initialState: GameState = {
@@ -79,6 +127,7 @@ const initialState: GameState = {
     streakMultiplier: 1,
     id: '',
     name: '',
+    email: '',
     level: 1,
     xp: 0,
     streak: 0,
@@ -91,9 +140,32 @@ const initialState: GameState = {
     criminalScore: 0,
     administrativeScore: 0,
     sharedAchievements: [],
-    roles: []
+    roles: [],
+    avatar: null,
+    title: null
   },
-  achievements: [],
+  achievements: [
+    {
+      id: 'first_login',
+      title: 'First Steps',
+      description: 'Login for the first time',
+      category: 'progress',
+      points: 10,
+      rarity: 'common',
+      unlocked: false,
+      unlockedAt: new Date(),
+      prerequisites: [],
+      dependents: [],
+      triggerConditions: [{
+        type: 'login_days',
+        value: 1,
+        comparison: 'gte'
+      }],
+      order: 1,
+      progress: 0
+    },
+    // Add more default achievements here
+  ],
   recentXPGains: [],
   completedQuests: [],
   quests: [],
@@ -109,7 +181,8 @@ const initialState: GameState = {
     activeUsers: 0,
     completedQuests: 0,
     purchasedItems: 0
-  }
+  },
+  debugMode: false
 };
 
 /**
@@ -138,19 +211,14 @@ const fetchStatistics = async () => {
  * Converts Quest from database to frontend format
  * Ensures type compatibility between different Quest versions
  */
-function convertQuest(quest: any): Quest {
+function convertQuest(quest: Quest): Quest {
   return {
     ...quest,
-    requirements: quest.requirements?.map((req: any) => ({
+    requirements: quest.requirements.map(req => ({
       ...req,
-      type: req.type as QuestRequirementType,
-      id: req.id || String(Date.now()),
-      completed: req.completed || false
-    })) as QuestRequirement[],
-    type: quest.type as QuestType,
-    deadline: new Date(quest.deadline),
-    progress: quest.progress || 0,
-    metadata: quest.metadata || {}
+      value: typeof req.value === 'string' ? parseInt(req.value, 10) : req.value,
+      type: req.type
+    }))
   };
 }
 
@@ -370,14 +438,20 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         )
       };
 
-    case 'UPDATE_REWARD_MULTIPLIERS':
+    case 'UPDATE_REWARD_MULTIPLIERS': {
+      const multipliers: RewardMultipliers = {
+        xp: action.payload.xp || 1,
+        coins: action.payload.coins || 1
+      };
+      
       return {
         ...state,
         user: {
           ...state.user,
-          rewardMultipliers: action.payload
+          rewardMultipliers: multipliers
         }
       };
+    }
 
     case 'SYNC_START':
       return { ...state, syncing: true };
@@ -386,23 +460,11 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       const userData = action.payload.user;
       if (!userData) return state;
 
-      const convertedUser: User = {
+      const convertedUser: User & { rewardMultipliers: RewardMultipliers; streakMultiplier?: number } = {
         ...state.user,
-        id: userData.id || state.user.id,
-        name: userData.name || state.user.name,
-        level: userData.level || state.user.level,
-        xp: userData.xp || state.user.xp,
-        streak: userData.streak || state.user.streak,
-        coins: userData.coins || state.user.coins,
-        achievements: (userData.achievements || []) as Achievement[],
-        inventory: (userData.inventory || []) as InventoryItem[],
-        studyTime: userData.studyTime || state.user.studyTime,
-        constitutionalScore: userData.constitutionalScore || state.user.constitutionalScore,
-        civilScore: userData.civilScore || state.user.civilScore,
-        criminalScore: userData.criminalScore || state.user.criminalScore,
-        administrativeScore: userData.administrativeScore || state.user.administrativeScore,
-        sharedAchievements: userData.sharedAchievements || state.user.sharedAchievements,
-        roles: userData.roles || state.user.roles
+        ...userData,
+        rewardMultipliers: userData.rewardMultipliers || { xp: 1, coins: 1 },
+        streakMultiplier: userData.streakMultiplier || state.user.streakMultiplier
       };
 
       return {
@@ -419,19 +481,21 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       const { type, value, rarity } = action.payload;
       let updatedState = { ...state };
       
-      if (type === 'xp') {
-        updatedState = gameReducer(state, {
-          type: 'ADD_XP',
-          payload: {
-            amount: value,
-            reason: `${rarity} Reward Claimed`
-          }
-        });
-      } else if (type === 'coins') {
-        updatedState = gameReducer(state, {
-          type: 'ADD_COINS',
-          payload: value
-        });
+      if (isNumericReward(action.payload)) {
+        if (type === 'xp') {
+          updatedState = gameReducer(state, {
+            type: 'ADD_XP',
+            payload: {
+              amount: action.payload.value,
+              reason: `${rarity} Reward Claimed`
+            }
+          });
+        } else if (type === 'coins') {
+          updatedState = gameReducer(state, {
+            type: 'ADD_COINS',
+            payload: action.payload.value
+          });
+        }
       }
       
       return updatedState;
@@ -448,11 +512,12 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
-    case 'INITIALIZE_QUESTS':
+    case 'INITIALIZE_QUESTS': {
       return {
         ...state,
         quests: action.payload.map(quest => convertQuest(quest))
       };
+    }
 
     case 'ADD_TO_INVENTORY': {
       const { item } = action.payload;
@@ -460,7 +525,10 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         user: {
           ...state.user,
-          inventory: [...state.user.inventory, item]
+          inventory: [...state.user.inventory, {
+            ...item,
+            type: item.type as "material" | "booster" | "cosmetic"
+          }]
         }
       };
     }
@@ -564,7 +632,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           level: newLevel
         },
         showLevelUpReward: true,
-        currentLevelRewards: rewards.flatMap((r: { items: any[] }) => r.items)
+        currentLevelRewards: rewards
       };
     }
 
@@ -598,24 +666,44 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
-    case 'ADD_QUEST':
+    case 'ADD_QUEST': {
+      const quest = action.payload;
       return {
         ...state,
-        quests: [...state.quests, convertQuest(action.payload)]
+        quests: [...state.quests, quest],
+        // Also update user if quest is completed
+        user: quest.status === 'completed' ? {
+          ...state.user,
+          xp: state.user.xp + quest.xpReward,
+          coins: state.user.coins + quest.coinReward
+        } : state.user
       };
+    }
 
-    case 'UPDATE_QUEST':
+    case 'UPDATE_QUEST': {
+      const updatedQuest = action.payload;
+      const oldQuest = state.quests.find(q => q.id === updatedQuest.id);
+      
+      // If quest was just completed, give rewards
+      const justCompleted = oldQuest?.status !== 'completed' && updatedQuest.status === 'completed';
+      
       return {
         ...state,
         quests: state.quests.map(quest => 
-          quest.id === action.payload.id ? convertQuest(action.payload) : quest
-        )
+          quest.id === updatedQuest.id ? updatedQuest : quest
+        ),
+        user: justCompleted ? {
+          ...state.user,
+          xp: state.user.xp + updatedQuest.xpReward,
+          coins: state.user.coins + updatedQuest.coinReward
+        } : state.user
       };
+    }
 
     case 'REMOVE_QUEST':
       return {
         ...state,
-        quests: state.quests.filter(quest => quest.id !== action.payload.id)
+        quests: state.quests.filter(quest => quest.id !== action.payload)
       };
 
     case 'SYNC_STATISTICS': {
@@ -626,6 +714,79 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           ...action.payload
         }
       };
+    }
+
+    case 'SET_USER':
+      console.log('GameReducer: Setting user with payload:', action.payload);
+      const isAdmin = action.payload.email === 'admin@admin';
+      return {
+        ...state,
+        user: {
+          ...state.user,
+          ...action.payload,
+          roles: isAdmin ? ['admin', 'user', 'premium'] : (action.payload.roles || ['user']),
+          level: isAdmin ? 99 : (action.payload.level || state.user.level),
+          xp: isAdmin ? 10000 : (action.payload.xp || state.user.xp),
+          coins: isAdmin ? 999999 : (action.payload.coins || state.user.coins),
+          rewardMultipliers: action.payload.rewardMultipliers || state.user.rewardMultipliers,
+          streakMultiplier: action.payload.streakMultiplier || state.user.streakMultiplier
+        },
+        debugMode: isAdmin || state.debugMode
+      };
+
+    case 'TOGGLE_DEBUG_MODE':
+      console.log('GameReducer: Toggling debug mode');
+      return {
+        ...state,
+        debugMode: !state.debugMode
+      };
+
+    case 'UPDATE_ACHIEVEMENT':
+      return {
+        ...state,
+        achievements: state.achievements.map(achievement =>
+          achievement.id === action.payload.id ? action.payload : achievement
+        )
+      };
+
+    case 'REMOVE_ACHIEVEMENT':
+      return {
+        ...state,
+        achievements: state.achievements.filter(achievement => achievement.id !== action.payload)
+      };
+
+    case 'ADD_ACHIEVEMENT':
+      return {
+        ...state,
+        achievements: [...state.achievements, action.payload]
+      };
+
+    case 'SHOW_NOTIFICATION': {
+      const { type, message } = action.payload;
+      try {
+        switch (type) {
+          case 'achievement':
+            NotificationSystem.showAchievement(message as Achievement);
+            break;
+          case 'quest':
+            NotificationSystem.showQuestComplete(message as Quest);
+            break;
+          case 'reward':
+            NotificationSystem.showReward(message as Reward);
+            break;
+          case 'error':
+            NotificationSystem.showError(message as string);
+            break;
+          case 'success':
+            NotificationSystem.showSuccess(message as string);
+            break;
+          default:
+            console.warn('Unknown notification type:', type);
+        }
+      } catch (error) {
+        console.error('Error showing notification:', error);
+      }
+      return state;
     }
 
     default:
@@ -639,54 +800,123 @@ const GameContext = createContext<{
 } | undefined>(undefined);
 
 /**
- * Game context provider component
- * Manages global game state and synchronization
+ * Game Context Provider
+ * 
+ * Role:
+ * - Central state management
+ * - Game logic coordination
+ * - Data persistence
+ * 
+ * Dependencies:
+ * - React Context API
+ * - Supabase for data storage
+ * - Level System for XP calculations
+ * - Achievement System for unlocks
+ * - Quest System for progress
+ * 
+ * Used By:
+ * - All game components
+ * - Admin components
+ * - Battle system
+ * - Reward system
+ * 
+ * Features:
+ * - State management
+ * - Action dispatching
+ * - Data synchronization
+ * - Progress tracking
+ * 
+ * Scalability:
+ * - Modular action types
+ * - Extensible state structure
+ * - Optimized updates
+ * - Type safety
  */
 export function GameProvider({ children }: { children: React.ReactNode }) {
-  const { user: authUser } = useAuth();
-  const [savedState, setSavedState] = useLocalStorage<GameState>('gameState', initialState);
-  const [state, dispatch] = useReducer(gameReducer, savedState || initialState);
+  const [state, dispatch] = useReducer(gameReducer, initialState);
+  const { user } = useAuth();
+  const { setValue: saveState } = useLocalStorage('gameState', initialState);
 
-  // Sync with database on auth user change
+  // Sync user data with auth state
   useEffect(() => {
-    if (authUser) {
-      dispatch({ type: 'SYNC_START' });
-      getUserProgress(authUser.id).then(({ data }) => {
-        if (data) {
-          dispatch({
-            type: 'SYNC_SUCCESS',
-            payload: {
-              user: {
-                ...state.user,
-                ...data,
-                id: authUser.id
-              }
-            }
+    if (user) {
+      console.log('GameProvider: Current user data:', user);
+      console.log('GameProvider: User roles:', user.roles);
+      
+      // Ensure admin privileges are set
+      if (user.email === 'admin@admin') {
+        const adminUser = {
+          ...user,
+          roles: ['admin', 'user', 'premium'],
+          level: 99,
+          xp: 10000,
+          coins: 999999,
+          streak: 0,
+          studyTime: 0,
+          constitutionalScore: 100,
+          civilScore: 100,
+          criminalScore: 100,
+          administrativeScore: 100,
+          debugMode: true,
+          is_super_admin: true
+        };
+        
+        console.log('Setting admin user:', adminUser);
+        
+        // Update Supabase profile
+        supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            name: 'Admin',
+            is_super_admin: true,
+            level: 99,
+            xp: 10000,
+            coins: 999999,
+            updated_at: new Date().toISOString()
+          })
+          .then(() => {
+            dispatch({
+              type: 'SET_USER',
+              payload: adminUser
+            });
           });
-        }
-      });
+      } else {
+        dispatch({
+          type: 'SET_USER',
+          payload: user
+        });
+      }
     }
-  }, [authUser]);
+  }, [user]);
 
   // Save state to localStorage on changes
   useEffect(() => {
-    setSavedState(state);
-  }, [state, setSavedState]);
+    console.log('GameProvider: Saving state:', state);
+    saveState(state);
+  }, [state, saveState]);
+
+  // Add debug logging for state changes
+  useEffect(() => {
+    console.log('Current game state:', state);
+    console.log('User roles:', state.user.roles);
+    console.log('Is admin?', state.user.roles?.includes('admin'));
+  }, [state]);
 
   // Check login streak
   useEffect(() => {
-    if (authUser) {
+    if (user) {
       const today = formatISO(new Date(), { representation: 'date' });
       if (today !== state.lastLoginDate) {
         dispatch({ type: 'RECORD_LOGIN', payload: today });
         dispatch({ type: 'SET_LAST_LOGIN', payload: today });
       }
     }
-  }, [authUser, state.lastLoginDate]);
+  }, [user, state.lastLoginDate]);
 
   // Sync user data periodically
   useEffect(() => {
-    if (authUser && !state.syncing) {
+    if (user && !state.syncing) {
       const syncData = {
         xp: state.user.xp,
         level: state.user.level,
@@ -696,13 +926,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         inventory: state.user.inventory
       };
 
-      updateUserProgress(authUser.id, syncData);
+      updateUserProgress(user.id, syncData);
     }
-  }, [state.user.xp, state.user.level, state.user.coins, state.user.streak, authUser]);
+  }, [state.user.xp, state.user.level, state.user.coins, state.user.streak, user]);
 
   // Sync statistics for admin users
   useEffect(() => {
-    if (authUser?.roles?.includes('admin')) {
+    if (user?.roles?.includes('admin')) {
       const syncStatistics = async () => {
         const stats = await fetchStatistics();
         if (stats) {
@@ -718,16 +948,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       return () => clearInterval(interval);
     }
-  }, [authUser]);
+  }, [user]);
 
   // Add quest synchronization
   useEffect(() => {
-    if (authUser) {
+    if (user) {
       const syncQuests = async () => {
         const { data: questsData } = await supabase
           .from('quests')
           .select('*')
-          .eq('user_id', authUser.id);
+          .eq('user_id', user.id);
 
         if (questsData) {
           dispatch({
@@ -739,7 +969,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       syncQuests();
     }
-  }, [authUser]);
+  }, [user]);
 
   return (
     <GameContext.Provider value={{ state, dispatch }}>
@@ -762,27 +992,19 @@ export function useGame() {
 }
 
 /**
- * Component Dependencies:
- * - useAuth: For user authentication state
- * - useLocalStorage: For state persistence
- * - supabase: For database operations
- * 
- * State Management:
- * - Global game state through context
- * - Local storage persistence
- * - Database synchronization
- * 
- * Features:
- * - User progress tracking
- * - Achievement system
- * - Quest management
- * - Item management
- * - Statistics tracking
- * 
- * Scalability Considerations:
- * - Type conversion utilities
- * - Separate interfaces for state
- * - Periodic synchronization
- * - Error handling
- * - Type safety throughout
+ * Add this helper function to check admin status
+ * @param state - Current game state
+ * @returns True if the user is an admin, false otherwise
  */
+export function isAdmin(state: GameState): boolean {
+  return state.user.roles?.includes('admin') || false;
+}
+
+/**
+ * Add this helper function to check debug mode
+ * @param state - Current game state
+ * @returns True if the user is in debug mode, false otherwise
+ */
+export function isDebugMode(state: GameState): boolean {
+  return state.debugMode || state.user.roles?.includes('admin') || false;
+}

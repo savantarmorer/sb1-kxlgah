@@ -1,34 +1,43 @@
 /**
  * Available quest types
  */
-export type QuestType = 'daily' | 'weekly' | 'epic';
+export type QuestType = 'daily' | 'weekly' | 'achievement' | 'story';
+
+/**
+ * Quest rarity levels
+ */
+export type QuestRarity = 'common' | 'rare' | 'epic' | 'legendary';
 
 /**
  * Available requirement types for quests
  */
-export type QuestRequirementType = 'level' | 'streak' | 'xp' | 'study_time' | 'score';
+export type QuestRequirementType = 'score' | 'time' | 'battles' | 'streak';
+
+/**
+ * Quest statuses
+ */
+export type QuestStatus = 'available' | 'in_progress' | 'completed' | 'failed';
 
 /**
  * Interface for quest requirements
  */
 export interface QuestRequirement {
   id: string;
-  description: string;
   type: QuestRequirementType;
   value: number;
+  description: string;
   completed: boolean;
-  metadata?: Record<string, any>; // For requirement-specific data
 }
 
 /**
  * Interface for quest lootbox rewards
  */
 export interface QuestLootbox {
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  rarity: QuestRarity;
   contents: Array<{
     type: string;
     value: number;
-    rarity: string;
+    rarity: QuestRarity;
   }>;
 }
 
@@ -40,16 +49,16 @@ export interface Quest {
   title: string;
   description: string;
   type: QuestType;
+  status: QuestStatus;
   xpReward: number;
   coinReward: number;
-  deadline: Date;
-  progress: number;
   requirements: QuestRequirement[];
-  lootbox?: QuestLootbox;
-  metadata?: Record<string, any>; // For quest-specific data
+  category: string;
+  order: number;
+  progress?: number;
+  is_active: boolean;
   created_at?: string;
   updated_at?: string;
-  is_active?: boolean;
 }
 
 /**

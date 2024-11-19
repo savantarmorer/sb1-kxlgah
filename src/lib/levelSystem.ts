@@ -8,131 +8,127 @@ interface LevelUpReward {
 }
 
 export class LevelSystem {
+  private static readonly BASE_XP = 100;
+  private static readonly GROWTH_FACTOR = 1.5;
+
+  /**
+   * Calculates the XP required for a specific level
+   * @param level - Target level
+   * @returns XP required for the level
+   */
+  static calculateXPForLevel(level: number): number {
+    return Math.floor(this.BASE_XP * Math.pow(this.GROWTH_FACTOR, level - 1));
+  }
+
+  /**
+   * Calculates total XP required up to a level
+   * @param level - Target level
+   * @returns Total XP required
+   */
+  static calculateTotalXPForLevel(level: number): number {
+    let totalXP = 0;
+    for (let i = 1; i < level; i++) {
+      totalXP += this.calculateXPForLevel(i);
+    }
+    return totalXP;
+  }
+
+  /**
+   * Calculates XP needed for next level
+   * @param currentXP - Current XP amount
+   * @returns XP needed for next level
+   */
+  static calculateXPToNextLevel(currentXP: number): number {
+    const currentLevel = this.calculateLevel(currentXP);
+    const nextLevelXP = this.calculateTotalXPForLevel(currentLevel + 1);
+    return nextLevelXP - currentXP;
+  }
+
+  /**
+   * Calculates current level based on XP
+   * @param xp - Current XP amount
+   * @returns Current level
+   */
   static calculateLevel(xp: number): number {
-    const baseXP = 1000;
-    const scalingFactor = 1.5;
-    
     let level = 1;
-    let requiredXP = baseXP;
+    let totalXP = 0;
     
-    while (xp >= requiredXP) {
+    while (totalXP <= xp) {
+      totalXP += this.calculateXPForLevel(level);
+      if (totalXP > xp) break;
       level++;
-      requiredXP = Math.floor(baseXP * Math.pow(scalingFactor, level - 1));
     }
     
     return level;
   }
 
-  static getXPForLevel(level: number): number {
-    const baseXP = 1000;
-    const scalingFactor = 1.5;
-    
-    return Math.floor(baseXP * Math.pow(scalingFactor, level - 1));
-  }
-
-  static getProgressToNextLevel(xp: number): number {
-    const currentLevel = this.calculateLevel(xp);
-    const currentLevelXP = this.getXPForLevel(currentLevel);
-    const nextLevelXP = this.getXPForLevel(currentLevel + 1);
-    
-    return ((xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
-  }
-
-  static calculateXPForLevel(level: number): number {
-    return Math.floor(LEVEL_CONFIG.baseXP * Math.pow(LEVEL_CONFIG.scalingFactor, level - 1));
-  }
-
-  static calculateTotalXPForLevel(level: number): number {
-    let total = 0;
-    for (let i = 1; i < level; i++) {
-      total += this.calculateXPForLevel(i);
-    }
-    return total;
-  }
-
-  static calculateLevel(xp: number): number {
-    let level = 1;
-    let totalXP = 0;
-    
-    while (level < LEVEL_CONFIG.maxLevel) {
-      const nextLevelXP = this.calculateXPForLevel(level);
-      if (totalXP + nextLevelXP > xp) break;
-      totalXP += nextLevelXP;
-      level++;
-    }
-    
-    return Math.min(level, LEVEL_CONFIG.maxLevel);
-  }
-
+  /**
+   * Calculates progress percentage to next level
+   * @param xp - Current XP amount
+   * @returns Progress percentage (0-100)
+   */
   static calculateProgress(xp: number): number {
     const currentLevel = this.calculateLevel(xp);
-    const totalXPForCurrentLevel = this.calculateTotalXPForLevel(currentLevel);
-    const xpInCurrentLevel = xp - totalXPForCurrentLevel;
-    const xpNeededForNextLevel = this.calculateXPForLevel(currentLevel);
+    const currentLevelXP = this.calculateTotalXPForLevel(currentLevel);
+    const nextLevelXP = this.calculateTotalXPForLevel(currentLevel + 1);
+    const levelXP = nextLevelXP - currentLevelXP;
+    const progress = xp - currentLevelXP;
     
-    return (xpInCurrentLevel / xpNeededForNextLevel) * 100;
+    return Math.min(100, Math.floor((progress / levelXP) * 100));
   }
 
-  static calculateXPToNextLevel(xp: number): number {
-    const currentLevel = this.calculateLevel(xp);
-    const totalXPForCurrentLevel = this.calculateTotalXPForLevel(currentLevel);
-    const xpInCurrentLevel = xp - totalXPForCurrentLevel;
-    const xpNeededForNextLevel = this.calculateXPForLevel(currentLevel);
-    
-    return xpNeededForNextLevel - xpInCurrentLevel;
-  }
+  /**
+   * Gets rewards for a specific level
+   * @param level - Target level
+   * @returns Array of rewards
+   */
+  static getLevelRewards(level: number): LevelUpReward[] {
+    const rewards: LevelUpReward[] = [
+      {
+        type: 'coins',
+        rarity: 'common',
+        value: (level * 100).toString()
+      }
+    ];
 
-  static getLevelUpRewards(level: number): {
-    coins: number;
-    items: LevelUpReward[];
-  } {
-    const rewards = {
-      coins: LEVEL_CONFIG.bonusPerLevel * level,
-      items: [] as LevelUpReward[]
-    };
-
-    // Base rewards for every level
-    rewards.items.push({
-      type: 'xp',
-      rarity: 'common',
-      value: '100'
-    });
-
-    // Special rewards based on level milestones
+    // Add special rewards for milestone levels
     if (level % 5 === 0) {
-      rewards.items.push({
-        type: 'title',
+      rewards.push({
+        type: 'lootbox',
         rarity: 'rare',
-        value: `Level ${level} Master`
+        value: 'milestone_reward'
       });
     }
 
     if (level % 10 === 0) {
-      rewards.items.push({
-        type: 'item',
+      rewards.push({
+        type: 'title',
         rarity: 'epic',
-        value: 'Premium Study Material'
+        value: `level_${level}_master`
       });
     }
 
-    if (level % 25 === 0) {
-      rewards.items.push({
-        type: 'item',
-        rarity: 'legendary',
-        value: 'Exclusive Title: Legal Legend'
-      });
-    }
-
-    return rewards;
-  }
-
-  static handleLevelUp(user: User, oldLevel: number, newLevel: number) {
-    const rewards = [];
-    
-    for (let level = oldLevel + 1; level <= newLevel; level++) {
-      rewards.push(this.getLevelUpRewards(level));
-    }
-    
     return rewards;
   }
 }
+
+/**
+ * Class Role:
+ * - XP and level calculations
+ * - Progress tracking
+ * - Level-up detection
+ * - Reward management
+ * 
+ * Dependencies:
+ * - None (pure calculations)
+ * 
+ * Used by:
+ * - LevelProgress component
+ * - XPSystem component
+ * - GameContext
+ * 
+ * Scalability:
+ * - Configurable base XP and growth
+ * - Pure functions for easy testing
+ * - Efficient calculations
+ */

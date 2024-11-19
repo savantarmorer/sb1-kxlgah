@@ -15,22 +15,21 @@ import type { Database } from '../types/supabase';
  * Interface for admin-specific actions
  */
 interface AdminActions {
-  saveQuest: (quest: Partial<Quest>) => Promise<Quest>;
+  saveQuest: (questData: Partial<Quest>) => Promise<Quest>;
   saveItem: (item: Partial<GameItem>) => Promise<GameItem>;
   updateUserProfile: (userId: string, updates: Partial<User>) => Promise<void>;
-  fetchStatistics: () => Promise<{
-    activeUsers: number;
-    completedQuests: number;
-    purchasedItems: number;
-  } | null>;
+  fetchStatistics: () => Promise<AdminStatistics | null>;
+  deleteQuest: (id: string) => Promise<void>;
 }
 
 /**
- * Interface for quest data with requirements
+ * Interface for admin statistics
  */
-interface QuestData extends Omit<Partial<Quest>, 'requirements'> {
-  requirements?: QuestRequirement[];
-  type?: QuestType;
+interface AdminStatistics {
+  activeUsers: number;
+  completedQuests: number;
+  purchasedItems: number;
+  lastUpdated: string;
 }
 
 /**
@@ -46,12 +45,12 @@ export function useAdminActions(): AdminActions {
    * @param questData - Quest data to save
    * @returns Promise with saved quest
    */
-  const saveQuest = async (questData: QuestData) => {
+  const saveQuest = async (questData: Partial<Quest>): Promise<Quest> => {
     if (!isAdmin) throw new Error('Admin access required');
     
     try {
       // Convert quest data to proper type before saving
-      const quest: Partial<Quest> = {
+      const processedQuest: Partial<Quest> = {
         ...questData,
         requirements: questData.requirements?.map(req => ({
           ...req,
@@ -60,7 +59,7 @@ export function useAdminActions(): AdminActions {
         }))
       };
 
-      const dbQuest = convertQuestToDB(quest);
+      const dbQuest = convertQuestToDB(processedQuest);
       const { data, error } = await supabase
         .from('quests')
         .upsert([dbQuest])
@@ -73,8 +72,8 @@ export function useAdminActions(): AdminActions {
       const formattedQuest = convertQuestFromDB(data);
       
       dispatch({
-        type: quest.id ? 'UPDATE_QUEST' : 'ADD_QUEST',
-        payload: formattedQuest
+        type: questData.id ? 'UPDATE_QUEST' : 'ADD_QUEST',
+        payload: formattedQuest as Quest
       });
 
       return formattedQuest;
@@ -89,7 +88,7 @@ export function useAdminActions(): AdminActions {
    * @param item - Item data to save
    * @returns Promise with saved item
    */
-  const saveItem = async (item: Partial<GameItem>) => {
+  const saveItem = async (item: Partial<GameItem>): Promise<GameItem> => {
     if (!isAdmin) throw new Error('Admin access required');
 
     try {
@@ -121,12 +120,8 @@ export function useAdminActions(): AdminActions {
    * Updates a user's profile
    * @param userId - ID of user to update
    * @param updates - Profile updates
-   * 
-   * Used by:
-   * - UserManager
-   * - AdminPanel
    */
-  const updateUserProfile = async (userId: string, updates: Partial<User>) => {
+  const updateUserProfile = async (userId: string, updates: Partial<User>): Promise<void> => {
     if (!isAdmin) throw new Error('Admin access required');
 
     try {
@@ -150,12 +145,8 @@ export function useAdminActions(): AdminActions {
   /**
    * Fetches system statistics
    * @returns Promise with statistics data
-   * 
-   * Used by:
-   * - Statistics component
-   * - AdminDashboard
    */
-  const fetchStatistics = async () => {
+  const fetchStatistics = async (): Promise<AdminStatistics | null> => {
     if (!isAdmin) return null;
 
     try {
@@ -165,14 +156,47 @@ export function useAdminActions(): AdminActions {
         supabase.from('items').select('id')
       ]);
 
-      return {
+      const stats: AdminStatistics = {
         activeUsers: (usersResult.data || []).length,
         completedQuests: (questsResult.data || []).length,
-        purchasedItems: (itemsResult.data || []).length
+        purchasedItems: (itemsResult.data || []).length,
+        lastUpdated: new Date().toISOString()
       };
+
+      dispatch({
+        type: 'SYNC_STATISTICS',
+        payload: stats
+      });
+
+      return stats;
     } catch (error) {
       console.error('Error fetching statistics:', error);
       return null;
+    }
+  };
+
+  /**
+   * Deletes a quest
+   * @param id - ID of quest to delete
+   */
+  const deleteQuest = async (id: string): Promise<void> => {
+    if (!isAdmin) throw new Error('Admin access required');
+
+    try {
+      const { error } = await supabase
+        .from('quests')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      dispatch({
+        type: 'REMOVE_QUEST',
+        payload: id
+      });
+    } catch (error) {
+      console.error('Error deleting quest:', error);
+      throw error;
     }
   };
 
@@ -180,7 +204,8 @@ export function useAdminActions(): AdminActions {
     saveQuest,
     saveItem,
     updateUserProfile,
-    fetchStatistics
+    fetchStatistics,
+    deleteQuest
   };
 }
 

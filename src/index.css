@@ -6,6 +6,8 @@
   :root {
     --brand-teal-rgb: 32, 178, 193;
     --brand-copper-rgb: 230, 135, 56;
+    --toast-bg: #ffffff;
+    --toast-color: #1f2937;
   }
 
   body {
@@ -182,4 +184,39 @@
 
 .scrollbar-hidden::-webkit-scrollbar {
   display: none;
+}
+
+[data-theme='dark'] {
+  --toast-bg: #1f2937;
+  --toast-color: #ffffff;
+}
+
+.animate-enter {
+  animation: enter 200ms ease-out;
+}
+
+.animate-leave {
+  animation: leave 150ms ease-in forwards;
+}
+
+@keyframes enter {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes leave {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
 }

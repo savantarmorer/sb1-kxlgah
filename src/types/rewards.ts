@@ -1,7 +1,9 @@
+export type RewardType = 'xp' | 'coins' | 'item' | 'title' | 'lootbox';
 export type RewardRarity = 'common' | 'rare' | 'epic' | 'legendary';
 
 export interface Reward {
-  type: string;
+  id: string;
+  type: RewardType;
   value: number | string;
   rarity: RewardRarity;
 }

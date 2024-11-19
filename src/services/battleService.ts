@@ -1,6 +1,43 @@
 import { Question, BattleResults } from '../types/battle';
 import { Achievement } from '../types/achievements';
 
+// Sample questions for development
+const SAMPLE_QUESTIONS: Question[] = [
+  {
+    id: '1',
+    question: 'What is the primary purpose of a Constitution?',
+    answers: [
+      'To establish and limit government power',
+      'To collect taxes',
+      'To regulate commerce',
+      'To declare war'
+    ],
+    correctAnswer: 0
+  },
+  {
+    id: '2',
+    question: 'Which principle ensures separation of powers?',
+    answers: [
+      'Federalism',
+      'Checks and balances',
+      'Popular sovereignty',
+      'Individual rights'
+    ],
+    correctAnswer: 1
+  },
+  {
+    id: '3',
+    question: 'What is "habeas corpus"?',
+    answers: [
+      'A tax law',
+      'A property right',
+      'A right to challenge unlawful detention',
+      'A voting right'
+    ],
+    correctAnswer: 2
+  }
+];
+
 /**
  * Service class for managing battle-related operations
  * 
@@ -25,8 +62,8 @@ export class BattleService {
    */
   static async getQuestions(count: number, category?: string, difficulty?: number): Promise<Question[]> {
     // In a real implementation, this would fetch from an API/database
-    const questions = await this.fetchQuestionsFromDB(count, category, difficulty);
-    return this.shuffleQuestions(questions).slice(0, count);
+    // For now, return sample questions
+    return SAMPLE_QUESTIONS.slice(0, count);
   }
 
   /**

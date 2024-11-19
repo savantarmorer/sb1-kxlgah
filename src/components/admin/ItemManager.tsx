@@ -1,267 +1,184 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Plus, Search, Filter, ArrowUpDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Package, Plus, Edit, Trash2, Save } from 'lucide-react';
 import { useGame } from '../../contexts/GameContext';
-import { useAdmin } from '../../hooks/useAdmin';
-import { GameItem, ItemType, ItemRarity } from '../../types/items';
+import { GameItem } from '../../types/items';
+import { supabase } from '../../lib/supabase';
 import Button from '../Button';
-import ItemEditor from './ItemEditor';
-import { useAdminActions } from '../../hooks/useAdminActions';
 
-/**
- * Available item types for filtering
- */
-const ITEM_TYPES: ItemType[] = [
-  'material',
-  'booster',
-  'cosmetic',
-  'consumable',
-  'equipment'
-];
-
-/**
- * Filter interface for item filtering
- */
-interface ItemFilters {
-  search: string;
-  type: ItemType | 'all';
-  rarity: ItemRarity | 'all';
+interface ItemManagerProps {
+  onSave: (data: any, type: string) => Promise<void>;
+  onDelete: (id: string, type: string) => Promise<void>;
+  loading: boolean;
 }
 
-/**
- * Sort configuration interface
- */
-interface ItemSort {
-  field: 'name' | 'cost' | 'type' | 'rarity' | 'createdAt';
-  direction: 'asc' | 'desc';
-}
+export default function ItemManager({ onSave, onDelete, loading }: ItemManagerProps) {
+  const { state, dispatch } = useGame();
+  const [items, setItems] = useState<GameItem[]>(state.items);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<Partial<GameItem>>({});
 
-export default function ItemManager() {
-  const { state } = useGame();
-  const { isAdmin } = useAdmin();
-  const { saveItem } = useAdminActions();
-  const [isLoading, setIsLoading] = useState(false);
-  const [showEditor, setShowEditor] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<Partial<GameItem> | undefined>(undefined);
-  const [filters, setFilters] = useState<ItemFilters>({
-    search: '',
-    type: 'all',
-    rarity: 'all'
-  });
-  const [sort, setSort] = useState<ItemSort>({
-    field: 'createdAt',
-    direction: 'desc'
-  });
-
-  // Sync items with state
   useEffect(() => {
-    const loadItems = async () => {
-      try {
-        setIsLoading(true);
-        // Any additional item loading logic can go here
-      } catch (error) {
-        console.error('Error loading items:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadItems();
   }, []);
 
-  /**
-   * Updates sort configuration
-   */
-  const handleSort = (field: ItemSort['field']) => {
-    setSort(prev => ({
-      field,
-      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc'
-    }));
-  };
-
-  /**
-   * Updates filter settings
-   */
-  const handleFilterChange = (updates: Partial<ItemFilters>) => {
-    setFilters(prev => ({ ...prev, ...updates }));
-  };
-
-  /**
-   * Handles saving or updating an item
-   * @param item - The item to save
-   */
-  const handleSaveItem = async (item: Partial<GameItem>) => {
+  const loadItems = async () => {
     try {
-      setIsLoading(true);
-      await saveItem(item);
-      setShowEditor(false);
+      const { data, error } = await supabase
+        .from('items')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (data) {
+        setItems(data);
+        dispatch({ type: 'SYNC_ITEMS', payload: data });
+      }
+    } catch (error) {
+      console.error('Error loading items:', error);
+    }
+  };
+
+  const handleEdit = (item: GameItem) => {
+    setEditingId(item.id);
+    setEditForm(item);
+  };
+
+  const handleSave = async () => {
+    if (!editForm.id) return;
+    
+    try {
+      await onSave(editForm, 'items');
+      await loadItems();
+      setEditingId(null);
+      setEditForm({});
     } catch (error) {
       console.error('Error saving item:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  /**
-   * Handles item editing
-   * @param item - The item to edit
-   */
-  const handleEditItem = (item: GameItem) => {
-    setSelectedItem(item);
-    setShowEditor(true);
-  };
-
-  /**
-   * Handles item deletion (soft delete)
-   * Uses saveItem with is_active: false instead of a separate delete function
-   * @param itemId - ID of the item to delete
-   */
-  const handleSoftDelete = async (itemId: string) => {
+  const handleDelete = async (id: string) => {
     try {
-      setIsLoading(true);
-      await saveItem({ 
-        id: itemId, 
-        is_active: false 
-      });
+      await onDelete(id, 'items');
+      await loadItems();
     } catch (error) {
       console.error('Error deleting item:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  /**
-   * Filters and sorts items based on current filters and sort settings
-   */
-  const getFilteredItems = (items: GameItem[]) => {
-    return items
-      .filter(item => {
-        const matchesSearch = item.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-                            item.description.toLowerCase().includes(filters.search.toLowerCase());
-        const matchesType = filters.type === 'all' || item.type === filters.type;
-        const matchesRarity = filters.rarity === 'all' || item.rarity === filters.rarity;
-        return matchesSearch && matchesType && matchesRarity;
-      })
-      .sort((a, b) => {
-        const direction = sort.direction === 'asc' ? 1 : -1;
-        switch (sort.field) {
-          case 'name':
-            return direction * a.name.localeCompare(b.name);
-          case 'cost':
-            return direction * (a.cost - b.cost);
-          case 'type':
-            return direction * a.type.localeCompare(b.type);
-          case 'rarity':
-            return direction * a.rarity.localeCompare(b.rarity);
-          default:
-            return direction * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        }
-      });
+  const handleAdd = () => {
+    const newItem: Partial<GameItem> = {
+      id: `item_${Date.now()}`,
+      name: 'New Item',
+      description: 'Item description',
+      type: 'consumable',
+      rarity: 'common',
+      cost: 100,
+      effects: []
+    };
+
+    setEditForm(newItem);
+    setEditingId(newItem.id);
   };
-
-  // Get filtered items based on current filters and sort settings
-  const filteredItems = getFilteredItems(state.items || []);
-
-  // Only render for admin users
-  if (!isAdmin) return null;
 
   return (
     <div className="space-y-6">
-      {/* Header with Add Button */}
       <div className="flex justify-between items-center">
-        <div className="flex items-center space-x-3">
-          <Package className="text-gray-400" size={24} />
-          <h2 className="text-2xl font-bold dark:text-white">Item Management</h2>
-        </div>
+        <h2 className="text-2xl font-bold dark:text-white">Item Manager</h2>
         <Button
           variant="primary"
-          onClick={() => setShowEditor(true)}
-          icon={<Plus size={16} />}
-          disabled={isLoading}
+          onClick={handleAdd}
+          icon={<Plus size={20} />}
+          disabled={loading}
         >
           Add Item
         </Button>
       </div>
 
-      {/* Search and Filters */}
-      <div className="flex space-x-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search items..."
-            value={filters.search}
-            onChange={(e) => handleFilterChange({ search: e.target.value })}
-            className="pl-10 pr-4 py-2 w-full rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800"
-          />
-        </div>
-
-        {/* Type Filter */}
-        <div className="relative">
-          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <select
-            value={filters.type}
-            onChange={(e) => handleFilterChange({ type: e.target.value as ItemType | 'all' })}
-            className="pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800"
+      <div className="space-y-4">
+        {items.map(item => (
+          <motion.div
+            key={item.id}
+            layout
+            className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow"
           >
-            <option value="all">All Types</option>
-            {ITEM_TYPES.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Sort Control */}
-        <div className="flex items-center space-x-2">
-          <select
-            value={sort.field}
-            onChange={(e) => handleSort(e.target.value as ItemSort['field'])}
-            className="rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800"
-          >
-            <option value="createdAt">Date Created</option>
-            <option value="name">Name</option>
-            <option value="cost">Cost</option>
-            <option value="type">Type</option>
-            <option value="rarity">Rarity</option>
-          </select>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSort(prev => ({
-              ...prev,
-              direction: prev.direction === 'asc' ? 'desc' : 'asc'
-            }))}
-            icon={<ArrowUpDown size={16} />}
-          />
-        </div>
-      </div>
-
-      {/* Items Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <AnimatePresence>
-          {filteredItems.map((item) => (
-            <motion.div
-              key={item.id}
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="p-4 rounded-lg border border-gray-200 dark:border-gray-700"
-            >
-              <div className="flex justify-between items-start">
+            {editingId === item.id ? (
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={editForm.name || ''}
+                  onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  placeholder="Item Name"
+                />
+                <textarea
+                  value={editForm.description || ''}
+                  onChange={e => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  placeholder="Item Description"
+                />
+                <div className="flex space-x-4">
+                  <select
+                    value={editForm.type || 'consumable'}
+                    onChange={e => setEditForm(prev => ({ ...prev, type: e.target.value }))}
+                    className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  >
+                    <option value="consumable">Consumable</option>
+                    <option value="equipment">Equipment</option>
+                    <option value="cosmetic">Cosmetic</option>
+                  </select>
+                  <select
+                    value={editForm.rarity || 'common'}
+                    onChange={e => setEditForm(prev => ({ ...prev, rarity: e.target.value }))}
+                    className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  >
+                    <option value="common">Common</option>
+                    <option value="rare">Rare</option>
+                    <option value="epic">Epic</option>
+                    <option value="legendary">Legendary</option>
+                  </select>
+                  <input
+                    type="number"
+                    value={editForm.cost || 0}
+                    onChange={e => setEditForm(prev => ({ ...prev, cost: parseInt(e.target.value) }))}
+                    className="w-24 p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                    placeholder="Cost"
+                  />
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditingId(null);
+                      setEditForm({});
+                    }}
+                    disabled={loading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleSave}
+                    icon={<Save size={20} />}
+                    disabled={loading}
+                  >
+                    Save
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="font-semibold">{item.name}</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {item.description}
-                  </p>
-                  <div className="mt-2 flex items-center space-x-2">
-                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700">
-                      {item.type}
-                    </span>
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                  <h3 className="font-semibold dark:text-white">{item.name}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{item.description}</p>
+                  <div className="flex items-center space-x-2 mt-2">
+                    <Package size={16} className="text-indigo-500" />
+                    <span className="text-sm">{item.cost} coins</span>
+                    <span className={`text-sm px-2 py-1 rounded ${
                       item.rarity === 'legendary' ? 'bg-yellow-100 text-yellow-800' :
                       item.rarity === 'epic' ? 'bg-purple-100 text-purple-800' :
-                      'bg-blue-100 text-blue-800'
+                      item.rarity === 'rare' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
                     }`}>
                       {item.rarity}
                     </span>
@@ -270,61 +187,26 @@ export default function ItemManager() {
                 <div className="flex space-x-2">
                   <Button
                     variant="outline"
-                    size="sm"
-                    onClick={() => handleEditItem(item)}
-                    disabled={isLoading}
+                    onClick={() => handleEdit(item)}
+                    icon={<Edit size={20} />}
+                    disabled={loading}
                   >
                     Edit
                   </Button>
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleSoftDelete(item.id)}
-                    disabled={isLoading}
+                    variant="danger"
+                    onClick={() => handleDelete(item.id)}
+                    icon={<Trash2 size={20} />}
+                    disabled={loading}
                   >
                     Delete
                   </Button>
                 </div>
               </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+            )}
+          </motion.div>
+        ))}
       </div>
-
-      {/* Item Editor Modal */}
-      {showEditor && (
-        <ItemEditor
-          item={selectedItem}
-          onSave={handleSaveItem}
-          onClose={() => setShowEditor(false)}
-        />
-      )}
     </div>
   );
 }
-
-/**
- * Component Dependencies:
- * - useGame: For accessing global game state
- * - useAdmin: For admin permission checks
- * - useAdminActions: For CRUD operations
- * - ItemEditor: For editing item details
- * 
- * State Management:
- * - Local state for UI (filters, sort, loading)
- * - Global state through GameContext
- * 
- * Database Interactions:
- * - Creates/updates items through useAdminActions
- * - Syncs with GameContext state
- * 
- * Used By:
- * - AdminDashboard component
- * 
- * Features:
- * - Item CRUD operations
- * - Search and filtering
- * - Sorting
- * - Responsive grid layout
- * - Animated transitions
- */

@@ -1,115 +1,94 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Gift, Flame, Settings } from 'lucide-react';
 import { useGame } from '../../contexts/GameContext';
-import LoginCalendar from './LoginCalendar';
-import RewardNotification from './RewardNotification';
-import StreakDisplay from './StreakDisplay';
-import AdminPanel from './AdminPanel';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { motion } from 'framer-motion';
+import { Calendar, Gift, Settings } from 'lucide-react';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
-import { formatISO, isToday, parseISO } from 'date-fns';
-
-interface DailyReward {
-  day: number;
-  reward: {
-    type: 'xp' | 'coins' | 'item';
-    value: number;
-    rarity: 'common' | 'rare' | 'epic' | 'legendary';
-  };
-}
+import RewardNotification from './RewardNotification';
+import AdminPanel from './AdminPanel';
+import LoginCalendar from './LoginCalendar';
+import { Reward } from '../../types/rewards';
 
 export default function DailyRewardSystem() {
   const { state, dispatch } = useGame();
+  const { t } = useLanguage();
   const [showNotification, setShowNotification] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
-  const [lastLoginDate, setLastLoginDate] = useLocalStorage<string>('lastLoginDate', '');
-  const [currentReward, setCurrentReward] = useState<DailyReward['reward'] | null>(null);
+  const { value: lastLoginDate, setValue: setLastLoginDate } = useLocalStorage<string>('lastLoginDate', '');
+  const [currentReward, setCurrentReward] = useState<Reward | null>(null);
   const isAdmin = state.user.roles?.includes('admin');
 
-  const DAILY_REWARDS: DailyReward[] = [
-    { day: 1, reward: { type: 'xp', value: 100, rarity: 'common' } },
-    { day: 2, reward: { type: 'coins', value: 50, rarity: 'common' } },
-    { day: 3, reward: { type: 'xp', value: 150, rarity: 'rare' } },
-    { day: 4, reward: { type: 'coins', value: 100, rarity: 'rare' } },
-    { day: 5, reward: { type: 'xp', value: 250, rarity: 'epic' } },
-    { day: 6, reward: { type: 'coins', value: 200, rarity: 'epic' } },
-    { day: 7, reward: { type: 'item', value: 500, rarity: 'legendary' } }
-  ];
+  // Initialize daily rewards
+  const [rewards] = useState([
+    { day: 1, reward: { type: 'coins', value: 100, rarity: 'common' } },
+    { day: 2, reward: { type: 'xp', value: 200, rarity: 'common' } },
+    { day: 3, reward: { type: 'coins', value: 300, rarity: 'rare' } },
+    { day: 4, reward: { type: 'xp', value: 400, rarity: 'rare' } },
+    { day: 5, reward: { type: 'coins', value: 500, rarity: 'epic' } },
+    { day: 6, reward: { type: 'xp', value: 600, rarity: 'epic' } },
+    { day: 7, reward: { type: 'coins', value: 1000, rarity: 'legendary' } }
+  ]);
 
   useEffect(() => {
-    checkDailyLogin();
+    checkDailyReward();
   }, []);
 
-  useEffect(() => {
-    if (state.user.streak > 0) {
-      dispatch({ type: 'UPDATE_STREAK_MULTIPLIER' });
-    }
-  }, [state.user.streak]);
-
-  const checkDailyLogin = () => {
-    const today = formatISO(new Date(), { representation: 'date' });
-    
-    if (!lastLoginDate || !isToday(parseISO(lastLoginDate))) {
-      const dayIndex = (state.user.streak % 7);
-      const reward = DAILY_REWARDS[dayIndex].reward;
-      
+  const checkDailyReward = () => {
+    const today = new Date().toISOString().split('T')[0];
+    if (lastLoginDate !== today) {
+      // Give daily reward
+      const reward = {
+        type: 'coins' as const,
+        value: 100,
+        rarity: 'common' as const
+      };
       setCurrentReward(reward);
       setShowNotification(true);
       setLastLoginDate(today);
       
-      if (!state.loginHistory?.includes(today)) {
-        dispatch({ type: 'INCREMENT_STREAK' });
-        dispatch({ type: 'RECORD_LOGIN', payload: today });
-        dispatch({ type: 'UPDATE_STREAK_MULTIPLIER' });
-      }
+      // Record login
+      dispatch({
+        type: 'RECORD_LOGIN',
+        payload: today
+      });
     }
   };
 
-  const handleClaimReward = () => {
-    setShowNotification(false);
-  };
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Daily Rewards
-        </h2>
+    <div className="card">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center space-x-3">
+          <Calendar className="text-indigo-500" size={24} />
+          <h2 className="heading text-xl">{t('dailyRewards.title')}</h2>
+        </div>
         {isAdmin && (
           <button
             onClick={() => setShowAdminPanel(true)}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="icon-button"
           >
-            <Settings size={20} className="text-gray-600 dark:text-gray-400" />
+            <Settings size={20} />
           </button>
         )}
       </div>
 
-      <StreakDisplay streak={state.user.streak} />
-      
-      <LoginCalendar
-        loginDates={state.loginHistory || []}
-        rewards={DAILY_REWARDS}
+      <LoginCalendar 
+        loginDates={state.loginHistory}
+        rewards={rewards}
         currentStreak={state.user.streak}
       />
 
-      <AnimatePresence>
-        {showNotification && currentReward && (
-          <RewardNotification
-            reward={currentReward}
-            onClaim={handleClaimReward}
-          />
-        )}
-      </AnimatePresence>
+      {showNotification && currentReward && (
+        <RewardNotification
+          reward={currentReward}
+          onClose={() => setShowNotification(false)}
+        />
+      )}
 
       {showAdminPanel && (
-        <AdminPanel
+        <AdminPanel 
           onClose={() => setShowAdminPanel(false)}
-          rewards={DAILY_REWARDS}
-          onUpdateRewards={(newRewards) => {
-            // Handle reward updates
-            console.log('Updated rewards:', newRewards);
-          }}
+          rewards={rewards}
+          onUpdateRewards={() => {}}
         />
       )}
     </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, Loader } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader, User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -13,7 +13,8 @@ export default function AuthForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
+    name: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,9 +23,10 @@ export default function AuthForm() {
     setLoading(true);
 
     try {
-      // For development, accept any credentials
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const { error } = await (isLogin ? signIn : signUp)(formData.email, formData.password);
+      const { error } = isLogin 
+        ? await signIn(formData.email, formData.password)
+        : await signUp(formData.email, formData.password, formData.name);
+
       if (error) {
         setError(error.message);
       }
@@ -66,6 +68,27 @@ export default function AuthForm() {
           </AnimatePresence>
 
           <div className="space-y-4">
+            {!isLogin && (
+              <div>
+                <label htmlFor="name" className="sr-only">
+                  {t('auth.name')}
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    required={!isLogin}
+                    value={formData.name}
+                    onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    className="pl-10 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                    placeholder={t('auth.name')}
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
               <label htmlFor="email" className="sr-only">
                 {t('auth.email')}

@@ -32,12 +32,12 @@ export interface Achievement {
   rarity: AchievementRarity;
   unlocked: boolean;
   unlockedAt: Date;
-  prerequisites: string[];
-  dependents: string[];
+  prerequisites?: string[];
+  dependents?: string[];
   triggerConditions: AchievementTrigger[];
   order: number;
-  progress?: number; // Optional progress tracking (0-100)
-  metadata?: Record<string, any>; // Optional achievement-specific data
+  progress?: number;
+  metadata?: Record<string, any>;
 }
 
 /**

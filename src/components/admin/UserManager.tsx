@@ -1,311 +1,219 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  UserCircle2 as User2Icon,
-  ShieldCheck as ShieldIcon,
-  Star as StarIcon,
-  Camera, 
-  Edit2, 
-  Save, 
-  X as CloseIcon
-} from 'lucide-react';
-import { useGame } from '../../contexts/GameContext';
-import { useAdminActions } from '../../hooks/useAdminActions';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { User, Edit, Trash2, Save, Shield, Star } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 import Button from '../Button';
-import type { User } from '../../types';
 
-/**
- * Interface for user profile updates
- * Extends User type to ensure ID is always present
- */
-interface UserUpdateData extends Partial<User> {
+interface UserData {
   id: string;
-}
-
-/**
- * Interface for user profile form data
- */
-interface UserProfileForm {
   name: string;
-  title: string;
-  avatar: string;
-  roles: string[];
+  email: string;
+  is_super_admin: boolean;
+  level: number;
+  xp: number;
+  coins: number;
+  created_at: string;
 }
 
-/**
- * Interface for component state
- */
-interface UserManagerState {
-  selectedUser: Partial<User> | null;
-  isLoading: boolean;
-  isEditing: boolean;
-  formData: UserProfileForm;
-}
+export default function UserManager() {
+  const [users, setUsers] = useState<UserData[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<Partial<UserData>>({});
 
-/**
- * UserManager Component
- * Handles user management in the admin dashboard
- */
-export default function UserManager(): JSX.Element {
-  const { state } = useGame();
-  const { updateUserProfile } = useAdminActions();
-  
-  // Initialize component state
-  const [localState, setLocalState] = useState<UserManagerState>({
-    selectedUser: null,
-    isLoading: false,
-    isEditing: false,
-    formData: {
-      name: '',
-      title: '',
-      avatar: '',
-      roles: []
-    }
-  });
+  useEffect(() => {
+    loadUsers();
+  }, []);
 
-  /**
-   * Handles user profile updates
-   * @param updates - User data to update
-   */
-  const handleUpdateUser = async (updates: UserUpdateData) => {
-    if (!updates.id) {
-      console.error('User ID is required for updates');
-      return;
+  const loadUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (data) {
+        setUsers(data);
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
     }
+  };
+
+  const handleEdit = (user: UserData) => {
+    setEditingId(user.id);
+    setEditForm(user);
+  };
+
+  const handleSave = async () => {
+    if (!editForm.id) return;
+    setLoading(true);
 
     try {
-      setLocalState(prev => ({ ...prev, isLoading: true }));
-      await updateUserProfile(updates.id, updates);
-      setLocalState(prev => ({ ...prev, isEditing: false }));
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: editForm.name,
+          is_super_admin: editForm.is_super_admin,
+          level: editForm.level,
+          xp: editForm.xp,
+          coins: editForm.coins
+        })
+        .eq('id', editForm.id);
+
+      if (error) throw error;
+
+      await loadUsers();
+      setEditingId(null);
+      setEditForm({});
     } catch (error) {
-      console.error('Error updating user:', error);
+      console.error('Error saving user:', error);
     } finally {
-      setLocalState(prev => ({ ...prev, isLoading: false }));
+      setLoading(false);
     }
   };
 
-  /**
-   * Handles role toggle for users
-   * @param userId - ID of the user
-   * @param role - Role to toggle
-   */
-  const handleToggleRole = (userId: string, role: string) => {
-    const currentRoles = localState.formData.roles;
-    const newRoles = currentRoles.includes(role)
-      ? currentRoles.filter(r => r !== role)
-      : [...currentRoles, role];
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    setLoading(true);
 
-    setLocalState(prev => ({
-      ...prev,
-      formData: {
-        ...prev.formData,
-        roles: newRoles
-      }
-    }));
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', id);
 
-    handleUpdateUser({
-      id: userId,
-      roles: newRoles
-    });
-  };
-
-  /**
-   * Handles edit mode toggle
-   * @param user - User to edit
-   */
-  const handleEditClick = (user: User) => {
-    setLocalState(prev => ({
-      ...prev,
-      selectedUser: user,
-      isEditing: true,
-      formData: {
-        name: user.name,
-        title: user.title || '',
-        avatar: user.avatar || '',
-        roles: user.roles || []
-      }
-    }));
-  };
-
-  /**
-   * Handles form data updates
-   * @param updates - Partial form data updates
-   */
-  const handleFormChange = (updates: Partial<UserProfileForm>) => {
-    setLocalState(prev => ({
-      ...prev,
-      formData: {
-        ...prev.formData,
-        ...updates
-      }
-    }));
+      if (error) throw error;
+      await loadUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* User Profile Section */}
-      <div className="bg-white dark:bg-gray-700 p-6 rounded-lg shadow-sm">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-2">
-            <User2Icon className="text-gray-400" size={24} />
-            <h3 className="text-lg font-semibold dark:text-white">User Profile</h3>
-          </div>
-          <Button
-            variant="primary"
-            onClick={() => handleEditClick(state.user)}
-            icon={<Edit2 size={16} />}
-            disabled={localState.isLoading}
-          >
-            Edit Profile
-          </Button>
-        </div>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold dark:text-white">User Manager</h2>
+      </div>
 
-        <AnimatePresence mode="wait">
-          {localState.isEditing ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="space-y-4"
-            >
-              {/* Edit Form */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Name</label>
+      <div className="space-y-4">
+        {users.map(user => (
+          <motion.div
+            key={user.id}
+            layout
+            className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow"
+          >
+            {editingId === user.id ? (
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={editForm.name || ''}
+                  onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  placeholder="User Name"
+                />
+                <div className="flex space-x-4">
                   <input
-                    type="text"
-                    value={localState.formData.name}
-                    onChange={e => handleFormChange({ name: e.target.value })}
-                    className="input w-full"
-                    disabled={localState.isLoading}
+                    type="number"
+                    value={editForm.level || 1}
+                    onChange={e => setEditForm(prev => ({ ...prev, level: parseInt(e.target.value) }))}
+                    className="w-24 p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                    placeholder="Level"
                   />
+                  <input
+                    type="number"
+                    value={editForm.xp || 0}
+                    onChange={e => setEditForm(prev => ({ ...prev, xp: parseInt(e.target.value) }))}
+                    className="w-24 p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                    placeholder="XP"
+                  />
+                  <input
+                    type="number"
+                    value={editForm.coins || 0}
+                    onChange={e => setEditForm(prev => ({ ...prev, coins: parseInt(e.target.value) }))}
+                    className="w-24 p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                    placeholder="Coins"
+                  />
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={editForm.is_super_admin || false}
+                      onChange={e => setEditForm(prev => ({ ...prev, is_super_admin: e.target.checked }))}
+                      className="form-checkbox h-5 w-5 text-indigo-600"
+                    />
+                    <span>Admin</span>
+                  </label>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Title</label>
-                  <input
-                    type="text"
-                    value={localState.formData.title}
-                    onChange={e => handleFormChange({ title: e.target.value })}
-                    className="input w-full"
-                    disabled={localState.isLoading}
-                  />
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditingId(null);
+                      setEditForm({});
+                    }}
+                    disabled={loading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleSave}
+                    icon={<Save size={20} />}
+                    disabled={loading}
+                  >
+                    Save
+                  </Button>
                 </div>
               </div>
-
-              {/* Role Management */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <ShieldIcon className="text-gray-400" size={16} />
-                  <label className="block text-sm font-medium mb-1">Roles</label>
+            ) : (
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="font-semibold dark:text-white">{user.name}</h3>
+                    {user.is_super_admin && (
+                      <Shield size={16} className="text-indigo-500" />
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{user.email}</p>
+                  <div className="flex items-center space-x-4 mt-2">
+                    <div className="flex items-center space-x-1">
+                      <Star size={16} className="text-yellow-500" />
+                      <span className="text-sm">Level {user.level}</span>
+                    </div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {user.xp.toLocaleString()} XP
+                    </span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {user.coins.toLocaleString()} Coins
+                    </span>
+                  </div>
                 </div>
                 <div className="flex space-x-2">
-                  {['admin', 'moderator', 'premium'].map(role => (
-                    <Button
-                      key={role}
-                      variant={localState.formData.roles.includes(role) ? 'primary' : 'outline'}
-                      size="sm"
-                      onClick={() => handleToggleRole(state.user.id, role)}
-                      disabled={localState.isLoading}
-                      icon={role === 'premium' ? <StarIcon size={14} /> : <ShieldIcon size={14} />}
-                    >
-                      {role}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-end space-x-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setLocalState(prev => ({ ...prev, isEditing: false }))}
-                  disabled={localState.isLoading}
-                  icon={<CloseIcon size={16} />}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => handleUpdateUser({
-                    id: state.user.id,
-                    ...localState.formData
-                  })}
-                  icon={<Save size={16} />}
-                  disabled={localState.isLoading}
-                >
-                  Save Changes
-                </Button>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="space-y-4"
-            >
-              {/* User Info Display */}
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <img
-                    src={state.user.avatar || '/default-avatar.png'}
-                    alt={state.user.name}
-                    className="w-16 h-16 rounded-full object-cover"
-                  />
-                  {localState.isEditing && (
-                    <button className="absolute bottom-0 right-0 p-1 bg-indigo-600 rounded-full">
-                      <Camera size={16} className="text-white" />
-                    </button>
-                  )}
-                </div>
-                <div>
-                  <h4 className="font-semibold dark:text-white">{state.user.name}</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">{state.user.title}</p>
-                </div>
-              </div>
-
-              {/* Role Badges */}
-              <div className="flex flex-wrap gap-2">
-                {state.user.roles?.map(role => (
-                  <span
-                    key={role}
-                    className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
-                      role === 'admin'
-                        ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
-                        : 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100'
-                    }`}
+                  <Button
+                    variant="outline"
+                    onClick={() => handleEdit(user)}
+                    icon={<Edit size={20} />}
+                    disabled={loading}
                   >
-                    {role === 'admin' ? (
-                      <ShieldIcon size={12} className="mr-1" />
-                    ) : role === 'premium' ? (
-                      <StarIcon size={12} className="mr-1" />
-                    ) : null}
-                    {role}
-                  </span>
-                ))}
+                    Edit
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={() => handleDelete(user.id)}
+                    icon={<Trash2 size={20} />}
+                    disabled={loading}
+                  >
+                    Delete
+                  </Button>
+                </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </motion.div>
+        ))}
       </div>
     </div>
   );
 }
-
-/**
- * Component Dependencies:
- * - Lucide icons for UI elements
- * - useGame for state management
- * - useAdminActions for user operations
- * - Button component for interactions
- * - Framer Motion for animations
- * 
- * Icon Usage:
- * - User2Icon: Main profile icon
- * - ShieldIcon: Admin/moderator role indicator
- * - StarIcon: Premium role indicator
- * - Camera: Avatar upload indicator
- * - Edit2: Edit mode toggle
- * - Save: Save changes action
- * - CloseIcon: Cancel/close actions
- */

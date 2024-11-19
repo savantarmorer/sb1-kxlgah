@@ -1,61 +1,94 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useGame } from '../contexts/GameContext';
-import { BattleState, Question, BattleResults } from '../types/battle';
-import { Achievement } from '../types/achievements';
+import { BATTLE_CONFIG } from '../config/battleConfig';
+import { BattleService } from '../services/battleService';
+import { Question } from '../types/battle';
+
+interface BattleState {
+  status: 'searching' | 'ready' | 'battle' | 'completed';
+  currentQuestion: number;
+  timeLeft: number;
+  score: {
+    player: number;
+    opponent: number;
+  };
+  streakBonus: number;
+  questions: Question[];
+}
 
 export function useBattle() {
   const { state, dispatch } = useGame();
   const [battleState, setBattleState] = useState<BattleState>({
     status: 'searching',
     currentQuestion: 0,
-    timeLeft: 30,
+    timeLeft: BATTLE_CONFIG.questionTime,
     score: { player: 0, opponent: 0 },
     streakBonus: 0,
     questions: []
   });
 
-  // Handle battle state transitions
+  // Initialize battle
   useEffect(() => {
-    if (battleState.status === 'searching') {
-      const timer = setTimeout(() => {
-        setBattleState(prev => ({ ...prev, status: 'ready' }));
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
+    const initBattle = async () => {
+      if (battleState.status === 'searching') {
+        // Simulate searching for opponent
+        await new Promise(resolve => setTimeout(resolve, BATTLE_CONFIG.searchTime * 1000));
+        
+        // Get questions
+        const questions = await BattleService.getQuestions(3);
+        
+        setBattleState(prev => ({
+          ...prev,
+          status: 'ready',
+          questions
+        }));
 
-    if (battleState.status === 'ready') {
-      const timer = setTimeout(() => {
-        setBattleState(prev => ({ ...prev, status: 'battle' }));
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [battleState.status]);
+        // Start battle after ready countdown
+        setTimeout(() => {
+          setBattleState(prev => ({
+            ...prev,
+            status: 'battle'
+          }));
+        }, BATTLE_CONFIG.readyTime * 1000);
+      }
+    };
 
-  // Handle timer
+    initBattle();
+  }, []);
+
+  // Timer countdown
   useEffect(() => {
-    if (battleState.status === 'battle') {
-      const timer = setInterval(() => {
-        setBattleState(prev => {
-          if (prev.timeLeft <= 1) {
-            handleAnswer(-1);
-            return { ...prev, timeLeft: 30 };
-          }
-          return { ...prev, timeLeft: prev.timeLeft - 1 };
-        });
+    let timer: NodeJS.Timeout;
+
+    if (battleState.status === 'battle' && battleState.timeLeft > 0) {
+      timer = setInterval(() => {
+        setBattleState(prev => ({
+          ...prev,
+          timeLeft: prev.timeLeft - 1
+        }));
       }, 1000);
-      return () => clearInterval(timer);
     }
-  }, [battleState.status]);
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [battleState.status, battleState.timeLeft]);
+
+  // Auto-progress when time runs out
+  useEffect(() => {
+    if (battleState.timeLeft === 0) {
+      handleAnswer(-1); // -1 indicates timeout
+    }
+  }, [battleState.timeLeft]);
 
   const handleAnswer = useCallback((answerIndex: number) => {
     const currentQuestion = battleState.questions[battleState.currentQuestion];
-    const isCorrect = answerIndex === currentQuestion.correctAnswer;
+    const isCorrect = answerIndex === currentQuestion?.correctAnswer;
     
     if (isCorrect) {
-      const baseXP = 50;
-      const timeBonus = Math.floor(battleState.timeLeft * 0.5);
-      const streakMultiplier = 1 + (state.user.streak * 0.1);
-      const totalXP = Math.floor((baseXP + timeBonus) * streakMultiplier);
+      const timeBonus = BattleService.calculateTimeBonus(battleState.timeLeft);
+      const streakBonus = BattleService.calculateStreakBonus(state.user.streak);
+      const totalXP = BATTLE_CONFIG.rewards.baseXP + timeBonus + streakBonus;
 
       dispatch({
         type: 'ADD_XP',
@@ -71,12 +104,12 @@ export function useBattle() {
           ...prev.score,
           player: prev.score.player + 1
         },
-        streakBonus: prev.streakBonus + Math.floor(totalXP - baseXP)
+        streakBonus: prev.streakBonus + timeBonus + streakBonus
       }));
     }
 
-    // Simulate opponent answer
-    const opponentCorrect = Math.random() > 0.4; // 60% chance to be correct
+    // Simulate opponent
+    const opponentCorrect = Math.random() > 0.4;
     setBattleState(prev => ({
       ...prev,
       score: {
@@ -85,69 +118,60 @@ export function useBattle() {
       }
     }));
 
+    // Progress to next question or end battle
     if (battleState.currentQuestion < battleState.questions.length - 1) {
       setBattleState(prev => ({
         ...prev,
         currentQuestion: prev.currentQuestion + 1,
-        timeLeft: 30
+        timeLeft: BATTLE_CONFIG.questionTime
       }));
     } else {
-      endBattle();
+      setBattleState(prev => ({
+        ...prev,
+        status: 'completed'
+      }));
     }
   }, [battleState, dispatch, state.user.streak]);
 
   const endBattle = useCallback(() => {
     const isVictory = battleState.score.player > battleState.score.opponent;
-    const results: BattleResults = {
-      score: battleState.score.player,
-      totalQuestions: battleState.questions.length,
-      xpEarned: battleState.score.player * 50 + battleState.streakBonus,
-      coinsEarned: battleState.score.player * 20 + (isVictory ? 50 : 0),
-      isVictory,
-      streakBonus: battleState.streakBonus,
-      achievements: []
-    };
-
-    // Handle achievements
-    if (battleState.score.player === battleState.questions.length) {
-      const achievement: Achievement = {
-        id: 'perfect_battle',
-        title: 'Perfect Scholar',
-        description: 'Answer all questions correctly in a battle',
-        category: 'battles',
-        points: 100,
-        rarity: 'legendary',
-        unlocked: true,
-        unlockedAt: new Date(),
-        prerequisites: [],
-        dependents: [],
-        triggerConditions: [{
-          type: 'battle_score',
-          value: 100,
-          comparison: 'eq'
-        }],
-        order: 100
-      };
-      
-      dispatch({
-        type: 'UNLOCK_ACHIEVEMENT',
-        payload: achievement
-      });
-      results.achievements.push(achievement.id);
-    }
-
+    
     if (isVictory) {
       dispatch({ type: 'INCREMENT_STREAK' });
     } else {
       dispatch({ type: 'RESET_STREAK' });
     }
 
-    setBattleState(prev => ({ ...prev, status: 'completed' }));
-    return results;
-  }, [battleState, dispatch]);
+    // Check for achievements
+    const battleResults = {
+      score: battleState.score.player,
+      totalQuestions: battleState.questions.length,
+      xpEarned: battleState.score.player * BATTLE_CONFIG.rewards.baseXP + battleState.streakBonus,
+      coinsEarned: battleState.score.player * BATTLE_CONFIG.rewards.baseCoins,
+      isVictory,
+      streakBonus: battleState.streakBonus,
+      achievements: []
+    };
+
+    const achievements = BattleService.checkAchievements(battleResults, state.user.streak);
+
+    achievements.forEach(achievement => {
+      dispatch({
+        type: 'UNLOCK_ACHIEVEMENT',
+        payload: achievement
+      });
+    });
+
+    return {
+      ...battleResults,
+      coinsEarned: battleResults.coinsEarned + (isVictory ? BATTLE_CONFIG.rewards.victoryBonus.coins : 0),
+      achievements
+    };
+  }, [battleState.score, battleState.streakBonus, battleState.questions.length, dispatch, state.user.streak]);
 
   return {
     battleState,
+    setBattleState,
     handleAnswer,
     endBattle
   };

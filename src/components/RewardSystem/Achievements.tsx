@@ -23,25 +23,29 @@ import { motion } from 'framer-motion';
 import { Award, Lock, CheckCircle } from 'lucide-react';
 import { useAchievements } from '../../hooks/useAchievements';
 import { ACHIEVEMENT_CATEGORIES } from '../Achievements/AchievementSystem';
-import type { AchievementCategory } from '../../types/achievements';
+import type { AchievementCategory, Achievement } from '../../types/achievements';
 
 export function Achievements() {
   const { t } = useLanguage();
   const { achievements } = useAchievements();
 
-  /**
-   * Group achievements by category using normalized structure
-   * This creates an object where keys are category IDs and values are arrays of achievements
-   * Used for organizing achievements in the UI
-   */
-  const achievementsByCategory = achievements.reduce((acc, achievement) => {
+  // Ensure all achievements have required properties
+  const normalizedAchievements = achievements.map(achievement => ({
+    ...achievement,
+    prerequisites: achievement.prerequisites || [],
+    dependents: achievement.dependents || [],
+    triggerConditions: achievement.triggerConditions || [],
+    progress: achievement.progress || 0
+  }));
+
+  const achievementsByCategory = normalizedAchievements.reduce((acc, achievement) => {
     const category = achievement.category;
     if (!acc[category]) {
       acc[category] = [];
     }
     acc[category].push(achievement);
     return acc;
-  }, {} as Record<string, typeof achievements>);
+  }, {} as Record<string, Achievement[]>);
 
   /**
    * Helper function to render category icons
@@ -59,6 +63,14 @@ export function Achievements() {
         size={20} 
       />
     );
+  };
+
+  /**
+   * Helper function to safely get prerequisites
+   * Returns an empty array if prerequisites are not defined
+   */
+  const getPrerequisites = (achievement: Achievement) => {
+    return achievement.prerequisites || [];
   };
 
   return (
@@ -109,12 +121,12 @@ export function Achievements() {
                       <p className="text-muted mt-1 ml-7">{achievement.description}</p>
                       
                       {/* Prerequisites display */}
-                      {achievement.prerequisites.length > 0 && (
+                      {getPrerequisites(achievement).length > 0 && (
                         <p className="text-xs text-muted mt-1 ml-7">
-                          Requires: {achievement.prerequisites.map(preId => {
+                          Requires: {getPrerequisites(achievement).map(preId => {
                             const prereq = achievements.find(a => a.id === preId);
                             return prereq?.title;
-                          }).join(', ')}
+                          }).filter(Boolean).join(', ')}
                         </p>
                       )}
                     </div>
@@ -140,6 +152,7 @@ export function Achievements() {
                           className="progress-bar-fill"
                           initial={{ width: 0 }}
                           animate={{ width: `${achievement.progress}%` }}
+                          transition={{ type: "spring", stiffness: 50, damping: 15 }}
                         />
                       </div>
                     </div>

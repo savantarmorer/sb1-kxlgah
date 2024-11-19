@@ -6,6 +6,7 @@ import { Reward, RewardRarity } from '../types/rewards';
  * Interface for reward claim payload
  */
 interface RewardClaimPayload {
+  id: string;
   type: string;
   value: number;
   rarity: string;
@@ -51,8 +52,9 @@ export function useRewards() {
    */
   const claimReward = (reward: Reward) => {
     // Convert reward value to number if it's a string
-    const claimPayload: RewardClaimPayload = {
-      type: reward.type,
+    const claimPayload: Reward = {
+      id: `reward_${Date.now()}`,
+      type: reward.type as RewardType,
       value: typeof reward.value === 'string' ? parseInt(reward.value, 10) : reward.value,
       rarity: reward.rarity
     };
