@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/gavel.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0F766E" />
+    <meta name="description" content="CepaC Play - Gamificação para estudantes de direito" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://cepacplay.com/" />
+    <meta property="og:title" content="CepaC Play" />
+    <meta property="og:description" content="Gamificação para estudantes de direito" />
+    <meta property="og:image" content="/og-image.png" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://cepacplay.com/" />
+    <meta property="twitter:title" content="CepaC Play" />
+    <meta property="twitter:description" content="Gamificação para estudantes de direito" />
+    <meta property="twitter:image" content="/og-image.png" />
+
+    <!-- Preconnect to Supabase -->
+    <link rel="preconnect" href="https://tvmjnkdgiuwutobtqprh.supabase.co" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link 
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" 
+      rel="stylesheet"
+    />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    
+    <title>CepaC Play</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Error Boundary Fallback -->
+    <div id="error-root" style="display: none;">
+      <div style="
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f3f4f6;
+        padding: 20px;
+        text-align: center;
+      ">
+        <div>
+          <h1 style="
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            color: #1f2937;
+          ">Algo deu errado</h1>
+          <p style="
+            color: #4b5563;
+            margin-bottom: 16px;
+          ">Por favor, tente recarregar a página</p>
+          <button onclick="window.location.reload()" style="
+            background: #0f766e;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+          ">
+            Recarregar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker
+            .register('/sw.js', { scope: '/' })
+            .then(registration => {
+              console.log('ServiceWorker registration successful');
+            })
+            .catch(err => {
+              console.error('ServiceWorker registration failed:', err);
+            });
+        });
+      }
+    </script>
+  </body>
+</html>
