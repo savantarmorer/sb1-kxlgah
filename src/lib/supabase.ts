@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import { Database } from '../types/supabase';
 
 if (!import.meta.env.VITE_SUPABASE_URL) {
   throw new Error('Missing VITE_SUPABASE_URL');
@@ -39,7 +38,7 @@ testConnection().then(isConnected => {
 
 async function testConnection() {
   try {
-    const { data, error } = await supabase.from('profiles').select('count');
+    const { error } = await supabase.from('profiles').select('count');
     if (error) {
       throw error;
     }

@@ -32,6 +32,7 @@ export interface GameState {
   user: User;
   battle: BattleState;
   battleStats: BattleStats;
+  battleRating?: number;
   achievements: Achievement[];
   quests: Quest[];
   completedQuests: string[];

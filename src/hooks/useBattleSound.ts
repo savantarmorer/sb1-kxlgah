@@ -15,6 +15,8 @@ export function useBattleSound() {
   const [playStart] = useSound('/sounds/battle-start.mp3', { volume: effectiveVolume * 0.6 });
 
   const playSound = useCallback((type: 'correct' | 'wrong' | 'victory' | 'defeat' | 'tick' | 'start') => {
+    if (isMuted) return;
+    
     switch (type) {
       case 'correct':
         playCorrect();
@@ -35,7 +37,7 @@ export function useBattleSound() {
         playStart();
         break;
     }
-  }, [playCorrect, playWrong, playVictory, playDefeat, playTick, playStart]);
+  }, [playCorrect, playWrong, playVictory, playDefeat, playTick, playStart, isMuted]);
 
   return { playSound };
 } 

@@ -1,175 +1,189 @@
 import React, { useState } from 'react';
+import { Circle, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Timer, Star, CheckCircle2, Circle } from 'lucide-react';
 import { useGame } from '../../contexts/GameContext';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { Quest, QuestType } from '../../types/quests';
 import LootBox from '../LootBox';
+import { RewardService } from '../../services/rewardService';
+import { useNotification } from '../../contexts/NotificationContext';
+import { useTranslation } from '../../contexts/LanguageContext';
+import { Reward } from '../../types/rewards';
+import { NotificationMessage } from '../../types/notifications';
 
-function getTimeRemaining(deadline: Date) {
-  const total = deadline.getTime() - Date.now();
-  const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
-  const minutes = Math.floor((total / 1000 / 60) % 60);
-  return `${hours}h ${minutes}m`;
+interface MissionListProps {
+  missions: Quest[];
+  onMissionComplete?: (mission: Quest) => void;
 }
 
-export default function MissionList() {
+export default function MissionList({ missions, onMissionComplete }: MissionListProps) {
   const { state, dispatch } = useGame();
-  const { t } = useLanguage();
   const [showLootBox, setShowLootBox] = useState(false);
-  const [currentRewards, setCurrentRewards] = useState<any[]>([]);
+  const [currentRewards, setCurrentRewards] = useState<Reward[]>([]);
+  const { showNotification } = useNotification();
+  const { t } = useTranslation();
 
-  // Ensure quests exist with a default empty array
-  const quests = state.quests || [];
+  const handleCompleteMission = async (mission: Quest) => {
+    if (!mission.id || state.completedQuests.includes(mission.id)) return;
 
-  const canCompleteMission = (mission: any) => {
-    if (mission.requirements) {
-      return mission.requirements.every((req: any) => {
-        switch (req.type) {
-          case 'level':
-            return state.user.level >= req.value;
-          case 'streak':
-            return state.user.streak >= req.value;
-          case 'xp':
-            return state.user.xp >= req.value;
-          default:
-            return true;
-        }
-      });
-    }
-    return true;
-  };
-
-  const handleCompleteMission = (mission: any) => {
-    if (!canCompleteMission(mission)) return;
-
-    const rewards = [
-      {
-        type: 'xp',
-        value: mission.xpReward,
-        rarity: mission.type === 'epic' ? 'legendary' : 'rare'
-      },
-      {
-        type: 'coins',
-        value: mission.coinReward,
-        rarity: 'common'
-      }
-    ];
-
+    // Calculate rewards
+    const rewards = RewardService.calculateRewards({
+      type: 'quest',
+      data: mission
+    });
     setCurrentRewards(rewards);
     setShowLootBox(true);
 
-    dispatch({ type: 'COMPLETE_QUEST', payload: mission.id });
+    // Update game state
+    dispatch({ 
+      type: 'UPDATE_USER_STATS', 
+      payload: {
+        xp: rewards.reduce((sum: number, r: Reward) => r.type === 'xp' ? sum + Number(r.value) : sum, 0),
+        coins: rewards.reduce((sum: number, r: Reward) => r.type === 'coins' ? sum + Number(r.value) : sum, 0),
+        streak: state.user.streak // Maintain current streak
+      }
+    });
+
+    // Mark quest as completed
+    dispatch({ 
+      type: 'COMPLETE_QUEST', 
+      payload: {
+        questId: mission.id,
+        rewards
+      }
+    });
+
+    // Show notification
+    const notificationMessage: NotificationMessage = {
+      title: t('quest.completed'),
+      description: mission.title,
+      questId: mission.id,
+      rewardsList: rewards
+    };
+
+    showNotification({
+      type: 'quest',
+      message: notificationMessage,
+      duration: 5000
+    });
+
+    // Callback if provided
+    if (onMissionComplete) {
+      onMissionComplete(mission);
+    }
+  };
+
+  const getQuestTypeLabel = (type: QuestType): string => {
+    switch (type) {
+      case 'daily':
+        return t('quest.type.daily');
+      case 'weekly':
+        return t('quest.type.weekly');
+      case 'story':
+        return t('quest.type.story');
+      case 'achievement':
+        return t('quest.type.achievement');
+      default:
+        return type;
+    }
+  };
+
+  const getQuestTypeClass = (type: QuestType): string => {
+    switch (type) {
+      case 'daily':
+        return 'badge-success';
+      case 'weekly':
+        return 'badge-info';
+      case 'story':
+        return 'badge-warning';
+      case 'achievement':
+        return 'badge-purple';
+      default:
+        return 'badge-default';
+    }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {t('common.missions')}
-        </h2>
-        <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-          <Timer size={16} />
-          <span>Resets in {getTimeRemaining(new Date(Date.now() + 24 * 60 * 60 * 1000))}</span>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <AnimatePresence mode="popLayout">
-          {quests.map((mission) => (
-            <motion.div
-              key={mission.id}
-              layout
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className={`p-4 rounded-lg border ${
-                state.completedQuests.includes(mission.id)
-                  ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
-                  : 'bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700'
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center space-x-2">
-                    {state.completedQuests.includes(mission.id) ? (
-                      <CheckCircle2 className="text-green-500" size={20} />
-                    ) : (
-                      <Circle className="text-gray-400 dark:text-gray-500" size={20} />
-                    )}
-                    <h3 className="font-semibold text-gray-900 dark:text-white">
-                      {mission.title}
-                    </h3>
-                    <span className={`badge ${
-                      mission.type === 'epic' ? 'badge-warning' :
-                      mission.type === 'weekly' ? 'badge-info' :
-                      'badge-success'
-                    }`}>
-                      {mission.type === 'weekly' ? 'Semanal' : 
-                       mission.type === 'epic' ? 'Épica' : 'Diária'}
-                    </span>
-                  </div>
-                  <p className="text-muted mt-1 ml-7">{mission.description}</p>
-                  {mission.requirements && (
-                    <ul className="mt-2 ml-7 space-y-1">
-                      {mission.requirements.map((req: string, index: number) => (
-                        <li key={index} className="flex items-center space-x-2 text-muted">
-                          <Circle size={6} />
-                          <span>{req}</span>
-                        </li>
-                      ))}
-                    </ul>
+    <div className="space-y-4">
+      <AnimatePresence mode="wait">
+        {missions.map((mission) => (
+          <motion.div
+            key={mission.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={`p-4 rounded-lg border ${
+              mission.id && state.completedQuests.includes(mission.id)
+                ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+                : 'bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700'
+            }`}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="flex items-center space-x-2">
+                  {mission.id && state.completedQuests.includes(mission.id) ? (
+                    <CheckCircle2 className="text-green-500" size={20} />
+                  ) : (
+                    <Circle className="text-gray-400 dark:text-gray-500" size={20} />
                   )}
+                  <h3 className="text-lg font-semibold dark:text-white">
+                    {mission.title}
+                  </h3>
+                  <span className={`badge ${getQuestTypeClass(mission.type)}`}>
+                    {getQuestTypeLabel(mission.type)}
+                  </span>
                 </div>
-                <div className="flex items-center space-x-4">
-                  <div className="text-right">
-                    <div className="flex items-center space-x-1 text-primary">
-                      <Star size={16} />
-                      <span className="font-medium">+{mission.xpReward} XP</span>
-                    </div>
-                    <div className="flex items-center space-x-1 text-yellow-600 dark:text-yellow-400">
-                      <Star size={16} />
-                      <span className="font-medium">+{mission.coinReward} Coins</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleCompleteMission(mission)}
-                    disabled={state.completedQuests.includes(mission.id)}
-                    className={`btn ${
-                      state.completedQuests.includes(mission.id)
-                        ? 'btn-secondary opacity-50 cursor-not-allowed'
-                        : 'btn-primary'
-                    }`}
-                  >
-                    {state.completedQuests.includes(mission.id) ? 'Completed' : 'Complete'}
-                  </button>
-                </div>
+                <p className="text-muted mt-1 ml-7">{mission.description}</p>
+
+                {mission.requirements && (
+                  <ul className="mt-2 ml-7 space-y-1">
+                    {mission.requirements.map((req, index) => (
+                      <li key={index} className="flex items-center space-x-2 text-muted">
+                        <Circle size={6} />
+                        <span>{req.description}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
-              {mission.progress !== undefined && (
-                <div className="mt-3 ml-7">
-                  <div className="flex justify-between text-xs text-muted mb-1">
-                    <span>{t('common.progress')}</span>
-                    <span>{mission.progress}%</span>
-                  </div>
-                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${mission.progress}%` }}
-                      className="h-full bg-indigo-600 dark:bg-indigo-500"
-                    />
-                  </div>
+              <div className="flex flex-col items-end space-y-2">
+                <div className="flex items-center space-x-2">
+                  {mission.rewards?.map((reward, index) => (
+                    <span
+                      key={index}
+                      className="text-sm font-medium text-gray-600 dark:text-gray-300"
+                    >
+                      +{reward.value} {reward.type}
+                    </span>
+                  ))}
                 </div>
-              )}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
+                <button
+                  onClick={() => handleCompleteMission(mission)}
+                  disabled={mission.id && state.completedQuests.includes(mission.id)}
+                  className={`btn ${
+                    mission.id && state.completedQuests.includes(mission.id)
+                      ? 'btn-secondary opacity-50 cursor-not-allowed'
+                      : 'btn-primary'
+                  }`}
+                >
+                  {mission.id && state.completedQuests.includes(mission.id) 
+                    ? t('quest.completed') 
+                    : t('quest.complete')}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
 
-      <LootBox
-        isOpen={showLootBox}
-        onClose={() => setShowLootBox(false)}
-        rewards={currentRewards}
-      />
+      {showLootBox && (
+        <LootBox
+          isOpen={showLootBox}
+          onClose={() => setShowLootBox(false)}
+          rewards={currentRewards}
+          source="quest"
+        />
+      )}
     </div>
   );
 }

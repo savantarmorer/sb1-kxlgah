@@ -24,36 +24,20 @@ interface ActivityItem {
   value?: number;
 }
 
-export default function Statistics() {
+interface StatisticsProps {
+  statistics: GameStatistics;
+  onRefresh: () => Promise<void>;
+  isLoading: boolean;
+  error: string | null;
+}
+
+export default function Statistics({ statistics, onRefresh, isLoading, error }: StatisticsProps) {
   const { state } = useGame();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [stats, setStats] = useState<GameStatistics | null>(null);
 
-  const loadStats = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const data = await StatisticsService.fetchStatistics();
-      if (data) {
-        setStats(data);
-      }
-    } catch (error) {
-      setError('Failed to load statistics');
-      console.error('Error loading statistics:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadStats();
-  }, []);
-
-  const statCards = stats ? [
+  const statCards = statistics ? [
     {
       label: 'Active Users',
-      value: stats.activeUsers,
+      value: statistics.activeUsers,
       icon: <Users className="text-blue-500" />,
       change: '+12%',
       trend: 'up' as const,
@@ -61,7 +45,7 @@ export default function Statistics() {
     },
     {
       label: 'Completed Quests',
-      value: stats.completedQuests,
+      value: statistics.completedQuests,
       icon: <Award className="text-green-500" />,
       change: '+8%',
       trend: 'up' as const,
@@ -69,7 +53,7 @@ export default function Statistics() {
     },
     {
       label: 'Battles Played',
-      value: stats.battlesPlayed,
+      value: statistics.battlesPlayed,
       icon: <Swords className="text-purple-500" />,
       change: '+15%',
       trend: 'up' as const,
@@ -77,7 +61,7 @@ export default function Statistics() {
     },
     {
       label: 'Purchased Items',
-      value: stats.purchasedItems,
+      value: statistics.purchasedItems,
       icon: <TrendingUp className="text-orange-500" />,
       change: '+10%',
       trend: 'up' as const,
@@ -118,7 +102,7 @@ export default function Statistics() {
           <Button
             variant="outline"
             size="sm"
-            onClick={loadStats}
+            onClick={onRefresh}
             disabled={isLoading}
             icon={<RefreshCw className={isLoading ? 'animate-spin' : ''} size={16} />}
           >
@@ -126,7 +110,7 @@ export default function Statistics() {
           </Button>
         </div>
         <div className="space-y-4">
-          {stats?.recentActivity.map((activity, index) => (
+          {statistics?.recentActivity.map((activity, index) => (
             <motion.div
               key={activity.timestamp.toString()}
               initial={{ opacity: 0, x: -20 }}
@@ -151,9 +135,9 @@ export default function Statistics() {
       </div>
 
       {/* Last Updated */}
-      {stats && (
+      {statistics && (
         <div className="flex justify-between items-center text-sm text-gray-600 dark:text-gray-300">
-          <span>Last updated: {format(new Date(stats.lastUpdated), 'PPpp')}</span>
+          <span>Last updated: {format(new Date(statistics.lastUpdated), 'PPpp')}</span>
         </div>
       )}
     </div>

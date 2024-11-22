@@ -1,8 +1,10 @@
 import { useGame } from '../contexts/GameContext';
 import { useAdmin } from './useAdmin';
-import { GameItem, User } from '../types';
+import { User } from '../types/user';
+import { GameItem } from '../types/items';
 import { Quest } from '../types/quests';
 import { supabase } from '../lib/supabase';
+import { convertQuestToDB, convertQuestFromDB } from '../utils/questConverters';
 import { convertItemToDB, convertItemFromDB } from '../utils/supabaseUtils';
 import type { Database } from '../types/supabase';
 
@@ -17,10 +19,6 @@ interface AdminActions {
   } | null>;
 }
 
-/**
- * Hook for admin-only actions
- * Provides administrative functionality with permission checks
- */
 export function useAdminActions(): AdminActions {
   const { dispatch } = useGame();
   const { isAdmin } = useAdmin();
@@ -31,45 +29,24 @@ export function useAdminActions(): AdminActions {
    * @returns Promise with saved quest
    */
   const saveQuest = async (quest: Partial<Quest>): Promise<Quest> => {
-    if (!isAdmin) throw new Error('Admin access required');
+    if (!isAdmin) throw new Error('Unauthorized');
 
     try {
+      const questData = convertQuestToDB(quest);
       const { data, error } = await supabase
         .from('quests')
-        .upsert([{
-          title: quest.title,
-          description: quest.description,
-          type: quest.type || 'daily',
-          status: quest.status || 'available',
-          category: quest.category || 'general',
-          xp_reward: quest.xpReward || 0,
-          coin_reward: quest.coinReward || 0,
-          requirements: quest.requirements || [],
-          progress: quest.progress || 0,
-          is_active: true
-        }])
+        .upsert(questData)
         .select()
         .single();
 
       if (error) throw error;
-      if (!data) throw new Error('No data returned from insert');
-
-      const savedQuest = {
-        ...data,
-        xpReward: data.xp_reward,
-        coinReward: data.coin_reward,
-        isActive: data.is_active
-      } as Quest;
-
-      dispatch({
-        type: quest.id ? 'UPDATE_QUEST' : 'ADD_QUEST',
-        payload: savedQuest
-      });
-
+      const savedQuest = convertQuestFromDB(data);
+      
+      dispatch({ type: 'UPDATE_QUEST', payload: savedQuest });
       return savedQuest;
-    } catch (error) {
-      console.error('Error saving quest:', error);
-      throw error;
+    } catch (err) {
+      console.error('Error saving quest:', err);
+      throw err;
     }
   };
 

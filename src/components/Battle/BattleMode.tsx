@@ -19,6 +19,7 @@ import { RewardService } from '../../services/rewardService';
 import { useBattleStreak } from '../../hooks/useBattleStreak';
 import { Trophy } from 'lucide-react';
 import Modal from '../Modal';
+import { useAdmin } from '../../hooks/useAdmin';
 
 interface BattleModeProps {
   onClose: () => void;
@@ -27,25 +28,32 @@ interface BattleModeProps {
 export default function BattleMode({ onClose }: BattleModeProps) {
   const { t } = useLanguage();
   const { state } = useGame();
-  const { initializeBattle, handleAnswer } = useBattle();
+  const { initializeBattle, handleAnswer, updateTimer } = useBattle();
   const { handleBattleResult } = useBattleStreak();
+  const { isAdmin, debugAdmin } = useAdmin();
   
   const [error, setError] = useState<Error | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showStats, setShowStats] = useState(true);
-  const [opponent, setOpponent] = useState<{ name: string; rating: number } | null>(null);
+  const [opponent, setOpponent] = useState<{ name: string; battleRating: number } | null>(null);
   const [currentRewards, setCurrentRewards] = useState<Reward[]>([]);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
 
   const getBattleRewards = async (isVictory: boolean) => {
-    const baseRewards = RewardService.createBattleRewards(
-      state.battle.rewards?.experienceGained || 0,
-      state.battle.rewards?.coinsEarned || 0,
-      state.battle.score.player >= state.battle.questions.length,
-      state.battle.rewards?.streakBonus
-    );
+    const baseRewards = RewardService.calculateRewards({
+      type: 'battle',
+      data: {
+        isVictory,
+        experienceGained: state.battle.rewards?.experienceGained || 0,
+        coinsEarned: state.battle.rewards?.coinsEarned || 0,
+        streakBonus: state.battle.score.player >= state.battle.questions.length ? 
+          state.user.streak * BATTLE_CONFIG.rewards.streakBonus.multiplier : 0,
+        timeBonus: state.battle.timeLeft * BATTLE_CONFIG.rewards.timeBonus.multiplier
+      }
+    });
 
-    const streakRewards = await handleBattleResult(isVictory);
-    return [...baseRewards, ...streakRewards];
+    setCurrentRewards(baseRewards);
+    setShowConfetti(isVictory);
   };
 
   useEffect(() => {
@@ -53,7 +61,7 @@ export default function BattleMode({ onClose }: BattleModeProps) {
       try {
         const autoOpponent = {
           name: `Bot_${Math.floor(Math.random() * 1000)}`,
-          rating: state.battleRating + (Math.random() * 200 - 100)
+          battleRating: (state.user?.battleRating || 1000) + (Math.random() * 200 - 100)
         };
         setOpponent(autoOpponent);
         
@@ -73,13 +81,29 @@ export default function BattleMode({ onClose }: BattleModeProps) {
   useEffect(() => {
     if (state.battle.status === 'completed') {
       const isVictory = state.battle.score.player > state.battle.score.opponent;
-      getBattleRewards(isVictory).then(setCurrentRewards);
-      
-      if (isVictory) {
-        setShowConfetti(true);
-      }
+      getBattleRewards(isVictory);
     }
   }, [state.battle.status]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[BattleMode Admin Status]', {
+        showAdminPanel,
+        isAdmin,
+        userEmail: state.user?.email,
+        timestamp: new Date().toISOString()
+      });
+      
+      debugAdmin.checkPermissions();
+    }
+  }, [showAdminPanel, isAdmin]);
+
+  useEffect(() => {
+    if (state.battle?.status === 'battle') {
+      const timer = setInterval(updateTimer, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [state.battle?.status, updateTimer]);
 
   const handleQuestionAnswer = async (index: number) => {
     try {
@@ -164,6 +188,11 @@ export default function BattleMode({ onClose }: BattleModeProps) {
                 streakBonus: state.battle.rewards?.streakBonus || 0,
                 timeBonus: state.battle.rewards?.timeBonus || 0,
                 scorePercentage: (state.battle.playerAnswers.filter(a => a).length / state.battle.questions.length) * 100,
+                opponent: {
+                  id: state.battle.currentOpponent || 'bot',
+                  name: 'Opponent',
+                  rating: state.battle.opponentRating || 1000
+                },
                 rewards: {
                   items: [], 
                   achievements: state.battle.rewards?.achievements || [],
@@ -210,10 +239,19 @@ export default function BattleMode({ onClose }: BattleModeProps) {
             <div className="flex items-center space-x-3">
               {opponent && (
                 <span className="text-sm font-normal text-gray-600 dark:text-gray-400">
-                  vs {opponent.name} ({opponent.rating})
+                  vs {opponent.name} ({opponent.battleRating})
                 </span>
               )}
             </div>
+            {isAdmin && (
+              <Button
+                variant="secondary"
+                onClick={() => setShowAdminPanel(true)}
+                className="flex items-center space-x-2"
+              >
+                Admin Panel
+              </Button>
+            )}
             {!showStats && (
               <Button
                 variant="secondary"
@@ -228,6 +266,24 @@ export default function BattleMode({ onClose }: BattleModeProps) {
 
           {/* Battle Content */}
           {renderContent()}
+
+          {isAdmin && process.env.NODE_ENV === 'development' && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                debugAdmin.logState();
+                console.log('[Battle State Debug]', {
+                  opponent,
+                  battleState: state.battle,
+                  rewards: currentRewards,
+                  timestamp: new Date().toISOString()
+                });
+              }}
+              className="flex items-center space-x-2 mt-2"
+            >
+              Debug State
+            </Button>
+          )}
         </div>
       )}
     </Modal>

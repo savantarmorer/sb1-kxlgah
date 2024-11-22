@@ -1,7 +1,6 @@
 import { BATTLE_CONFIG } from '../config/battleConfig';
 import { supabase } from '../lib/supabase';
 import { BattleResults, BattleQuestion, BattleStats } from '../types/battle';
-import { mockQuestions } from '../lib/supabase';
 
 export class BattleService {
   static async getQuestions(
@@ -10,13 +9,12 @@ export class BattleService {
     difficulty?: number
   ): Promise<BattleQuestion[]> {
     try {
-      // Query from quiz_questions table
       let query = supabase
         .from('quiz_questions')
         .select(`
           id,
           question,
-          quiz_answers (
+          quiz_answers!inner (
             id,
             answer_text,
             is_correct
@@ -24,7 +22,9 @@ export class BattleService {
           category_id,
           difficulty
         `)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1000);
 
       if (category) {
         query = query.eq('category_id', category);
@@ -34,38 +34,42 @@ export class BattleService {
         query = query.eq('difficulty', difficulty);
       }
 
-      const { data, error } = await query
-        .limit(count)
-        .order('RANDOM()');
+      const { data, error } = await query;
 
       if (error) {
-        console.warn('Using mock questions due to error:', error);
-        return mockQuestions;
+        console.error('Database query error:', error);
+        throw error;
       }
 
       if (!data || data.length === 0) {
-        console.warn('No questions found in database, using mock questions');
-        return mockQuestions;
+        throw new Error('No questions found in database');
       }
 
-      // Transform the data into BattleQuestion format
-      return data.map(q => {
-        const answers = q.quiz_answers;
-        const correctAnswerIndex = answers.findIndex(a => a.is_correct);
-        
-        return {
+      // Filter valid questions and map to correct format
+      const validQuestions = data
+        .filter(q => q.quiz_answers?.length >= 4)
+        .map(q => ({
           id: q.id,
           question: q.question,
-          answers: answers.map(a => a.answer_text),
-          correctAnswer: correctAnswerIndex,
+          answers: q.quiz_answers.map(a => a.answer_text),
+          correctAnswer: q.quiz_answers.findIndex(a => a.is_correct),
           category: q.category_id,
-          difficulty: q.difficulty,
-          timeLimit: BATTLE_CONFIG.timePerQuestion
-        };
-      });
+          difficulty: q.difficulty
+        }))
+        .filter(q => q.answers.length >= 4 && q.correctAnswer !== -1);
+
+      if (validQuestions.length < count) {
+        throw new Error(`Not enough valid questions found. Required: ${count}, Found: ${validQuestions.length}`);
+      }
+
+      // Shuffle and return required number of questions
+      return validQuestions
+        .sort(() => Math.random() - 0.5)
+        .slice(0, count);
+
     } catch (error) {
-      console.warn('Using mock questions due to error:', error);
-      return mockQuestions;
+      console.error('Error fetching questions:', error);
+      throw error;
     }
   }
 
@@ -86,12 +90,13 @@ export class BattleService {
           currentStats?.highestStreak || 0,
           results.streakBonus / BATTLE_CONFIG.rewards.streakBonus.multiplier
         ),
-        average_score: this.calculateNewAverageScore(
+        score_average: this.calculateNewAverageScore(
           results.scorePercentage,
           currentStats?.averageScore || 0,
           currentStats?.totalBattles || 0
         ),
-        last_battle_date: new Date().toISOString()
+        last_battle_date: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
       const { error } = await supabase
@@ -104,7 +109,6 @@ export class BattleService {
       await this.recordBattleHistory(userId, results);
     } catch (error) {
       console.error('Error updating battle stats:', error);
-      // Don't throw - allow battle to continue even if stats update fails
     }
   }
 

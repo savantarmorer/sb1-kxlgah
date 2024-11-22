@@ -1,6 +1,6 @@
 import { useGame } from '../contexts/GameContext';
 import { useAdmin } from './useAdmin';
-import { GameItem, User } from '../types';
+import { GameItem, User } from '../types/items';
 import { Quest, QuestRequirement, QuestType } from '../types/quests';
 import { supabase } from '../lib/supabase';
 import { 
@@ -10,6 +10,8 @@ import {
   convertItemFromDB 
 } from '../utils/supabaseUtils';
 import type { Database } from '../types/supabase';
+import { Achievement } from '../types/achievements';
+import { Reward } from '../types/rewards';
 
 /**
  * Interface for admin-specific actions

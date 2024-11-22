@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useGame } from '../contexts/GameContext';
 import { format } from 'date-fns';
 import { Achievement, AchievementTrigger } from '../types/achievements';
+import { supabase } from '../lib/supabase';
 
 /**
  * Type for streak-specific trigger conditions
@@ -56,78 +57,45 @@ function createStreakAchievement(
 export function useStreak() {
   const { state, dispatch } = useGame();
 
-  /**
-   * Checks and updates streak status
-   * Called on component mount and date changes
-   */
-  useEffect(() => {
-    const checkStreak = () => {
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const lastLogin = state.lastLoginDate;
+  const handleStreakUpdate = async (isVictory: boolean) => {
+    const newStreak = isVictory ? state.user.streak + 1 : 0;
+    
+    // Update streak in database
+    try {
+      const { error } = await supabase
+        .from('user_progress')
+        .update({
+          streak: newStreak,
+          highest_streak: Math.max(state.user.highestStreak || 0, newStreak),
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', state.user.id);
 
-      if (!lastLogin) {
-        dispatch({ type: 'RECORD_LOGIN', payload: today });
-        return;
-      }
+      if (error) throw error;
 
-      const lastLoginDate = new Date(lastLogin);
-      const currentDate = new Date();
-      const daysDiff = Math.floor((currentDate.getTime() - lastLoginDate.getTime()) / (1000 * 60 * 60 * 24));
-
-      if (daysDiff === 1) {
-        // Consecutive day login
-        dispatch({ type: 'INCREMENT_STREAK' });
-        dispatch({ type: 'RECORD_LOGIN', payload: today });
-      } else if (daysDiff > 1) {
-        // Streak broken
-        if (state.user.streak >= 7) {
-          // Create streak lost achievement
-          const achievement = createStreakAchievement(
-            'streak_lost',
-            'Back to Square One',
-            'Lose a streak of 7 or more days',
-            50,
-            {
-              type: 'streak',
-              value: 7,
-              comparison: 'gte'
-            }
-          );
-
-          dispatch({
-            type: 'UNLOCK_ACHIEVEMENT',
-            payload: achievement
-          });
+      // Update local state
+      dispatch({
+        type: 'UPDATE_STREAK',
+        payload: {
+          streak: newStreak,
+          highestStreak: Math.max(state.user.highestStreak || 0, newStreak)
         }
+      });
 
-        dispatch({ type: 'RESET_STREAK' });
-        dispatch({ type: 'RECORD_LOGIN', payload: today });
+      // Check for streak-based rewards
+      if (newStreak > 0 && newStreak % 5 === 0) {
+        const streakReward = calculateStreakReward(newStreak);
+        dispatch({
+          type: 'ADD_REWARD',
+          payload: streakReward
+        });
       }
-
-      // Update streak multiplier
-      dispatch({ type: 'UPDATE_STREAK_MULTIPLIER' });
-    };
-
-    checkStreak();
-  }, [state.lastLoginDate]);
-
-  /**
-   * Gets current streak bonus multiplier
-   * @returns Current streak multiplier value
-   */
-  const getStreakBonus = (): number => {
-    const streak = state.user.streak;
-    if (streak < 3) return 1;
-    if (streak < 7) return 1.2;
-    if (streak < 14) return 1.5;
-    if (streak < 30) return 2;
-    return 3;
+    } catch (err) {
+      console.error('Error updating streak:', err);
+    }
   };
 
-  return {
-    streak: state.user.streak,
-    streakBonus: getStreakBonus()
-  };
+  return { handleStreakUpdate };
 }
 
 /**

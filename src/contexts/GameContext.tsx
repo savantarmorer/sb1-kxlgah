@@ -1,7 +1,14 @@
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { GameState } from '../types/game';
 import { BattleState, BattleStatus } from '../types/battle';
 import { BATTLE_CONFIG } from '../config/battleConfig';
+import { supabase } from '../lib/supabase';
+import { useAuth } from './AuthContext';
+import { User } from '../types/user';
+import { Achievement } from '../types/achievements';
+import { Reward } from '../types/rewards';
+import { BattleStats } from '../types/battle';
+import { GameStatistics } from '../types/game';
 
 type GameAction = 
   // Battle Actions
@@ -15,7 +22,13 @@ type GameAction =
   | { type: 'ADD_XP'; payload: number }
   | { type: 'ADD_COINS'; payload: number }
   | { type: 'UNLOCK_ACHIEVEMENT'; payload: Achievement }
-  | { type: 'CLAIM_REWARD'; payload: Reward };
+  | { type: 'CLAIM_REWARD'; payload: Reward }
+  | { type: 'UPDATE_USER_STATS'; payload: { xp: number; coins: number; streak: number } }
+  | { type: 'UPDATE_BATTLE_STATS'; payload: Partial<BattleStats> }
+  | { type: 'LEVEL_UP'; payload: { level: number; rewards: Reward[] } }
+  | { type: 'SYNC_STATISTICS'; payload: GameStatistics }
+  | { type: 'UPDATE_STREAK_MULTIPLIER' }
+  | { type: 'COMPLETE_QUEST'; payload: { questId: string; rewards: Reward[] } };
 
 const initialState: GameState = {
   user: {
@@ -27,7 +40,14 @@ const initialState: GameState = {
     coins: 0,
     streak: 0,
     battleRating: BATTLE_CONFIG.matchmaking.defaultRating,
-    roles: ['user']
+    roles: ['user'],
+    achievements: [],
+    rewardMultipliers: {
+      xp: 1,
+      coins: 1
+    },
+    streakMultiplier: 1,
+    title: ''
   },
   battle: {
     status: 'searching',
@@ -37,8 +57,7 @@ const initialState: GameState = {
     score: { player: 0, opponent: 0 },
     timePerQuestion: BATTLE_CONFIG.timePerQuestion,
     playerAnswers: [],
-    winStreak: 0,
-    totalBattles: 0
+    timeLeft: BATTLE_CONFIG.timePerQuestion
   },
   battleStats: {
     totalBattles: 0,
@@ -78,7 +97,37 @@ const GameContext = createContext<{
 } | undefined>(undefined);
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
+  const { user: authUser } = useAuth();
   const [state, dispatch] = useReducer(gameReducer, initialState);
+
+  // Sync with database whenever relevant state changes
+  useEffect(() => {
+    if (state.user?.id) {
+      updateUserProgress(state.user.id, {
+        xp: state.user.xp,
+        coins: state.user.coins,
+        level: state.user.level,
+        streak: state.user.streak,
+        battleStats: state.battleStats
+      });
+    }
+  }, [state.user?.xp, state.user?.coins, state.user?.level, state.user?.streak, state.battleStats]);
+
+  const updateUserProgress = async (userId: string, progress: any) => {
+    try {
+      const { error } = await supabase
+        .from('user_progress')
+        .upsert({
+          user_id: userId,
+          ...progress,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error updating user progress:', err);
+    }
+  };
 
   return (
     <GameContext.Provider value={{ state, dispatch }}>
@@ -179,6 +228,70 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           ...state.user,
           ...(action.payload.type === 'xp' && { xp: state.user.xp + Number(action.payload.value) }),
           ...(action.payload.type === 'coins' && { coins: state.user.coins + Number(action.payload.value) })
+        }
+      };
+
+    case 'UPDATE_USER_STATS':
+      return {
+        ...state,
+        user: {
+          ...state.user,
+          xp: state.user.xp + action.payload.xp,
+          coins: state.user.coins + action.payload.coins,
+          streak: action.payload.streak
+        }
+      };
+
+    case 'UPDATE_BATTLE_STATS':
+      return {
+        ...state,
+        battleStats: {
+          ...state.battleStats,
+          ...action.payload
+        }
+      };
+
+    case 'LEVEL_UP':
+      return {
+        ...state,
+        user: {
+          ...state.user,
+          level: action.payload.level,
+          xp: state.user.xp + Number(action.payload.rewards[0].value),
+          coins: state.user.coins + Number(action.payload.rewards[1].value)
+        }
+      };
+
+    case 'SYNC_STATISTICS':
+      return {
+        ...state,
+        statistics: {
+          ...state.statistics,
+          ...action.payload
+        }
+      };
+
+    case 'UPDATE_STREAK_MULTIPLIER':
+      return {
+        ...state,
+        user: {
+          ...state.user,
+          streakMultiplier: state.user.streakMultiplier + 1
+        }
+      };
+
+    case 'COMPLETE_QUEST':
+      return {
+        ...state,
+        completedQuests: [...state.completedQuests, action.payload.questId],
+        user: {
+          ...state.user,
+          xp: state.user.xp + action.payload.rewards.reduce(
+            (sum, r) => r.type === 'xp' ? sum + Number(r.value) : sum, 0
+          ),
+          coins: state.user.coins + action.payload.rewards.reduce(
+            (sum, r) => r.type === 'coins' ? sum + Number(r.value) : sum, 0
+          )
         }
       };
 

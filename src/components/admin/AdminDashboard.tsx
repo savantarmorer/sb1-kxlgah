@@ -94,6 +94,8 @@ export default function AdminDashboard({ onClose }: AdminDashboardProps) {
           <Statistics
             statistics={state.statistics}
             onRefresh={loadStatistics}
+            isLoading={loading}
+            error={error}
           />
         );
     }

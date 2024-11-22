@@ -1,4 +1,3 @@
-
 /**
  * Battle status enum
  * Represents different states of a battle
@@ -64,16 +63,21 @@ export interface BattleState {
  */
 export interface BattleResults {
   isVictory: boolean;
-  totalScore: number;
   score: number;
   playerScore: number;
   experienceGained: number;
   coinsEarned: number;
   streakBonus: number;
   timeBonus: number;
-  scorePercentage: number;
+  totalScore: number;
   totalQuestions: number;
+  scorePercentage: number;
   xpEarned: number;
+  opponent: {
+    id: string;
+    name: string;
+    rating: number;
+  };
   rewards: {
     items: any[];
     achievements: string[];
@@ -128,4 +132,10 @@ export interface BattleStats {
  * - Configurable scoring
  * - Comprehensive statistics
  */ 
+
+export interface InitializeBattlePayload {
+  questions: BattleQuestion[];
+  timePerQuestion: number;
+  timeLeft?: number;
+}
 

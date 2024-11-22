@@ -1,83 +1,23 @@
+import React from 'react';
 import { motion } from 'framer-motion';
-import { Star, Trophy, Zap } from 'lucide-react';
 import { useLevelSystem } from '../../hooks/useLevelSystem';
 
-/**
- * LevelProgress Component
- * 
- * Displays the user's current level, XP progress, and progress to next level
- * Used in: UserProfile, Dashboard
- * Depends on: useLevelSystem hook, GameContext (indirectly)
- */
-export function LevelProgress() {
-  // Get level data from the hook
-  const { 
-    currentLevel,
-    currentXP,
-    progress,
-    xpToNextLevel
-  } = useLevelSystem();
+export default function LevelProgress() {
+  const { currentLevel, progress, xpToNextLevel } = useLevelSystem();
 
   return (
-    <div className="card">
-      {/* Level Header Section
-       * Shows current level and total XP
-       * Updates whenever XP changes via GameContext
-       */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <Trophy className="text-yellow-500" size={24} />
-          <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white">
-              Level {currentLevel}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {currentXP.toLocaleString()} XP Total
-            </p>
-          </div>
-        </div>
-
-        {/* XP Remaining Display
-         * Shows XP needed for next level
-         * Updates based on current progress
-         */}
-        <div className="flex items-center space-x-2">
-          <Zap className="text-indigo-500" size={16} />
-          <span className="font-medium text-indigo-600 dark:text-indigo-400">
-            {xpToNextLevel.toLocaleString()} XP to next level
-          </span>
-        </div>
+    <div className="space-y-2">
+      <div className="flex justify-between items-center">
+        <span className="text-sm font-medium">Level {currentLevel}</span>
+        <span className="text-xs text-gray-600">{xpToNextLevel} XP to next level</span>
       </div>
-
-      {/* Progress Bar Section
-       * Visual representation of level progress
-       * Animated using Framer Motion
-       */}
-      <div className="relative pt-1">
-        <div className="flex mb-2 items-center justify-between">
-          <div>
-            <Star className="text-yellow-500" size={16} />
-          </div>
-          <div className="text-right">
-            <span className="text-sm font-semibold inline-block text-indigo-600 dark:text-indigo-400">
-              {Math.floor(progress)}%
-            </span>
-          </div>
-        </div>
-
-        {/* Animated Progress Bar
-         * Uses Framer Motion for smooth transitions
-         * Progress calculated by useLevelSystem hook
-         * Updates whenever XP changes
-         */}
-        <div className="overflow-hidden h-2 mb-4 text-xs flex rounded-full bg-gray-200 dark:bg-gray-700">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ type: "spring", stiffness: 50, damping: 15 }}
-            className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-indigo-500 to-indigo-600 dark:from-indigo-400 dark:to-indigo-500"
-          />
-        </div>
+      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+        <motion.div
+          className="h-full bg-indigo-500"
+          initial={{ width: 0 }}
+          animate={{ width: `${progress}%` }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        />
       </div>
     </div>
   );

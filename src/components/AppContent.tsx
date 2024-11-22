@@ -9,10 +9,8 @@ import { Achievements } from './RewardSystem/Achievements';
 import DailyRewardSystem from './DailyRewards/DailyRewardSystem';
 import ProfileDashboard from './UserProfile/ProfileDashboard';
 import Inventory from './UserProfile/Inventory';
-import { BattleMode } from './Battle/';
+import { BattleMode } from './Battle';
 import AdminDashboard from './admin/AdminDashboard';
-import { Swords } from 'lucide-react';
-import Button from './Button';
 import { View } from '../types/navigation';
 
 export default function AppContent() {
@@ -25,45 +23,8 @@ export default function AppContent() {
       case 'home':
         return (
           <div className="space-y-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Welcome back, {state.user.name}!
-              </h2>
-              <Button
-                onClick={() => setCurrentView('battle')}
-                variant="primary"
-                className="flex items-center space-x-2"
-              >
-                <Swords size={20} />
-                <span>Battle Mode</span>
-              </Button>
-            </div>
-
-            {state.battleStats && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="card">
-                  <h3 className="text-lg font-semibold mb-2">Battle Record</h3>
-                  <p className="text-2xl font-bold text-brand-teal-600">
-                    {state.battleStats.wins}W - {state.battleStats.losses}L
-                  </p>
-                </div>
-                <div className="card">
-                  <h3 className="text-lg font-semibold mb-2">Win Streak</h3>
-                  <p className="text-2xl font-bold text-orange-500">
-                    {state.battleStats.winStreak}
-                  </p>
-                </div>
-                <div className="card">
-                  <h3 className="text-lg font-semibold mb-2">Battle Rating</h3>
-                  <p className="text-2xl font-bold text-purple-600">
-                    {state.battleRating}
-                  </p>
-                </div>
-              </div>
-            )}
-
             <DailyRewardSystem />
-            <Achievements />
+            <QuestSystem />
           </div>
         );
       case 'leaderboard':
@@ -77,20 +38,20 @@ export default function AppContent() {
       case 'inventory':
         return <Inventory />;
       case 'admin':
-        return isAdmin ? <AdminDashboard onClose={() => setCurrentView('home')} /> : <div>Access Denied</div>;
+        return isAdmin ? <AdminDashboard onClose={() => setCurrentView('home')} /> : null;
       case 'battle':
         return <BattleMode onClose={() => setCurrentView('home')} />;
       default:
-        return <div>Content not found</div>;
+        return null;
     }
   };
 
   return (
     <div className="app-container">
-      {/* Header */}
+      {/* Header - Always show UserProgress */}
       <header className="app-header">
         <div className="content-container">
-          <UserProgress showSettings={true} />
+          <UserProgress showSettings={currentView === 'home'} />
         </div>
       </header>
 

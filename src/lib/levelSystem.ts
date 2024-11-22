@@ -1,4 +1,5 @@
 import { GameConfig } from '../config/gameConfig';
+import { Reward } from '../types/rewards';
 
 /**
  * Interface for level-up rewards
@@ -101,41 +102,21 @@ export class LevelSystem {
    * @param level - Target level
    * @returns Array of rewards
    */
-  static getLevelRewards(level: number): LevelUpReward[] {
-    const rewards: LevelUpReward[] = [
+  static getLevelRewards(level: number): Reward[] {
+    return [
       {
+        id: `level_${level}_xp`,
+        type: 'xp',
+        value: level * 100,
+        rarity: level % 10 === 0 ? 'legendary' : level % 5 === 0 ? 'epic' : 'rare'
+      },
+      {
+        id: `level_${level}_coins`,
         type: 'coins',
-        rarity: 'common',
-        value: level * GameConfig.rewards.coinsPerLevel
+        value: level * 50,
+        rarity: 'common'
       }
     ];
-
-    // Milestone rewards
-    if (level % 5 === 0) {
-      rewards.push({
-        type: 'lootbox',
-        rarity: 'rare',
-        value: 'milestone_reward'
-      });
-    }
-
-    if (level % 10 === 0) {
-      rewards.push({
-        type: 'title',
-        rarity: 'epic',
-        value: `level_${level}_master`
-      });
-    }
-
-    if (level === this.MAX_LEVEL) {
-      rewards.push({
-        type: 'title',
-        rarity: 'legendary',
-        value: 'grand_master'
-      });
-    }
-
-    return rewards;
   }
 }
 

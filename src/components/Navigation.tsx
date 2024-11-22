@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, Scroll, Store, User2, Home, Package } from 'lucide-react';
+import { Trophy, Scroll, Store, User2, Home, Package, Shield, Swords } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 type View = 'home' | 'leaderboard' | 'quests' | 'store' | 'profile' | 'inventory' | 'admin';
@@ -12,48 +12,39 @@ interface NavigationProps {
 }
 
 export default function Navigation({ currentView, onViewChange, showInventory = false, isAdmin = false }: NavigationProps) {
+  const navItems = [
+    { id: 'home', label: 'Home', icon: Home },
+    { id: 'battle', label: 'Battle', icon: Swords },
+    { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+    { id: 'quests', label: 'Quests', icon: Scroll },
+    { id: 'store', label: 'Store', icon: Store },
+    { id: 'profile', label: 'Profile', icon: User2 }
+  ];
+
+  if (showInventory) {
+    navItems.push({ id: 'inventory', label: 'Inventory', icon: Package });
+  }
+
+  if (isAdmin) {
+    navItems.push({ id: 'admin', label: 'Admin', icon: Shield });
+  }
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="h-16 flex items-center justify-around">
-          <NavItem
-            icon={<Home />}
-            label="Home"
-            isActive={currentView === 'home'}
-            onClick={() => onViewChange('home')}
-          />
-          <NavItem
-            icon={<Trophy />}
-            label="Ranking"
-            isActive={currentView === 'leaderboard'}
-            onClick={() => onViewChange('leaderboard')}
-          />
-          <NavItem
-            icon={<Scroll />}
-            label="Missões"
-            isActive={currentView === 'quests'}
-            onClick={() => onViewChange('quests')}
-          />
-          <NavItem
-            icon={<Store />}
-            label="Loja"
-            isActive={currentView === 'store'}
-            onClick={() => onViewChange('store')}
-          />
-          {showInventory && (
-            <NavItem
-              icon={<Package />}
-              label="Inventário"
-              isActive={currentView === 'inventory'}
-              onClick={() => onViewChange('inventory')}
-            />
-          )}
-          <NavItem
-            icon={<User2 />}
-            label="Perfil"
-            isActive={currentView === 'profile'}
-            onClick={() => onViewChange('profile')}
-          />
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavItem
+                key={item.id}
+                icon={<Icon />}
+                label={item.label}
+                isActive={currentView === item.id}
+                onClick={() => onViewChange(item.id as View)}
+              />
+            );
+          })}
         </div>
       </div>
     </nav>

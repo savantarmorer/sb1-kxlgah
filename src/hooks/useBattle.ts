@@ -1,162 +1,98 @@
 import { useCallback } from 'react';
 import { useGame } from '../contexts/GameContext';
 import { BattleService } from '../services/battleService';
-import { Achievement } from '../types/achievements';
-import { BattleResults } from '../types/battle';
 import { BATTLE_CONFIG } from '../config/battleConfig';
-import { User } from '../types/user';
+import { BattleResults } from '../types/battle';
+import { useLevelSystem } from './useLevelSystem';
+import { useAchievements } from '../hooks/useAchievements';
+import { useBattleSound } from '../hooks/useBattleSound';
+import { RewardService } from '../services/rewardService';
+import { useNotification } from '../contexts/NotificationContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 export function useBattle() {
   const { state, dispatch } = useGame();
+  const { checkAchievements } = useAchievements();
+  const { playSound } = useBattleSound();
+  const { showNotification } = useNotification();
+  const { t } = useTranslation();
+  const { currentLevel, currentXP } = useLevelSystem();
   
-  const userWithRating = {
-    ...state.user,
-    battleRating: state.user.battleRating ?? BATTLE_CONFIG.matchmaking.defaultRating
-  } satisfies User;
+  const handleAnswer = useCallback(async (answerIndex: number) => {
+    if (!state.battle) return;
 
-  const handleBattleEnd = useCallback(async (finalScore: { player: number; opponent: number }, timeBonus: number) => {
-    try {
-      const results = BattleService.calculateResults(
-        finalScore.player,
-        state.battle.questions.length,
-        userWithRating.streak,
-        timeBonus
-      );
+    const isCorrect = answerIndex === state.battle.questions[state.battle.currentQuestion].correctAnswer;
+    const newScore = {
+      player: state.battle.score.player + (isCorrect ? 1 : 0),
+      opponent: state.battle.score.opponent + (Math.random() > 0.4 ? 1 : 0) // Opponent has 60% chance
+    };
 
-      // Update battle stats
-      if (state.battleStats) {
-        await BattleService.updateStats(userWithRating.id, results, state.battleStats);
+    // Update score and progress
+    dispatch({
+      type: 'UPDATE_BATTLE_PROGRESS',
+      payload: {
+        score: newScore,
+        playerAnswers: [...state.battle.playerAnswers, isCorrect],
+        currentQuestion: state.battle.currentQuestion + 1,
+        timeLeft: BATTLE_CONFIG.timePerQuestion // Reset timer for next question
       }
+    });
 
-      // Update rating if opponent exists
-      if (state.battle.currentOpponent) {
-        const opponentRating = state.battle.opponentRating ?? BATTLE_CONFIG.matchmaking.defaultRating;
-        
-        const ratingChange = BattleService.calculateRatingChange(
-          userWithRating.battleRating,
-          opponentRating,
-          results.isVictory
-        );
-        
-        dispatch({
-          type: 'UPDATE_USER_PROFILE',
-          payload: {
-            battleRating: userWithRating.battleRating + ratingChange
-          }
-        });
-      }
+    playSound(isCorrect ? 'correct' : 'wrong');
 
-      // Check for perfect score achievement
-      if (finalScore.player === state.battle.questions.length * BATTLE_CONFIG.pointsPerQuestion) {
-        const achievement: Achievement = {
-          id: 'perfect_battle',
-          title: 'Perfect Scholar',
-          description: 'Answer all questions correctly in a battle',
-          category: 'battles',
-          points: 100,
-          rarity: 'legendary',
-          unlocked: true,
-          unlockedAt: new Date(),
-          prerequisites: [],
-          dependents: [],
-          triggerConditions: [{
-            type: 'battle_score',
-            value: 100,
-            comparison: 'eq'
-          }],
-          order: 100
-        };
-        
-        dispatch({
-          type: 'UNLOCK_ACHIEVEMENT',
-          payload: achievement
-        });
-      }
+    // Check if battle is complete
+    if (state.battle.currentQuestion + 1 >= state.battle.questions.length) {
+      const timeBonus = Math.max(0, state.battle.timeLeft || 0) * BATTLE_CONFIG.rewards.timeBonus.multiplier;
+      const totalPlayerScore = newScore.player + (timeBonus / 10); // Convert time bonus to score points
+      
+      // Create battle results with correct score type
+      const results: BattleResults = {
+        isVictory: newScore.player > newScore.opponent,
+        score: totalPlayerScore,
+        playerScore: newScore.player,
+        experienceGained: calculateXPGained(newScore.player, state.battle.questions.length),
+        coinsEarned: calculateCoinsEarned(newScore.player, state.battle.questions.length),
+        streakBonus: state.user.streak * BATTLE_CONFIG.rewards.streakBonus.multiplier,
+        timeBonus,
+        totalScore: Math.round(totalPlayerScore),
+        totalQuestions: state.battle.questions.length,
+        scorePercentage: (newScore.player / state.battle.questions.length) * 100,
+        xpEarned: calculateXPGained(newScore.player, state.battle.questions.length),
+        opponent: {
+          id: state.battle.currentOpponent || 'bot',
+          name: 'Opponent',
+          rating: state.battle.opponentRating || 1000
+        },
+        rewards: {
+          items: [],
+          achievements: [],
+          bonuses: [
+            {
+              type: 'streak',
+              amount: state.user.streak * BATTLE_CONFIG.rewards.streakBonus.multiplier
+            },
+            {
+              type: 'time',
+              amount: timeBonus
+            }
+          ]
+        }
+      };
 
       dispatch({ type: 'END_BATTLE', payload: results });
       
-    } catch (error) {
-      console.error('Battle end processing failed:', error);
-      dispatch({ 
-        type: 'END_BATTLE', 
-        payload: {
-          isVictory: false,
-          experienceGained: 0,
-          coinsEarned: 0,
-          streakBonus: 0,
-          timeBonus: 0,
-          totalScore: finalScore.player,
-          scorePercentage: (finalScore.player / (state.battle.questions.length * BATTLE_CONFIG.pointsPerQuestion)) * 100
-        }
-      });
+      // Update battle stats
+      await BattleService.updateStats(state.user.id, results, state.battleStats);
     }
-  }, [state.battle, userWithRating, dispatch]);
+  }, [state.battle, dispatch, playSound]);
 
-  const handleAnswer = useCallback(async (answerIndex: number) => {
-    try {
-      if (!state.battle.questions[state.battle.currentQuestion]) {
-        throw new Error('No current question available');
-      }
-
-      if (state.battle.status !== 'battle') {
-        return;
-      }
-
-      const currentQuestion = state.battle.questions[state.battle.currentQuestion];
-      const isCorrect = answerIndex === currentQuestion.correctAnswer;
-      const timeBonus = Math.max(0, state.battle.timeLeft / BATTLE_CONFIG.timePerQuestion);
-
-      const basePoints = isCorrect ? BATTLE_CONFIG.pointsPerQuestion : 0;
-      const timeBonusPoints = Math.floor(timeBonus * BATTLE_CONFIG.rewards.timeBonus.multiplier);
-      const totalPoints = basePoints + timeBonusPoints;
-
-      const newScore = {
-        player: state.battle.score.player + totalPoints,
-        opponent: state.battle.score.opponent + 
-          Math.floor(Math.random() * BATTLE_CONFIG.pointsPerQuestion)
-      };
-
-      await dispatch({
-        type: 'UPDATE_BATTLE_PROGRESS',
-        payload: {
-          questionId: currentQuestion.id,
-          correct: isCorrect,
-          playerAnswers: [...state.battle.playerAnswers, isCorrect],
-          score: newScore,
-        }
-      });
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      if (state.battle.currentQuestion >= state.battle.questions.length - 1) {
-        await handleBattleEnd(newScore, timeBonus);
-      } else {
-        dispatch({
-          type: 'ADVANCE_QUESTION',
-          payload: state.battle.currentQuestion + 1
-        });
-      }
-
-    } catch (error) {
-      console.error('Answer handling failed:', error);
-      // Don't throw - allow battle to continue even if there's an error
-    }
-  }, [state.battle, dispatch, handleBattleEnd]);
-
-  const initializeBattle = useCallback(async (category?: string, difficulty?: number) => {
+  const initializeBattle = useCallback(async () => {
     try {
       dispatch({ type: 'SET_BATTLE_STATUS', payload: 'searching' });
       
-      const questions = await BattleService.getQuestions(
-        BATTLE_CONFIG.questionsPerBattle,
-        category,
-        difficulty
-      );
-
-      if (!questions || questions.length === 0) {
-        throw new Error('No questions available');
-      }
-
+      // Get random questions
+      const questions = await BattleService.getQuestions();
+      
       dispatch({
         type: 'INITIALIZE_BATTLE',
         payload: {
@@ -165,24 +101,105 @@ export function useBattle() {
         }
       });
 
-      await new Promise(resolve => setTimeout(resolve, BATTLE_CONFIG.searchTime * 1000));
       dispatch({ type: 'SET_BATTLE_STATUS', payload: 'ready' });
       await new Promise(resolve => setTimeout(resolve, BATTLE_CONFIG.readyTime * 1000));
       dispatch({ type: 'SET_BATTLE_STATUS', payload: 'battle' });
 
     } catch (error) {
       console.error('Battle initialization failed:', error);
-      dispatch({ 
-        type: 'SET_BATTLE_STATUS', 
-        payload: 'completed' 
-      });
+      dispatch({ type: 'SET_BATTLE_STATUS', payload: 'completed' });
       throw error;
     }
   }, [dispatch]);
 
+  // Timer update function
+  const updateTimer = useCallback(() => {
+    if (state.battle?.timeLeft && state.battle.timeLeft > 0) {
+      dispatch({
+        type: 'UPDATE_BATTLE_PROGRESS',
+        payload: {
+          timeLeft: state.battle.timeLeft - 1
+        }
+      });
+    } else if (state.battle?.timeLeft === 0) {
+      // Auto-submit wrong answer when time runs out
+      handleAnswer(-1);
+    }
+  }, [state.battle, dispatch]);
+
+  const calculateXPGained = (score: number, totalQuestions: number): number => {
+    const baseXP = BATTLE_CONFIG.rewards.baseXP * (score / totalQuestions);
+    return Math.round(baseXP);
+  };
+
+  const calculateCoinsEarned = (score: number, totalQuestions: number): number => {
+    const baseCoins = BATTLE_CONFIG.rewards.baseCoins * (score / totalQuestions);
+    return Math.round(baseCoins);
+  };
+
+  const handleBattleComplete = async (results: BattleResults) => {
+    // Calculate rewards
+    const rewards = RewardService.calculateBattleRewards(results);
+    
+    // Calculate total XP gain including bonuses
+    const totalXPGain = rewards.reduce((sum, r) => 
+      r.type === 'xp' ? sum + Number(r.value) : sum, 0
+    );
+
+    // Calculate total coins gain
+    const totalCoinsGain = rewards.reduce((sum, r) => 
+      r.type === 'coins' ? sum + Number(r.value) : sum, 0
+    );
+
+    // Update user stats with rewards
+    dispatch({
+      type: 'UPDATE_USER_STATS',
+      payload: {
+        xp: totalXPGain,
+        coins: totalCoinsGain,
+        streak: results.isVictory ? state.user.streak + 1 : 0
+      }
+    });
+
+    // Update battle stats
+    dispatch({
+      type: 'UPDATE_BATTLE_STATS',
+      payload: {
+        totalBattles: state.battleStats.totalBattles + 1,
+        wins: state.battleStats.wins + (results.isVictory ? 1 : 0),
+        losses: state.battleStats.losses + (results.isVictory ? 0 : 1),
+        winStreak: results.isVictory ? state.battleStats.winStreak + 1 : 0,
+        highestStreak: Math.max(
+          state.battleStats.highestStreak,
+          results.isVictory ? state.battleStats.winStreak + 1 : state.battleStats.winStreak
+        ),
+        totalXpEarned: state.battleStats.totalXpEarned + totalXPGain,
+        totalCoinsEarned: state.battleStats.totalCoinsEarned + totalCoinsGain
+      }
+    });
+
+    // Show battle completion notification
+    showNotification({
+      type: 'battle',
+      message: {
+        title: results.isVictory ? t('battle.victory') : t('battle.defeat'),
+        description: t('battle.completed'),
+        rewards
+      },
+      duration: 5000
+    });
+
+    // Play appropriate sound
+    playSound(results.isVictory ? 'victory' : 'defeat');
+
+    // Check achievements after all updates
+    checkAchievements();
+  };
+
   return {
     battleState: state.battle,
     handleAnswer,
-    initializeBattle
+    initializeBattle,
+    updateTimer
   };
 }

@@ -1,24 +1,39 @@
 import { useEffect } from 'react';
 import { useGame } from '../contexts/GameContext';
 import { LevelSystem } from '../lib/levelSystem';
-import { LevelUpPayload } from '../types/achievements';
+import { useNotification } from '../contexts/NotificationContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export function useLevelSystem() {
   const { state, dispatch } = useGame();
+  const { showNotification } = useNotification();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const currentLevel = LevelSystem.calculateLevel(state.user.xp);
     if (currentLevel > state.user.level) {
-      const rewards = LevelSystem.handleLevelUp(state.user, state.user.level, currentLevel);
+      const rewards = LevelSystem.getLevelRewards(currentLevel);
+      
       dispatch({
         type: 'LEVEL_UP',
         payload: {
-          newLevel: currentLevel,
+          level: currentLevel,
           rewards
-        } as LevelUpPayload
+        }
+      });
+
+      // Show level up notification
+      showNotification({
+        type: 'achievement',
+        message: {
+          title: t('levelUp.title', { level: currentLevel }),
+          description: t('levelUp.description'),
+          rewards
+        },
+        duration: 5000
       });
     }
-  }, [state.user.xp]);
+  }, [state.user.xp, state.user.level, dispatch, showNotification, t]);
 
   return {
     currentLevel: state.user.level,

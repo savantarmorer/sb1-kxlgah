@@ -4,13 +4,13 @@
  */
 export type View = 
   | 'home' 
-  | 'battle'  // Battle view
   | 'leaderboard' 
   | 'quests' 
   | 'store' 
   | 'profile' 
   | 'inventory' 
-  | 'admin';
+  | 'admin'
+  | 'battle';  // Add battle view
 
 /**
  * Dependencies:
