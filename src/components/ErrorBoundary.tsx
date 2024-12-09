@@ -2,7 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
-  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  on_error?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
 interface State {
@@ -21,7 +21,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo);
-    this.props.onError?.(error, errorInfo);
+    this.props.on_error?.(error, errorInfo);
   }
 
   public render() {

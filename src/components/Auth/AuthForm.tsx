@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, Loader } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { use_language } from '../../contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 
 export default function AuthForm() {
   const navigate = useNavigate();
   const { signIn, signUp } = useAuth();
-  const { t } = useLanguage();
+  const { t } = use_language();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

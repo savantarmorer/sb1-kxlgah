@@ -14,7 +14,7 @@ export * from '../battle';
  * - BattleScore: Score tracking
  * - BattleState: Complete battle state
  * - BattleResults: Battle completion data
- * - BattleStats: Battle statistics
+ * - battle_stats: Battle statistics
  * 
  * Used By:
  * - BattleContext

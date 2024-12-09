@@ -1,6 +1,6 @@
 import { BattleResults } from '../types/battle';
 
-interface BattleStats {
+interface battle_stats {
   totalBattles: number;
   wins: number;
   perfectScores: number;
@@ -13,7 +13,7 @@ interface BattleStats {
 /**
  * Service for tracking and analyzing battle statistics
  */
-export class BattleStatsService {
+export class battle_statsService {
   /**
    * Records battle results and updates statistics
    * 
@@ -31,8 +31,9 @@ export class BattleStatsService {
    * @param userId - User ID
    * @returns Promise with user's battle statistics
    */
-  static async getUserStats(userId: string): Promise<BattleStats> {
-    // In real implementation, fetch from database
+  static async getUserStats(userId: string): Promise<battle_stats> {
+    // TODO: Query database using userId to fetch user's battle statistics
+    // For now returning default values
     return {
       totalBattles: 0,
       wins: 0,

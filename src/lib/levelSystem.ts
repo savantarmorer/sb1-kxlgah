@@ -1,23 +1,20 @@
-import { GameConfig } from '../config/gameConfig';
+import { BATTLE_CONFIG } from '../config/battleConfig';
 import { Reward } from '../types/rewards';
-
-/**
- * Interface for level-up rewards
- */
-interface LevelUpReward {
-  type: 'coins' | 'lootbox' | 'title';
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
-  value: string | number;
-}
+import {
+  calculate_level,
+  calculate_total_xp_for_level,
+  calculate_xp_for_next_level,
+  calculate_xp_progress
+} from '../utils/gameUtils';
 
 /**
  * Static class for managing level system calculations and rewards
  */
 export class LevelSystem {
-  // Base configuration values
-  private static readonly BASE_XP = GameConfig.level.baseXP;
-  private static readonly GROWTH_FACTOR = GameConfig.level.growthFactor;
-  private static readonly MAX_LEVEL = GameConfig.level.maxLevel;
+  // Base configuration values from battle progress settings
+  private static readonly base_xp = BATTLE_CONFIG.progress.base_xp;
+  private static readonly growth_factor = BATTLE_CONFIG.progress.growth_factor;
+  private static readonly max_level = BATTLE_CONFIG.progress.max_level;
 
   /**
    * Calculates XP required for a specific level
@@ -26,9 +23,8 @@ export class LevelSystem {
    * @param level - Target level
    * @returns XP required for the level
    */
-  static calculateXPForLevel(level: number): number {
-    if (level > this.MAX_LEVEL) return Infinity;
-    return Math.floor(this.BASE_XP * Math.pow(this.GROWTH_FACTOR, level - 1));
+  static calculate_xp_for_level(level: number): number {
+    return Math.floor(this.base_xp * Math.pow(this.growth_factor, level - 1));
   }
 
   /**
@@ -38,25 +34,19 @@ export class LevelSystem {
    * @param level - Target level
    * @returns Total XP required
    */
-  static calculateTotalXPForLevel(level: number): number {
-    let totalXP = 0;
-    for (let i = 1; i < level; i++) {
-      totalXP += this.calculateXPForLevel(i);
-    }
-    return totalXP;
+  static calculate_total_xp_for_level(level: number): number {
+    return calculate_total_xp_for_level(level);
   }
 
   /**
    * Calculates XP needed for next level
    * 
-   * @param currentXP - Current XP amount
+   * @param current_xp - Current XP amount
    * @returns XP needed for next level
    */
-  static calculateXPToNextLevel(currentXP: number): number {
-    const currentLevel = this.calculateLevel(currentXP);
-    if (currentLevel >= this.MAX_LEVEL) return 0;
-    const nextLevelXP = this.calculateTotalXPForLevel(currentLevel + 1);
-    return nextLevelXP - currentXP;
+  static calculate_xp_to_next_level(current_xp: number): number {
+    const current_level = this.calculate_level(current_xp);
+    return calculate_xp_for_next_level(current_level);
   }
 
   /**
@@ -65,17 +55,9 @@ export class LevelSystem {
    * @param xp - Current XP amount
    * @returns Current level
    */
-  static calculateLevel(xp: number): number {
-    let level = 1;
-    let totalXP = 0;
-    
-    while (level < this.MAX_LEVEL && totalXP <= xp) {
-      totalXP += this.calculateXPForLevel(level);
-      if (totalXP > xp) break;
-      level++;
-    }
-    
-    return Math.min(level, this.MAX_LEVEL);
+  static calculate_level(xp: number): number {
+    const level = calculate_level(xp);
+    return Math.min(level, this.max_level);
   }
 
   /**
@@ -84,37 +66,41 @@ export class LevelSystem {
    * @param xp - Current XP amount
    * @returns Progress percentage (0-100)
    */
-  static calculateProgress(xp: number): number {
-    const currentLevel = this.calculateLevel(xp);
-    if (currentLevel >= this.MAX_LEVEL) return 100;
-    
-    const currentLevelXP = this.calculateTotalXPForLevel(currentLevel);
-    const nextLevelXP = this.calculateTotalXPForLevel(currentLevel + 1);
-    const levelXP = nextLevelXP - currentLevelXP;
-    const progress = xp - currentLevelXP;
-    
-    return Math.min(100, Math.floor((progress / levelXP) * 100));
+  static calculate_progress(xp: number): number {
+    const current_level = this.calculate_level(xp);
+    return calculate_xp_progress(xp, current_level);
   }
 
   /**
    * Gets rewards for a specific level
-   * 
-   * @param level - Target level
+   * @param level Level to get rewards for
    * @returns Array of rewards
    */
-  static getLevelRewards(level: number): Reward[] {
+  static get_level_rewards(level: number): Reward[] {
     return [
       {
-        id: `level_${level}_xp`,
+        id: `level_${level}_xp_reward`,
         type: 'xp',
-        value: level * 100,
-        rarity: level % 10 === 0 ? 'legendary' : level % 5 === 0 ? 'epic' : 'rare'
+        value: Math.floor(this.calculate_xp_for_level(level) * 0.1),
+        rarity: level % 10 === 0 ? 'epic' : 'rare',
+        name: `Level ${level} XP Reward`,
+        description: `XP reward for reaching level ${level}`,
+        amount: 1,
+        metadata: {
+          source: 'LEVEL_UP'
+        }
       },
       {
-        id: `level_${level}_coins`,
+        id: `level_${level}_coins_reward`,
         type: 'coins',
-        value: level * 50,
-        rarity: 'common'
+        value: level * 100,
+        rarity: 'common',
+        name: `Level ${level} Coin Reward`,
+        description: `Coins reward for reaching level ${level}`,
+        amount: 1,
+        metadata: {
+          source: 'LEVEL_UP'
+        }
       }
     ];
   }
@@ -128,7 +114,7 @@ export class LevelSystem {
  * - Level cap management
  * 
  * Dependencies:
- * - GameConfig for base values
+ * - BATTLE_CONFIG for base values
  * 
  * Used by:
  * - LevelProgress component
@@ -153,4 +139,3 @@ export class LevelSystem {
  * - Optimized algorithms
  * - Memory efficient
  */
-

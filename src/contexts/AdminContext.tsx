@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { useGame } from './GameContext';
+import { use_game } from './GameContext';
 
 interface AdminContextType {
   isAdmin: boolean;
@@ -13,22 +13,25 @@ interface AdminContextType {
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
 export function AdminProvider({ children }: { children: React.ReactNode }) {
-  const { state, dispatch } = useGame();
+  const { state, dispatch } = use_game();
   const isAdmin = state.user.roles?.includes('admin') || false;
 
   const debugActions = {
     resetStreak: () => {
       if (!isAdmin) return;
-      dispatch({ type: 'RESET_STREAK' });
+      dispatch({ type: 'UPDATE_USER_STATS', payload: { streak: 0, xp: 0, coins: 0 } });
     },
     modifyRewards: (rewards: any) => {
       if (!isAdmin) return;
-      // Add reward modification logic here
+      dispatch({ type: 'CLAIM_REWARD', payload: rewards });
     },
     simulateLogin: () => {
       if (!isAdmin) return;
       const today = new Date().toISOString().split('T')[0];
-      dispatch({ type: 'RECORD_LOGIN', payload: today });
+      dispatch({ 
+        type: 'UPDATE_LOGIN_STREAK', 
+        payload: { streak: 0, last_login_date: today }
+      });
     }
   };
 

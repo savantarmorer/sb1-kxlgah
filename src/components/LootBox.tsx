@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gift, Star, Sparkles } from 'lucide-react';
-import { useGame } from '../contexts/GameContext';
-import { useLanguage } from '../contexts/LanguageContext';
+import { use_game } from '../contexts/GameContext';
+import { use_language } from '../contexts/LanguageContext';
 import { Reward, RewardRarity } from '../types/rewards';
 import { Achievement, AchievementCategory } from '../types/achievements';
 import Button from './Button';
 
 interface LootBoxProps {
-  isOpen: boolean;
-  onClose: () => void;
+  is_open: boolean;
+  on_close: () => void;
   rewards: Reward[];
-  source?: 'level_up' | 'daily_reward' | 'quest' | 'battle';
+  source?: 'LEVEL_UP' | 'daily_reward' | 'quest' | 'battle';
 }
 
 /**
@@ -28,11 +28,11 @@ interface LootBoxProps {
  * - QuestSystem
  * - DailyRewards
  */
-export default function LootBox({ isOpen, onClose, rewards, source }: LootBoxProps) {
+export default function LootBox({ is_open, on_close, rewards, source }: LootBoxProps) {
   const [isOpening, setIsOpening] = useState(false);
   const [showRewards, setShowRewards] = useState(false);
-  const { dispatch } = useGame();
-  const { t } = useLanguage();
+  const { dispatch } = use_game();
+  const { t } = use_language();
 
   const rarityOrder: Record<RewardRarity, number> = {
     common: 0,
@@ -41,8 +41,9 @@ export default function LootBox({ isOpen, onClose, rewards, source }: LootBoxPro
     legendary: 3
   };
 
-  const highestRarity = rewards.reduce((highest, reward) => {
-    return rarityOrder[reward.rarity] > rarityOrder[highest] ? reward.rarity : highest;
+  const highestRarity = rewards.reduce<RewardRarity>((highest, reward) => {
+    const rewardRarity = reward.rarity as RewardRarity;
+    return rarityOrder[rewardRarity] > rarityOrder[highest] ? rewardRarity : highest;
   }, 'common' as RewardRarity);
 
   const handleOpen = () => {
@@ -53,12 +54,12 @@ export default function LootBox({ isOpen, onClose, rewards, source }: LootBoxPro
         if (reward.type === 'xp') {
           dispatch({
             type: 'ADD_XP',
-            payload: Number(reward.value)
+            payload: { amount: Number(reward.value), source: source || 'lootbox' }
           });
         } else if (reward.type === 'coins') {
           dispatch({
             type: 'ADD_COINS',
-            payload: Number(reward.value)
+            payload: { amount: Number(reward.value), source: source || 'lootbox' }
           });
         }
       });
@@ -72,16 +73,18 @@ export default function LootBox({ isOpen, onClose, rewards, source }: LootBoxPro
     category: 'rewards',
     points: 100,
     rarity: 'legendary',
-    unlocked: true,
-    unlockedAt: new Date(),
-    prerequisites: [],
-    dependents: [],
-    triggerConditions: [{
+    trigger_conditions: [{
       type: 'reward_rarity',
       value: 4,
       comparison: 'eq'
     }],
-    order: 100
+    unlocked: true,
+    unlocked_at: new Date().toISOString(),
+    prerequisites: [],
+    dependents: [],
+    order_num: 100,
+    progress: 100,
+    max_progress: 100
   });
 
   const handleClaimRewards = () => {
@@ -92,7 +95,7 @@ export default function LootBox({ isOpen, onClose, rewards, source }: LootBoxPro
       });
     });
 
-    if (source === 'level_up') {
+    if (source === 'LEVEL_UP') {
       const legendaryReward = rewards.find(r => r.rarity === 'legendary');
       if (legendaryReward) {
         dispatch({
@@ -102,10 +105,10 @@ export default function LootBox({ isOpen, onClose, rewards, source }: LootBoxPro
       }
     }
 
-    onClose();
+    on_close();
   };
 
-  if (!isOpen) return null;
+  if (!is_open) return null;
 
   return (
     <motion.div

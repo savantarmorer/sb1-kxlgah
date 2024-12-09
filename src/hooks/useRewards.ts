@@ -1,15 +1,15 @@
-import { useGame } from '../contexts/GameContext';
+import { use_game } from '../contexts/GameContext';
 import { Achievement, AchievementTrigger } from '../types/achievements';
-import { Reward, RewardRarity } from '../types/rewards';
+import { Reward, RewardRarity, RewardType } from '../types/rewards';
 
 /**
  * Interface for reward claim payload
  */
 interface RewardClaimPayload {
   id: string;
-  type: string;
+  type: RewardType;
   value: number;
-  rarity: string;
+  rarity: RewardRarity;
 }
 
 /**
@@ -36,7 +36,7 @@ interface AchievementUnlockPayload {
   unlockedAt: Date;
   prerequisites: string[];
   dependents: string[];
-  triggerConditions: AchievementTriggerCondition[];
+  trigger_conditions: AchievementTriggerCondition[];
   order: number;
 }
 
@@ -44,7 +44,7 @@ interface AchievementUnlockPayload {
  * Hook for managing rewards and achievements
  */
 export function useRewards() {
-  const { dispatch } = useGame();
+  const { dispatch } = use_game();
 
   /**
    * Claims a reward and updates game state
@@ -52,7 +52,7 @@ export function useRewards() {
    */
   const claimReward = (reward: Reward) => {
     // Convert reward value to number if it's a string
-    const claimPayload: Reward = {
+    const claimPayload: RewardClaimPayload = {
       id: `reward_${Date.now()}`,
       type: reward.type as RewardType,
       value: typeof reward.value === 'string' ? parseInt(reward.value, 10) : reward.value,
@@ -60,7 +60,7 @@ export function useRewards() {
     };
 
     dispatch({
-      type: 'CLAIM_REWARD',
+      type: 'claim_reward',
       payload: claimPayload
     });
 
@@ -77,7 +77,7 @@ export function useRewards() {
         unlockedAt: new Date(),
         prerequisites: [],
         dependents: [],
-        triggerConditions: [{
+        trigger_conditions: [{
           type: 'reward_rarity',
           value: 4,
           comparison: 'eq'
@@ -88,7 +88,7 @@ export function useRewards() {
       // Convert to Achievement type before dispatching
       const achievement: Achievement = {
         ...achievementPayload,
-        triggerConditions: achievementPayload.triggerConditions.map(condition => ({
+        trigger_conditions: achievementPayload.trigger_conditions.map(condition => ({
           type: condition.type,
           value: condition.value,
           comparison: condition.comparison
@@ -133,7 +133,7 @@ export function useRewards() {
 
 /**
  * Hook Dependencies:
- * - useGame: For dispatching state updates
+ * - use_game: For dispatching state updates
  * - Achievement types: For achievement payloads
  * - Reward types: For reward handling
  * 
@@ -159,4 +159,3 @@ export function useRewards() {
  * - Extensible validation system
  * - Proper type conversion for achievements
  */ 
-

@@ -4,7 +4,7 @@ import { X, Play, RotateCcw, Save } from 'lucide-react';
 import Button from '../Button';
 
 interface AdminPanelProps {
-  onClose: () => void;
+  on_close: () => void;
   rewards: Array<{
     day: number;
     reward: {
@@ -13,13 +13,13 @@ interface AdminPanelProps {
       rarity: string;
     };
   }>;
-  onUpdateRewards: (rewards: any[]) => void;
+  on_update_rewards: (rewards: any[]) => void;
 }
 
 export default function AdminPanel({
-  onClose,
+  on_close,
   rewards,
-  onUpdateRewards
+  on_update_rewards
 }: AdminPanelProps) {
   const [editingRewards, setEditingRewards] = useState(rewards);
   const [previewMode, setPreviewMode] = useState<string | null>(null);
@@ -37,8 +37,8 @@ export default function AdminPanel({
   };
 
   const handleSave = () => {
-    onUpdateRewards(editingRewards);
-    onClose();
+    on_update_rewards(editingRewards);
+    on_close();
   };
 
   const handlePreview = (mode: string) => {
@@ -69,7 +69,7 @@ export default function AdminPanel({
             Daily Rewards Debug Panel
           </h2>
           <button
-            onClick={onClose}
+            onClick={on_close}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
           >
             <X size={20} className="text-gray-600 dark:text-gray-400" />
@@ -165,7 +165,7 @@ export default function AdminPanel({
           </div>
 
           <div className="flex justify-end space-x-3">
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="secondary" onClick={on_close}>
               Cancel
             </Button>
             <Button

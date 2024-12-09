@@ -5,17 +5,18 @@ import { LucideIcon } from 'lucide-react';
  * Defines all possible triggers for achievements
  */
 export type AchievementTriggerType = 
-  | 'xp' 
-  | 'streak' 
-  | 'quest' 
-  | 'study_time' 
-  | 'score' 
-  | 'reward_rarity' 
-  | 'login_days'
-  | 'battle_score'    // Added battle triggers
+  | 'xp_gained'
+  | 'highest_streak'
+  | 'quests_completed'
+  | 'battle_score'
   | 'battle_wins'
   | 'battle_streak'
-  | 'battle_rating';
+  | 'battle_rating'
+  | 'reward_rarity'
+  | 'login_days'
+  | 'battles_played'
+  | 'level_reached'
+  | 'coins_earned';
 
 /**
  * Achievement trigger configuration
@@ -25,8 +26,8 @@ export interface AchievementTrigger {
   value: number;
   comparison: 'eq' | 'gt' | 'lt' | 'gte' | 'lte';
   metadata?: {
-    scoreType?: string;
-    battleType?: string;
+    score_type?: string;
+    battle_type?: string;
     [key: string]: any;
   };
 }
@@ -34,13 +35,12 @@ export interface AchievementTrigger {
 /**
  * Achievement category types
  */
-export type AchievementCategory = 
-  | 'battle' 
-  | 'quest' 
-  | 'learning' 
-  | 'social' 
-  | 'collection'
-  | 'rewards';
+export interface AchievementCategory {
+  id: string;
+  name: string;
+  icon: LucideIcon;
+  color: string;
+}
 
 /**
  * Achievement interface
@@ -49,20 +49,23 @@ export interface Achievement {
   id: string;
   title: string;
   description: string;
-  category: AchievementCategory;
-  points: number;
+  category: string;
+  icon: LucideIcon;
+  progress: number;
+  total: number;
+  completed: boolean;
+  claimed: boolean;
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  points: number;
   unlocked: boolean;
-  unlockedAt?: Date;
+  max_progress: number;
+  trigger_conditions: any[];
+  order_num: number;
   prerequisites: string[];
   dependents: string[];
-  triggerConditions: AchievementTrigger[];
   order: number;
-  progress?: number;
+  unlocked_at?: string;
   metadata?: Record<string, any>;
-  icon?: string;
-  secret?: boolean;
-  shareReward?: boolean;
 }
 
 /**
@@ -90,3 +93,37 @@ export interface Achievement {
  * - Rarity levels
  */
 
+export type AchievementRarity = 'common' | 'rare' | 'epic' | 'legendary';
+
+export interface TriggerCondition {
+  type: string;
+  value: number;
+  comparison: 'eq' | 'gt' | 'gte' | 'lt' | 'lte';
+}
+
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  points: number;
+  rarity: AchievementRarity;
+  unlocked: boolean;
+  unlocked_at?: Date;
+  prerequisites: string[];
+  dependents: string[];
+  trigger_conditions: TriggerCondition[];
+  order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AchievementProgress {
+  achievement_id: string;
+  user_id: string;
+  progress: number;
+  completed: boolean;
+  completed_at?: Date;
+  created_at: string;
+  updated_at: string;
+}

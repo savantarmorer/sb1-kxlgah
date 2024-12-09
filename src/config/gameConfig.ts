@@ -5,36 +5,37 @@
 export const GameConfig = {
   // Level system configuration
   level: {
-    baseXP: 100,
-    growthFactor: 1.5,
-    maxLevel: 100,
+    base_xp: 100,
+    growth_factor: 1.5,
+    max_level: 100,
     bonusPerLevel: 50
   },
 
   // Reward configuration
   rewards: {
     coinsPerLevel: 100,
-    streakBonus: {
+    streak_bonus: {
       multiplier: 0.1,
-      maxBonus: 100
+      max_bonus: 100
     },
     dailyReward: {
-      baseCoins: 50,
-      baseXP: 25,
+      base_coins: 50,
+      base_xp: 25,
       streakMultiplier: 0.2
     }
   },
 
   // Battle configuration
   battle: {
-    questionTime: 30,
+    time_per_question: 30,
     readyTime: 3,
     searchTime: 2,
     rewards: {
-      baseXP: 50,
-      baseCoins: 20,
+      base_xp: 50,
+      base_coins: 20,
       streakMultiplier: 0.1
-    }
+    },
+    time_bonus_factor: 1.0  // Time bonus multiplier for quick answers
   },
 
   // Quest configuration
@@ -73,4 +74,4 @@ export const GameConfig = {
  * - Environment-aware
  * - Easy to extend
  * - Modular organization
- */ 
+ */

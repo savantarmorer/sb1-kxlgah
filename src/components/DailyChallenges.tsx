@@ -1,6 +1,6 @@
 import React from 'react';
 import { CheckCircle2, Circle, Timer, Award } from 'lucide-react';
-import { useLanguage } from '../contexts/LanguageContext';
+import { use_language } from '../contexts/LanguageContext';
 
 interface ChallengeProps {
   title: string;
@@ -12,7 +12,7 @@ interface ChallengeProps {
 }
 
 export default function DailyChallenges() {
-  const { t } = useLanguage();
+  const { t } = use_language();
 
   return (
     <div className="card mb-6">

@@ -31,14 +31,14 @@ async function handleQuizCompletion(userId: string, data: any) {
     const percentage = (score / maxScore) * 100;
     
     // Calculate rewards
-    const xpReward = Math.floor(percentage * 2);
-    const coinReward = Math.floor(percentage / 2);
+    const xp_reward = Math.floor(percentage * 2);
+    const coin_reward = Math.floor(percentage / 2);
     
     // Update user progress
     await supabase.rpc('award_quiz_completion', {
         user_id: userId,
-        xp_amount: xpReward,
-        coin_amount: coinReward,
+        xp_amount: xp_reward,
+        coin_amount: coin_reward,
         score_percentage: percentage
     });
 } 

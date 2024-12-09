@@ -5,7 +5,6 @@ import Particles from 'react-particles';
 import type { Engine } from 'tsparticles-engine';
 import { loadSlim } from 'tsparticles-slim';
 import Button from '../Button';
-import type { ISourceOptions } from 'tsparticles-engine';
 
 /**
  * Props interface for RewardNotification component
@@ -16,7 +15,7 @@ interface RewardNotificationProps {
     value: number;
     rarity: 'common' | 'rare' | 'epic' | 'legendary';
   };
-  onClaim: () => void;
+  on_claim: () => void;
 }
 
 /**
@@ -72,7 +71,7 @@ type OutMode = 'out' | 'destroy' | 'bounce' | 'none';
  * RewardNotification Component
  * Displays animated reward notifications with particle effects
  */
-export default function RewardNotification({ reward, onClaim }: RewardNotificationProps) {
+export default function RewardNotification({ reward, on_claim }: RewardNotificationProps) {
   /**
    * Initializes particle system
    * @param engine - TSParticles engine instance
@@ -204,7 +203,7 @@ export default function RewardNotification({ reward, onClaim }: RewardNotificati
         {/* Claim Button */}
         <Button
           variant="primary"
-          onClick={onClaim}
+          onClick={on_claim}
           className="w-full"
         >
           Claim Reward
@@ -225,7 +224,7 @@ export default function RewardNotification({ reward, onClaim }: RewardNotificati
  * 
  * Props:
  * - reward: Reward data (type, value, rarity)
- * - onClaim: Callback for claiming reward
+ * - on_claim: Callback for claiming reward
  * 
  * Used By:
  * - DailyRewardSystem component

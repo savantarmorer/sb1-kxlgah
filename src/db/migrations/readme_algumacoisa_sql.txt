@@ -52,7 +52,7 @@ export interface Database {
 public: {
 Tables: {
 achievements: Achievement
-battle_stats: BattleStats
+battle_stats: battle_stats
 daily_rewards: DailyReward
 items: Item
 notification_history: NotificationHistory

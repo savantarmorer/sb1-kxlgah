@@ -1,158 +1,130 @@
-import { useGame } from '../contexts/GameContext';
-import { useAdmin } from './useAdmin';
-import { User } from '../types/user';
-import { GameItem } from '../types/items';
-import { Quest } from '../types/quests';
+import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { convertQuestToDB, convertQuestFromDB } from '../utils/questConverters';
-import { convertItemToDB, convertItemFromDB } from '../utils/supabaseUtils';
-import type { Database } from '../types/supabase';
+import { Quest, QuestStatus } from '../types/quests';
+import { NotificationSystem } from '../utils/notifications';
 
-interface AdminActions {
-  saveQuest: (quest: Partial<Quest>) => Promise<Quest>;
-  saveItem: (item: Partial<GameItem>) => Promise<GameItem>;
-  updateUserProfile: (userId: string, updates: Partial<User>) => Promise<void>;
-  fetchStatistics: () => Promise<{
-    activeUsers: number;
-    completedQuests: number;
-    purchasedItems: number;
-  } | null>;
-}
+export function useAdminActions() {
+  const [loading, setLoading] = useState(false);
 
-export function useAdminActions(): AdminActions {
-  const { dispatch } = useGame();
-  const { isAdmin } = useAdmin();
-
-  /**
-   * Saves or updates a quest
-   * @param quest - Quest data to save
-   * @returns Promise with saved quest
-   */
-  const saveQuest = async (quest: Partial<Quest>): Promise<Quest> => {
-    if (!isAdmin) throw new Error('Unauthorized');
-
+  const saveQuest = async (questData: Partial<Quest>) => {
+    setLoading(true);
     try {
-      const questData = convertQuestToDB(quest);
       const { data, error } = await supabase
         .from('quests')
-        .upsert(questData)
+        .upsert({
+          ...questData,
+          updated_at: new Date().toISOString()
+        })
         .select()
         .single();
 
       if (error) throw error;
-      const savedQuest = convertQuestFromDB(data);
-      
-      dispatch({ type: 'UPDATE_QUEST', payload: savedQuest });
-      return savedQuest;
-    } catch (err) {
-      console.error('Error saving quest:', err);
-      throw err;
-    }
-  };
-
-  /**
-   * Saves or updates an item
-   * @param item - Item data to save
-   * @returns Promise with saved item
-   */
-  const saveItem = async (item: Partial<GameItem>): Promise<GameItem> => {
-    if (!isAdmin) throw new Error('Admin access required');
-
-    try {
-      const dbItem = convertItemToDB(item);
-      const { data, error } = await supabase
-        .from('items')
-        .upsert([dbItem])
-        .select()
-        .single();
-
-      if (error) throw error;
-      if (!data) throw new Error('No data returned from insert');
-
-      const savedItem = convertItemFromDB(data);
-
-      dispatch({
-        type: item.id ? 'UPDATE_ITEM' : 'ADD_ITEM',
-        payload: savedItem
-      });
-
-      return savedItem;
+      return data;
     } catch (error) {
-      console.error('Error saving item:', error);
+      console.error('Error saving quest:', error);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
-  /**
-   * Updates a user's profile
-   * @param userId - ID of user to update
-   * @param updates - Profile updates
-   */
-  const updateUserProfile = async (userId: string, updates: Partial<User>): Promise<void> => {
-    if (!isAdmin) throw new Error('Admin access required');
+  const deleteQuest = async (questId: string) => {
+    setLoading(true);
+    try {
+      // First delete all user_quests associations
+      await supabase
+        .from('user_quests')
+        .delete()
+        .eq('quest_id', questId);
 
+      // Then delete the quest
+      const { error } = await supabase
+        .from('quests')
+        .delete()
+        .eq('id', questId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting quest:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const assignQuestToUser = async (questId: string, userId: string) => {
+    setLoading(true);
+    try {
+      // Check if the quest is already assigned
+      const { data: existingAssignment } = await supabase
+        .from('user_quests')
+        .select()
+        .eq('quest_id', questId)
+        .eq('user_id', userId)
+        .single();
+
+      if (existingAssignment) {
+        NotificationSystem.showWarning('Quest already assigned');
+        return;
+      }
+
+      // Create new assignment
+      const { error } = await supabase
+        .from('user_quests')
+        .insert({
+          quest_id: questId,
+          user_id: userId,
+          status: QuestStatus.AVAILABLE,
+          progress: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      NotificationSystem.showSuccess('Quest assigned successfully');
+    } catch (error) {
+      console.error('Error assigning quest:', error);
+      NotificationSystem.showError('Error assigning quest');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const unassignQuestFromUser = async (questId: string, userId: string) => {
+    setLoading(true);
     try {
       const { error } = await supabase
-        .from('users')
-        .update(updates as Database['public']['Tables']['users']['Update'])
-        .eq('id', userId);
+        .from('user_quests')
+        .delete()
+        .eq('quest_id', questId)
+        .eq('user_id', userId);
 
       if (error) throw error;
 
-      dispatch({
-        type: 'UPDATE_USER_PROFILE',
-        payload: updates
-      });
+      NotificationSystem.showSuccess('Quest unassigned successfully');
     } catch (error) {
-      console.error('Error updating user:', error);
+      console.error('Error unassigning quest:', error);
+      NotificationSystem.showError('Error unassigning quest');
       throw error;
-    }
-  };
-
-  /**
-   * Fetches system statistics
-   * @returns Promise with statistics data
-   */
-  const fetchStatistics = async () => {
-    if (!isAdmin) return null;
-
-    try {
-      const [usersResult, questsResult, itemsResult] = await Promise.all([
-        supabase.from('users').select('id'),
-        supabase.from('quests').select('id'),
-        supabase.from('items').select('id')
-      ]);
-
-      const stats = {
-        activeUsers: (usersResult.data || []).length,
-        completedQuests: (questsResult.data || []).length,
-        purchasedItems: (itemsResult.data || []).length,
-        lastUpdated: new Date().toISOString()
-      };
-
-      dispatch({
-        type: 'SYNC_STATISTICS',
-        payload: stats
-      });
-
-      return stats;
-    } catch (error) {
-      console.error('Error fetching statistics:', error);
-      return null;
+    } finally {
+      setLoading(false);
     }
   };
 
   return {
+    loading,
     saveQuest,
-    saveItem,
-    updateUserProfile,
-    fetchStatistics
+    deleteQuest,
+    assignQuestToUser,
+    unassignQuestFromUser
   };
 }
 
 /**
  * Hook Dependencies:
- * - useGame: For dispatching state updates
+ * - use_game: For dispatching state updates
  * - useAdmin: For permission checks
  * - supabase: For database operations
  * - supabaseUtils: For data conversion
@@ -171,4 +143,3 @@ export function useAdminActions(): AdminActions {
  * - Type-safe operations
  * - Centralized admin logic
  */ 
-

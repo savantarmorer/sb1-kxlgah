@@ -1,44 +1,24 @@
-import { useSound } from 'use-sound';
 import { useCallback } from 'react';
-import { useSound as useSoundContext } from '../contexts/SoundContext';
+import { useSoundContext } from '../contexts/SoundContext';
+
+type BattleSoundType = 'battle_start' | 'correct' | 'wrong' | 'victory' | 'defeat';
 
 export function useBattleSound() {
-  const { volume, isMuted } = useSoundContext();
+  const { play_sound: playSound } = useSoundContext();
   
-  const effectiveVolume = isMuted ? 0 : volume;
+  const playCorrectSound = useCallback(() => {
+    playSound('correct');
+  }, [playSound]);
 
-  const [playCorrect] = useSound('/sounds/correct.mp3', { volume: effectiveVolume * 0.5 });
-  const [playWrong] = useSound('/sounds/wrong.mp3', { volume: effectiveVolume * 0.5 });
-  const [playVictory] = useSound('/sounds/victory.mp3', { volume: effectiveVolume * 0.7 });
-  const [playDefeat] = useSound('/sounds/defeat.mp3', { volume: effectiveVolume * 0.7 });
-  const [playTick] = useSound('/sounds/tick.mp3', { volume: effectiveVolume * 0.3 });
-  const [playStart] = useSound('/sounds/battle-start.mp3', { volume: effectiveVolume * 0.6 });
+  const playWrongSound = useCallback(() => {
+    playSound('wrong');
+  }, [playSound]);
 
-  const playSound = useCallback((type: 'correct' | 'wrong' | 'victory' | 'defeat' | 'tick' | 'start') => {
-    if (isMuted) return;
-    
-    switch (type) {
-      case 'correct':
-        playCorrect();
-        break;
-      case 'wrong':
-        playWrong();
-        break;
-      case 'victory':
-        playVictory();
-        break;
-      case 'defeat':
-        playDefeat();
-        break;
-      case 'tick':
-        playTick();
-        break;
-      case 'start':
-        playStart();
-        break;
-    }
-  }, [playCorrect, playWrong, playVictory, playDefeat, playTick, playStart, isMuted]);
-
-  return { playSound };
-} 
-
+  return {
+    play_sound: useCallback((type: BattleSoundType) => {
+      playSound(type);
+    }, [playSound]),
+    playCorrectSound,
+    playWrongSound
+  };
+}

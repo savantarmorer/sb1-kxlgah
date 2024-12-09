@@ -5,8 +5,8 @@ import LootboxScene from './LootboxScene';
 import Button from '../Button';
 
 interface LootboxRewardProps {
-  isOpen: boolean;
-  onClose: () => void;
+  is_open: boolean;
+  on_close: () => void;
   rewards: Array<{
     type: string;
     value: number | string;
@@ -14,7 +14,7 @@ interface LootboxRewardProps {
   }>;
 }
 
-export default function LootboxReward({ isOpen, onClose, rewards }: LootboxRewardProps) {
+export default function LootboxReward({ is_open, on_close, rewards }: LootboxRewardProps) {
   const [isOpening, setIsOpening] = useState(false);
   const [showRewards, setShowRewards] = useState(false);
   const highestRarity = rewards.reduce((highest, reward) => {
@@ -23,18 +23,18 @@ export default function LootboxReward({ isOpen, onClose, rewards }: LootboxRewar
   }, 'common' as 'common' | 'rare' | 'epic' | 'legendary');
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!is_open) {
       setIsOpening(false);
       setShowRewards(false);
     }
-  }, [isOpen]);
+  }, [is_open]);
 
   const handleOpen = () => {
     setIsOpening(true);
     setTimeout(() => setShowRewards(true), 2000);
   };
 
-  if (!isOpen) return null;
+  if (!is_open) return null;
 
   return (
     <motion.div
@@ -121,7 +121,7 @@ export default function LootboxReward({ isOpen, onClose, rewards }: LootboxRewar
               ))}
               <Button
                 variant="primary"
-                onClick={onClose}
+                onClick={on_close}
                 className="w-full mt-6"
               >
                 Continue

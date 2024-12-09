@@ -1,68 +1,84 @@
-import React from 'react';
-import { useLevelSystem } from '../hooks/useLevelSystem';
-import { useGame } from '../contexts/GameContext';
 import { motion } from 'framer-motion';
-import { Settings } from 'lucide-react';
-import UserSettings from './UserSettings';
+import { Settings, TrendingUp, Star } from 'lucide-react';
+import { use_game } from '../contexts/GameContext';
+import { Card } from './ui/Card';
+import { theme } from '../styles/design-system';
+import type { User } from '../types/user';
+import { LevelSystem } from '../lib/levelSystem';
 
 interface UserProgressProps {
   showSettings?: boolean;
+  showRecentGains?: boolean;
+  showMultipliers?: boolean;
 }
 
-export default function UserProgress({ showSettings = false }: UserProgressProps) {
-  const { state } = useGame();
-  const { currentLevel, progress, xpToNextLevel } = useLevelSystem();
-  const [showSettingsModal, setShowSettingsModal] = React.useState(false);
+export default function UserProgress({ 
+  showSettings = false, 
+  showRecentGains = false, 
+  showMultipliers = false 
+}: UserProgressProps) {
+  const { state } = use_game();
+  const { level, xp, coins } = state.user;
+  const xpMultiplier = state.user.rewardMultipliers?.xp ?? 1;
+  
+  const current_level_total_xp = LevelSystem.calculate_total_xp_for_level(level);
+  const xp_in_current_level = xp - current_level_total_xp;
+  const xp_needed_for_next_level = LevelSystem.calculate_xp_for_level(level);
+  const progress = Math.min(100, Math.floor((xp_in_current_level / xp_needed_for_next_level) * 100));
 
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex-1 space-y-2">
-        <div className="flex justify-between items-center">
-          <span className="text-sm font-medium dark:text-gray-200">
-            Level {currentLevel}
-          </span>
-          <span className="text-xs text-gray-600 dark:text-gray-400">
-            {xpToNextLevel} XP to next level
-          </span>
-        </div>
-
-        <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-          <motion.div
-            className="h-full bg-indigo-500 dark:bg-indigo-600"
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-          />
-        </div>
-
-        <div className="flex justify-between text-sm">
-          <div>
-            <span className="font-medium dark:text-gray-200">
-              {state.user.coins}
-            </span>
-            <span className="text-gray-600 dark:text-gray-400 ml-1">Coins</span>
-          </div>
-          <div>
-            <span className="font-medium dark:text-gray-200">
-              {state.user.streak}
-            </span>
-            <span className="text-gray-600 dark:text-gray-400 ml-1">Streak</span>
+    <Card className="p-6">
+      <div className="space-y-6">
+        {/* Level and XP */}
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Level {level}
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {xp_in_current_level.toLocaleString()} / {xp_needed_for_next_level.toLocaleString()} XP
+          </p>
+          <div className="mt-2 relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              className="absolute inset-y-0 left-0 bg-indigo-600 rounded-full"
+            />
           </div>
         </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <Star className="w-5 h-5 text-yellow-500" />
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Coins
+              </span>
+            </div>
+            <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+              {coins.toLocaleString()}
+            </p>
+          </div>
+
+          <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <TrendingUp className="w-5 h-5 text-green-500" />
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Battle Rating
+              </span>
+            </div>
+            <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+              {state.user.battle_rating || 0}
+            </p>
+          </div>
+        </div>
+
+        {showMultipliers && (
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            XP Multiplier: {xpMultiplier}x
+          </div>
+        )}
       </div>
-
-      {showSettings && (
-        <button
-          onClick={() => setShowSettingsModal(true)}
-          className="ml-4 p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-        >
-          <Settings size={20} />
-        </button>
-      )}
-
-      {showSettingsModal && (
-        <UserSettings onClose={() => setShowSettingsModal(false)} />
-      )}
-    </div>
+    </Card>
   );
 }

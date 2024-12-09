@@ -1,16 +1,16 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Star, Target } from 'lucide-react';
-import { useGame } from '../../contexts/GameContext';
+import { use_game } from '../../contexts/GameContext';
 
-export default function BattleStats() {
- const { state } = useGame();
- const { battleStats } = state;
+export default function battle_stats() {
+ const { state } = use_game();
+ const { battle_stats } = state;
 
- if (!battleStats) return null;
+ if (!battle_stats) return null;
 
- const winRate = battleStats.totalBattles > 0 
-   ? ((battleStats.wins / battleStats.totalBattles) * 100).toFixed(1)
+ const winRate = battle_stats.total_battles > 0 
+   ? ((battle_stats.wins / battle_stats.total_battles) * 100).toFixed(1)
    : '0';
 
  return (
@@ -24,7 +24,7 @@ export default function BattleStats() {
          <div>
            <h3 className="font-semibold text-lg">Battle Record</h3>
            <p className="text-2xl font-bold">
-             {battleStats.wins}W - {battleStats.losses}L
+             {battle_stats.wins}W - {battle_stats.losses}L
            </p>
            <p className="text-sm text-gray-600 dark:text-gray-400">
              {winRate}% Win Rate
@@ -42,10 +42,10 @@ export default function BattleStats() {
          <div>
            <h3 className="font-semibold text-lg">Win Streak</h3>
            <p className="text-2xl font-bold text-orange-500">
-             {battleStats.winStreak}
+             {battle_stats.win_streak}
            </p>
            <p className="text-sm text-gray-600 dark:text-gray-400">
-             Best: {battleStats.highestStreak}
+             Best: {battle_stats.highest_streak}
            </p>
          </div>
        </div>
@@ -60,10 +60,10 @@ export default function BattleStats() {
          <div>
            <h3 className="font-semibold text-lg">Average Score</h3>
            <p className="text-2xl font-bold text-indigo-500">
-             {battleStats.averageScore}%
+             {battle_stats.averageScore}%
            </p>
            <p className="text-sm text-gray-600 dark:text-gray-400">
-             {battleStats.totalBattles} Total Battles
+             {battle_stats.total_battles} Total Battles
            </p>
          </div>
        </div>

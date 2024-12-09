@@ -38,9 +38,9 @@ export function BattleToast({ visible, result }: BattleToastProps) {
               Score: {result.score}/{result.totalQuestions}
             </span>
           </div>
-          {result.streakBonus > 0 && (
+          {result.streak_bonus > 0 && (
             <div className="text-sm text-orange-500 mt-1">
-              +{result.streakBonus} Streak Bonus!
+              +{result.streak_bonus} Streak Bonus!
             </div>
           )}
         </div>

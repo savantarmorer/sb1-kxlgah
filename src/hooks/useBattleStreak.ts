@@ -1,4 +1,4 @@
-import { useGame } from '../contexts/GameContext';
+import { use_game } from '../contexts/GameContext';
 import { useAuth } from '../contexts/AuthContext';
 import { BattleService } from '../services/battleService';
 import { RewardService } from '../services/rewardService';
@@ -6,7 +6,7 @@ import { Reward } from '../types/rewards';
 import { supabase } from '../lib/supabase';
 
 export function useBattleStreak() {
-  const { state, dispatch } = useGame();
+  const { state, dispatch } = use_game();
   const { user: authUser } = useAuth();
 
   const handleBattleResult = async (isVictory: boolean): Promise<Reward[]> => {
@@ -22,7 +22,7 @@ export function useBattleStreak() {
         .from('battle_stats')
         .upsert({
           user_id: userId,
-          win_streak: isVictory ? (state.battleStats?.winStreak || 0) + 1 : 0,
+          win_streak: isVictory ? (state.battle_stats?.win_streak || 0) + 1 : 0,
           updated_at: new Date().toISOString()
         });
 
@@ -32,15 +32,15 @@ export function useBattleStreak() {
       dispatch({
         type: 'UPDATE_BATTLE_STATS',
         payload: {
-          winStreak: isVictory ? (state.battleStats?.winStreak || 0) + 1 : 0
+          win_streak: isVictory ? (state.battle_stats?.win_streak || 0) + 1 : 0
         }
       });
 
       let rewards: Reward[] = [];
 
       // Check for streak-based rewards
-      if (isVictory && state.battleStats?.winStreak && state.battleStats.winStreak % 3 === 0) {
-        const streakReward = RewardService.createStreakLootboxReward(state.battleStats.winStreak);
+      if (isVictory && state.battle_stats?.win_streak && state.battle_stats.win_streak % 3 === 0) {
+        const streakReward = RewardService.createStreakLootboxReward(state.battle_stats.win_streak);
         rewards.push(streakReward);
       }
 
@@ -53,7 +53,7 @@ export function useBattleStreak() {
 
   return {
     handleBattleResult,
-    currentStreak: state.battleStats?.winStreak || 0
+    current_streak: state.battle_stats?.win_streak || 0
   };
 }
 

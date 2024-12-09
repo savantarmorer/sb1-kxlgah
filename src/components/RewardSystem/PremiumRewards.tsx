@@ -10,14 +10,15 @@
  * - LootBox: For reward animations
  */
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Crown, Book, Users, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useGame } from '../../contexts/GameContext';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { use_game } from '../../contexts/GameContext';
+import { use_language } from '../../contexts/LanguageContext';
 import LootBox from '../LootBox';
 import Button from '../Button';
 import type { Reward } from '../../types';
+import { supabase } from '../../lib/supabaseClient';
 
 interface PremiumReward {
   id: string;
@@ -31,10 +32,11 @@ interface PremiumReward {
 }
 
 export function PremiumRewards() {
-  const { state, dispatch } = useGame();
-  const { t } = useLanguage();
+  const { state, dispatch } = use_game();
+  const { t } = use_language();
   const [showLootBox, setShowLootBox] = useState(false);
   const [selectedReward, setSelectedReward] = useState<PremiumReward | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   /**
    * Premium rewards configuration
@@ -67,19 +69,52 @@ export function PremiumRewards() {
    * Handles the purchase of a premium reward
    * Checks coin balance, dispatches purchase action, and shows reward animation
    */
-  const handlePurchase = (reward: PremiumReward) => {
-    if (state.user.coins < reward.cost) return;
+  const handlePurchase = async (reward: PremiumReward) => {
+    if (!state.user?.coins || state.user.coins < reward.cost) {
+      setError('Not enough coins to purchase this reward');
+      return;
+    }
 
-    dispatch({
-      type: 'PURCHASE_ITEM',
-      payload: {
-        itemId: reward.id,
-        cost: reward.cost
+    try {
+      // Dispatch purchase action
+      dispatch({
+        type: 'PURCHASE_ITEM',
+        payload: {
+          item_id: reward.id,
+          cost: reward.cost
+        }
+      });
+
+      // Show reward animation
+      setSelectedReward(reward);
+      setShowLootBox(true);
+
+      // Update database
+      const { error } = await supabase
+        .from('user_inventory')
+        .insert({
+          user_id: state.user.id,
+          item_id: reward.id,
+          acquired_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error purchasing reward:', err);
+      setError('Failed to purchase reward. Please try again.');
+      
+      // Revert the purchase if database update fails
+      if (state.user) {
+        dispatch({
+          type: 'update_user_stats',
+          payload: {
+            coins: state.user.coins + reward.cost,
+            xp: state.user.xp,
+            streak: state.user.streak
+          }
+        });
       }
-    });
-
-    setSelectedReward(reward);
-    setShowLootBox(true);
+    }
   };
 
   return (
@@ -148,14 +183,15 @@ export function PremiumRewards() {
       {/* Reward Animation */}
       {selectedReward && (
         <LootBox
-          isOpen={showLootBox}
-          onClose={() => {
+          is_open={showLootBox}
+          on_close={() => {
             setShowLootBox(false);
             setSelectedReward(null);
           }}
           rewards={[
             {
-              type: selectedReward.type,
+              id: selectedReward.id,
+              type: selectedReward.type === 'material' ? 'item' : 'lootbox',
               value: selectedReward.title,
               rarity: selectedReward.rarity
             } as Reward

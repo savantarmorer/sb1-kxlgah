@@ -63,9 +63,9 @@ export type GameAction =
   | { type: 'REMOVE_ITEM'; payload: { id: string } }
   | { type: 'SYNC_ITEMS'; payload: GameItem[] }
   | { type: 'ADD_TO_INVENTORY'; payload: { item: GameItem } }
-  | { type: 'REMOVE_FROM_INVENTORY'; payload: { itemId: string } }
-  | { type: 'EQUIP_ITEM'; payload: { itemId: string } }
-  | { type: 'UNEQUIP_ITEM'; payload: { itemId: string } }
+  | { type: 'REMOVE_FROM_INVENTORY'; payload: { item_id: string } }
+  | { type: 'EQUIP_ITEM'; payload: { item_id: string } }
+  | { type: 'UNEQUIP_ITEM'; payload: { item_id: string } }
   
   // User Management
   | { type: 'UPDATE_USER_PROFILE'; payload: Partial<User> }

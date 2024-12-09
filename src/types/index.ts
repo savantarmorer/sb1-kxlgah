@@ -1,6 +1,52 @@
-import { Achievement } from './achievements';
-import { GameItem, InventoryItem, ItemType } from './items';
-import { User } from './user';
+/**
+ * Core game types
+ */
+export type { User } from './user';
+export type { 
+  GameItem, 
+  InventoryItem,
+  ItemType, 
+  ItemRarity, 
+  ItemEffect 
+} from './items';
+export type { Achievement, AchievementCategory, AchievementTrigger } from './achievements';
+export type { 
+  BattleRewards, 
+  BattleState, 
+  BattleStatus, 
+  BattleQuestion,
+  battle_stats 
+} from './battle';
+export type { 
+  UIXPGain,
+  SystemXPGain,
+  ProgressionSource,
+  LevelData,
+  AchievementReward,
+  ProgressData,
+  // Backward compatibility
+  XPGain,
+  ProgressionXPGain
+} from './progress';
+export type { 
+  Reward, 
+  RewardType, 
+  RewardRarity 
+} from './rewards';
+
+/**
+ * Type Dependencies:
+ * This is the central type export file.
+ * All commonly used types should be exported here.
+ * 
+ * Usage:
+ * import { Type1, Type2 } from '../types';
+ * 
+ * Benefits:
+ * - Single import source
+ * - Easier dependency management
+ * - Better type organization
+ */
 
 /**
  * Core Challenge interface
@@ -14,39 +60,11 @@ export interface Challenge {
 }
 
 /**
- * Re-export essential types
- * These are commonly used across the application
- */
-export type {
-  // User types
-  User,
-  
-  // Item types
-  GameItem,
-  InventoryItem,
-  ItemType,
-  
-  // Achievement types
-  Achievement,
-};
-
-/**
  * Type guard for checking if an item is equippable
  * @param item - Item to check
  * @returns boolean indicating if item can be equipped
  */
-export function isEquippableItem(item: InventoryItem): boolean {
-  return item.type === 'equipment' || item.type === 'cosmetic';
-}
-
-/**
- * Type guard for checking if an item is consumable
- * @param item - Item to check
- * @returns boolean indicating if item can be consumed
- */
-export function isConsumableItem(item: InventoryItem): boolean {
-  return item.type === 'consumable' && item.metadata?.uses !== undefined;
-}
+export { isEquippableItem, isConsumableItem } from './guards/items';
 
 /**
  * Module Role:
@@ -86,5 +104,3 @@ export function isConsumableItem(item: InventoryItem): boolean {
  * - user.ts
  * - actions.ts
  */
-
-

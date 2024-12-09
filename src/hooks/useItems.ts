@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useGame } from '../contexts/GameContext';
+import { use_game } from '../contexts/GameContext';
 import { supabase } from '../lib/supabase';
 import { GameItem } from '../types/items';
 import { convertItemFromDB, convertItemToDB } from '../utils/supabaseUtils';
@@ -22,7 +22,7 @@ interface ItemTimestamps {
  * - supabaseUtils for data conversion
  */
 export function useItems() {
-  const { dispatch } = useGame();
+  const { dispatch } = use_game();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -125,25 +125,25 @@ export function useItems() {
   /**
    * Deletes an item from both database and local state
    * 
-   * @param itemId - ID of item to delete
+   * @param item_id - ID of item to delete
    * @returns Promise<void>
    * 
    * Used by:
    * - ItemManager component
    */
-  const deleteItem = async (itemId: string): Promise<void> => {
+  const deleteItem = async (item_id: string): Promise<void> => {
     try {
       setError(null);
       const { error: dbError } = await supabase
         .from('items')
         .delete()
-        .match({ id: itemId });
+        .match({ id: item_id });
 
       if (dbError) throw dbError;
 
       dispatch({
         type: 'REMOVE_ITEM',
-        payload: { id: itemId } // Fixed to match action payload type
+        payload: { id: item_id } // Fixed to match action payload type
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete item';
@@ -168,7 +168,7 @@ export function useItems() {
 
 /**
  * Hook Dependencies:
- * - useGame: For accessing and modifying game state
+ * - use_game: For accessing and modifying game state
  * - supabase: For database operations
  * - convertItemFromDB/convertItemToDB: For data transformation
  * 

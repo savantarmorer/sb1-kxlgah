@@ -1,18 +1,18 @@
 import React, { useEffect } from 'react';
 import { Star, Gift, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGame } from '../../contexts/GameContext';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { use_game } from '../../contexts/GameContext';
+import { use_language } from '../../contexts/LanguageContext';
 import { LevelSystem } from '../../lib/levelSystem';
 import LootBox from '../LootBox';
 
 export function XPSystem() {
-  const { state, dispatch } = useGame();
-  const { t } = useLanguage();
+  const { state, dispatch } = use_game();
+  const { t } = use_language();
 
-  const currentLevelProgress = LevelSystem.calculateProgress(state.user.xp);
-  const xpForNextLevel = LevelSystem.calculateXPToNextLevel(state.user.xp);
-  const totalXPForCurrentLevel = LevelSystem.calculateXPForLevel(state.user.level);
+  const current_levelProgress = LevelSystem.calculate_progress(state.user.xp);
+  const xpForNextLevel = LevelSystem.calculate_xp_to_next_level(state.user.xp);
+  const totalXPForcurrent_level = LevelSystem.calculate_xp_for_level(state.user.level);
 
   return (
     <div className="card">
@@ -33,14 +33,14 @@ export function XPSystem() {
           </div>
           <div className="text-right">
             <span className="text-xs font-semibold text-primary">
-              {totalXPForCurrentLevel - xpForNextLevel}/{totalXPForCurrentLevel} XP
+              {totalXPForcurrent_level - xpForNextLevel}/{totalXPForcurrent_level} XP
             </span>
           </div>
         </div>
         <div className="progress-bar">
           <motion.div
             initial={{ width: 0 }}
-            animate={{ width: `${currentLevelProgress}%` }}
+            animate={{ width: `${current_levelProgress}%` }}
             transition={{ type: "spring", stiffness: 100, damping: 15 }}
             className="progress-bar-fill"
           />
@@ -75,9 +75,9 @@ export function XPSystem() {
       </AnimatePresence>
 
       <LootBox
-        isOpen={state.showLevelUpReward}
-        onClose={() => dispatch({ type: 'DISMISS_LEVEL_UP_REWARD' })}
-        rewards={state.currentLevelRewards || []}
+        is_open={state.showLevelUpReward}
+        on_close={() => dispatch({ type: 'DISMISS_LEVEL_UP_REWARD' })}
+        rewards={state.current_levelRewards || []}
       />
     </div>
   );

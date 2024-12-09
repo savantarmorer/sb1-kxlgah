@@ -56,14 +56,14 @@ export class BattleRatingService {
   private static calculateNewRatings(winnerRating: number, loserRating: number) {
     const expectedWinner = 1 / (1 + Math.pow(10, (loserRating - winnerRating) / 400));
     const expectedLoser = 1 - expectedWinner;
-    const kFactor = BATTLE_CONFIG.matchmaking.kFactor;
+    const k_factor = BATTLE_CONFIG.matchmaking.k_factor;
 
     return {
       winnerRating: Math.round(
-        winnerRating + kFactor * (1 - expectedWinner)
+        winnerRating + k_factor * (1 - expectedWinner)
       ),
       loserRating: Math.round(
-        loserRating + kFactor * (0 - expectedLoser)
+        loserRating + k_factor * (0 - expectedLoser)
       )
     };
   }
@@ -77,7 +77,7 @@ export class BattleRatingService {
 
     return data || {
       userId,
-      rating: BATTLE_CONFIG.matchmaking.defaultRating,
+      rating: BATTLE_CONFIG.matchmaking.default_rating,
       wins: 0,
       losses: 0,
       streak: 0

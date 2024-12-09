@@ -8,7 +8,7 @@ export function isAchievement(value: any): value is Achievement {
 }
 
 export function isQuest(value: any): value is Quest {
-  return value && 'title' in value && 'xpReward' in value && 'coinReward' in value;
+  return value && 'title' in value && 'xp_reward' in value && 'coin_reward' in value;
 }
 
 export function isReward(value: any): value is Reward {

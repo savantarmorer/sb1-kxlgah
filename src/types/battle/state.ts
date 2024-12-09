@@ -4,19 +4,19 @@ export type BattleStatus = 'searching' | 'ready' | 'battle' | 'completed';
 
 export interface BattleState {
   status: BattleStatus;
-  inProgress: boolean;
+  in_progress: boolean;
   startTime?: string;
   endTime?: string;
   currentOpponent?: string;
-  winStreak: number;
+  win_streak: number;
   totalBattles: number;
   questions: BattleQuestion[];
   currentQuestion: number;
   score: BattleScore;
   timePerQuestion: number;
   playerAnswers: boolean[];
-  timeLeft?: number;
-  streakBonus?: number;
+  time_left?: number;
+  streak_bonus?: number;
 }
 
 /**

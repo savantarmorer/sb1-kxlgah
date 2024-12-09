@@ -1,4 +1,4 @@
-import { useGame } from '../contexts/GameContext';
+import { use_game } from '../contexts/GameContext';
 import { useAdmin } from './useAdmin';
 import { GameItem, User } from '../types';
 import { Quest, QuestRequirement, QuestType } from '../types/quests';
@@ -38,7 +38,7 @@ interface QuestData extends Omit<Partial<Quest>, 'requirements'> {
  * Provides CRUD operations for admin users
  */
 export function useAdminActions(): AdminActions {
-  const { dispatch } = useGame();
+  const { dispatch } = use_game();
   const { isAdmin } = useAdmin();
 
   /**
@@ -186,7 +186,7 @@ export function useAdminActions(): AdminActions {
 
 /**
  * Hook Dependencies:
- * - useGame: For dispatching state updates
+ * - use_game: For dispatching state updates
  * - useAdmin: For permission checks
  * - supabase: For database operations
  * - supabaseUtils: For data conversion

@@ -1,103 +1,84 @@
-import React from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BattleQuestion, BattleState } from '../../types/battle';
-import { useGame } from '../../contexts/GameContext';
+import { BattleQuestion } from '../../types/battle';
+import { use_game } from '../../contexts/GameContext';
 
 interface QuestionDisplayProps {
-  question: BattleQuestion;
-  onAnswer: (index: number) => void;
-  timeLeft: number;
+  question: BattleQuestion | null;
+  on_answer: (answer: 'A' | 'B' | 'C' | 'D') => void;
   disabled?: boolean;
 }
 
-export default function QuestionDisplay({ 
+function QuestionDisplay({ 
   question, 
-  onAnswer, 
-  timeLeft,
+  on_answer,
   disabled 
 }: QuestionDisplayProps) {
-  const { state } = useGame();
-  const battle = state.battle as BattleState;
+  const { state } = use_game();
+  const battle = state.battle;
+
+  // Memoized answer handler to prevent re-renders
+  const handleAnswer = useCallback((key: 'A' | 'B' | 'C' | 'D') => {
+    if (!disabled && battle.status === 'active') {
+      on_answer(key);
+    }
+  }, [disabled, battle.status, on_answer]);
+
+  // Show loading state if no question
+  if (!question) {
+    return (
+      <div className="flex items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  // Map alternatives to array for easier rendering
+  const alternatives = [
+    { key: 'A', value: question.alternatives.a },
+    { key: 'B', value: question.alternatives.b },
+    { key: 'C', value: question.alternatives.c },
+    { key: 'D', value: question.alternatives.d }
+  ];
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={question.id}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        className="space-y-6"
-      >
-        <motion.div
-          className="relative"
-          animate={{
-            scale: timeLeft <= 5 ? [1, 1.02, 1] : 1
-          }}
-          transition={{
-            duration: 0.5,
-            repeat: timeLeft <= 5 ? Infinity : 0
-          }}
-        >
-          <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-            {question.question}
-          </h3>
-          {timeLeft <= 5 && (
-            <motion.div
-              className="absolute inset-0 rounded-lg border-2 border-red-500"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            />
-          )}
-        </motion.div>
+    <div className="space-y-6">
+      {/* Question Text */}
+      <div className="text-lg font-medium dark:text-white p-4 bg-white dark:bg-gray-800 rounded-lg">
+        {question.question}
+      </div>
 
-        <div className="grid grid-cols-1 gap-3">
-          {question.answers.map((answer: string, index: number) => (
+      {/* Alternatives */}
+      <div className="grid grid-cols-1 gap-4">
+        <AnimatePresence mode="wait">
+          {alternatives.map(({ key, value }) => (
             <motion.button
-              key={index}
-              onClick={() => !disabled && onAnswer(index)}
-              disabled={disabled || battle.status !== 'battle'}
-              whileHover={!disabled && battle.status === 'battle' ? { scale: 1.02 } : {}}
-              whileTap={!disabled && battle.status === 'battle' ? { scale: 0.98 } : {}}
-              className={`p-4 text-left rounded-lg border ${
-                disabled || battle.status !== 'battle'
-                  ? 'border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
-                  : 'border-gray-200 dark:border-gray-700 hover:bg-brand-teal-50 hover:border-brand-teal-300 dark:hover:bg-brand-teal-900/20 dark:hover:border-brand-teal-700'
-              } transition-colors text-gray-900 dark:text-white`}
+              key={key}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2 }}
+              className={`
+                w-full p-4 text-left rounded-lg border transition-all
+                ${disabled ? 'cursor-not-allowed opacity-50' : 'hover:border-brand-teal-500 hover:bg-brand-teal-50 dark:hover:bg-brand-teal-900/20'}
+                ${battle.selectedAnswer === key ? 'border-brand-teal-500 bg-brand-teal-50 dark:bg-brand-teal-900/20' : 'border-gray-200 dark:border-gray-700'}
+                bg-white dark:bg-gray-800
+              `}
+              onClick={() => handleAnswer(key as 'A' | 'B' | 'C' | 'D')}
+              disabled={disabled || battle.status !== 'active'}
             >
-              {answer}
+              <div className="flex items-start space-x-4">
+                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-brand-teal-100 dark:bg-brand-teal-900/30 text-brand-teal-600 dark:text-brand-teal-400 font-medium">
+                  {key}
+                </span>
+                <span className="flex-1 dark:text-white">{value}</span>
+              </div>
             </motion.button>
           ))}
-        </div>
-      </motion.div>
-    </AnimatePresence>
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }
 
-/**
- * Component Role:
- * - Displays current battle question
- * - Handles answer selection
- * - Provides visual feedback
- * 
- * Dependencies:
- * - GameContext for battle state
- * - Question type for props
- * - Framer Motion for animations
- * 
- * Used by:
- * - BattleMode component
- * 
- * Features:
- * - Animated transitions
- * - Time-based UI feedback
- * - Disabled state handling
- * - Dark mode support
- * 
- * Scalability:
- * - Modular design
- * - Reusable animations
- * - Configurable timing
- * - Extensible styling
- */ 
-
+export { QuestionDisplay };

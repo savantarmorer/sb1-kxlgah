@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Circle, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGame } from '../../contexts/GameContext';
+import { use_game } from '../../contexts/GameContext';
 import { Quest, QuestType } from '../../types/quests';
 import LootBox from '../LootBox';
 import { RewardService } from '../../services/rewardService';
@@ -16,7 +16,7 @@ interface MissionListProps {
 }
 
 export default function MissionList({ missions, onMissionComplete }: MissionListProps) {
-  const { state, dispatch } = useGame();
+  const { state, dispatch } = use_game();
   const [showLootBox, setShowLootBox] = useState(false);
   const [currentRewards, setCurrentRewards] = useState<Reward[]>([]);
   const { showNotification } = useNotification();
@@ -26,7 +26,7 @@ export default function MissionList({ missions, onMissionComplete }: MissionList
     if (!mission.id || state.completedQuests.includes(mission.id)) return;
 
     // Calculate rewards
-    const rewards = RewardService.calculateRewards({
+    const rewards = RewardService.calculate_rewards({
       type: 'quest',
       data: mission
     });
@@ -47,8 +47,11 @@ export default function MissionList({ missions, onMissionComplete }: MissionList
     dispatch({ 
       type: 'COMPLETE_QUEST', 
       payload: {
-        questId: mission.id,
-        rewards
+        quest: mission,
+        rewards: {
+          xp: rewards.reduce((sum, r) => r.type === 'xp' ? sum + Number(r.value) : sum, 0),
+          coins: rewards.reduce((sum, r) => r.type === 'coins' ? sum + Number(r.value) : sum, 0)
+        }
       }
     });
 
@@ -148,7 +151,7 @@ export default function MissionList({ missions, onMissionComplete }: MissionList
 
               <div className="flex flex-col items-end space-y-2">
                 <div className="flex items-center space-x-2">
-                  {mission.rewards?.map((reward, index) => (
+                  {mission.rewards?.map((reward: Reward, index: number) => (
                     <span
                       key={index}
                       className="text-sm font-medium text-gray-600 dark:text-gray-300"
@@ -159,7 +162,7 @@ export default function MissionList({ missions, onMissionComplete }: MissionList
                 </div>
                 <button
                   onClick={() => handleCompleteMission(mission)}
-                  disabled={mission.id && state.completedQuests.includes(mission.id)}
+                  disabled={Boolean(mission.id && state.completedQuests.includes(mission.id))}
                   className={`btn ${
                     mission.id && state.completedQuests.includes(mission.id)
                       ? 'btn-secondary opacity-50 cursor-not-allowed'
@@ -178,8 +181,8 @@ export default function MissionList({ missions, onMissionComplete }: MissionList
 
       {showLootBox && (
         <LootBox
-          isOpen={showLootBox}
-          onClose={() => setShowLootBox(false)}
+          is_open={showLootBox}
+          on_close={() => setShowLootBox(false)}
           rewards={currentRewards}
           source="quest"
         />

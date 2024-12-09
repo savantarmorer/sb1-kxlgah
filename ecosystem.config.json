@@ -1,0 +1,27 @@
+{
+  "apps": [
+    {
+      "name": "tournament-mode",
+      "script": "npm",
+      "args": "start",
+      "instances": "max",
+      "exec_mode": "cluster",
+      "env": {
+        "NODE_ENV": "production"
+      },
+      "env_production": {
+        "NODE_ENV": "production"
+      },
+      "env_staging": {
+        "NODE_ENV": "staging"
+      },
+      "watch": false,
+      "merge_logs": true,
+      "error_file": "logs/err.log",
+      "out_file": "logs/out.log",
+      "log_date_format": "YYYY-MM-DD HH:mm:ss",
+      "max_memory_restart": "1G",
+      "autorestart": true
+    }
+  ]
+} 

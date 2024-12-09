@@ -43,8 +43,8 @@ export const NotificationSystem = {
             <h3 className="font-bold text-gray-900 dark:text-white">Quest Complete!</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">{quest.title}</p>
             <div className="flex items-center space-x-2 mt-2">
-              <span className="text-sm text-yellow-600">+{quest.xpReward} XP</span>
-              <span className="text-sm text-yellow-600">+{quest.coinReward} Coins</span>
+              <span className="text-sm text-yellow-600">+{quest.xp_reward} XP</span>
+              <span className="text-sm text-yellow-600">+{quest.coin_reward} Coins</span>
             </div>
           </div>
         </div>

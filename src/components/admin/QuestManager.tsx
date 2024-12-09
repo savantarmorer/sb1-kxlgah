@@ -1,129 +1,209 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Plus, Settings } from 'lucide-react';
-import { useGame } from '../../contexts/GameContext';
+import React, { useState, useContext } from 'react';
+import {
+  Box,
+  IconButton,
+  Typography,
+  TableContainer,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  Paper,
+  Chip,
+  Button
+} from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { useAdminActions } from '../../hooks/useAdminActions';
-import QuestEditor from './QuestEditor';
-import Button from '../Button';
+import { useQuests } from '../../hooks/useQuests';
+import { QuestEditor } from './QuestEditor';
+import { CreateQuestDialog } from './CreateQuestDialog';
+import { AssignQuestDialog } from './AssignQuestDialog';
 import { Quest } from '../../types/quests';
+import { useNotification } from '../../contexts/NotificationContext';
+import { GameContext } from '../../contexts/GameContext';
 
-type QuestWithId = Quest & Required<Pick<Quest, 'id'>>;
+interface QuestWithId extends Quest {
+  id: string;
+}
 
 interface QuestManagerState {
   showEditor: boolean;
   selectedQuest?: QuestWithId;
   isLoading: boolean;
+  error: string | null;
 }
 
 export default function QuestManager() {
-  const { state } = useGame();
+  const { state } = useContext(GameContext);
   const { saveQuest } = useAdminActions();
-  const [localState, setLocalState] = useState<QuestManagerState>({
+  const { syncQuests } = useQuests();
+  const { showSuccess, showError } = useNotification();
+  
+  const [managerState, setManagerState] = useState<QuestManagerState>({
     showEditor: false,
     selectedQuest: undefined,
-    isLoading: false
+    isLoading: false,
+    error: null,
   });
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
 
-  const handleEditQuest = (quest: Quest) => {
-    setLocalState({
-      ...localState,
-      selectedQuest: quest as QuestWithId
-    });
-    setLocalState({
-      ...localState,
-      showEditor: true
-    });
+  const handleCreateQuest = () => {
+    setShowCreateDialog(true);
   };
 
-  const handleAddQuest = () => {
-    setLocalState({
-      ...localState,
-      selectedQuest: undefined,
-      showEditor: true
-    });
+  const handleAssignQuest = (questId: string) => {
+    setSelectedQuestId(questId);
+    setShowAssignDialog(true);
+  };
+
+  const handleEditQuest = (quest: QuestWithId) => {
+    setManagerState(prev => ({
+      ...prev,
+      showEditor: true,
+      selectedQuest: quest,
+    }));
+  };
+
+  const handleDeleteQuest = async (questId: string) => {
+    try {
+      setManagerState(prev => ({ ...prev, isLoading: true }));
+      await saveQuest({ id: questId, is_active: false });
+      await syncQuests();
+      showSuccess('Quest deleted successfully');
+    } catch (error) {
+      console.error('Error deleting quest:', error);
+      showError('Error deleting quest');
+    } finally {
+      setManagerState(prev => ({ ...prev, isLoading: false }));
+    }
   };
 
   const handleSaveQuest = async (quest: Partial<Quest>) => {
     try {
-      setLocalState({
-        ...localState,
-        isLoading: true
-      });
+      setManagerState(prev => ({ ...prev, isLoading: true }));
       await saveQuest(quest);
-      setLocalState({
-        ...localState,
-        showEditor: false
-      });
+      await syncQuests();
+      setManagerState(prev => ({
+        ...prev,
+        showEditor: false,
+        selectedQuest: undefined,
+      }));
+      showSuccess('Quest saved successfully');
     } catch (error) {
       console.error('Error saving quest:', error);
+      showError('Error saving quest');
     } finally {
-      setLocalState({
-        ...localState,
-        isLoading: false
-      });
+      setManagerState(prev => ({ ...prev, isLoading: false }));
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold dark:text-white">Quest Management</h2>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+        <Typography variant="h4">Quest Management</Typography>
         <Button
-          variant="primary"
-          onClick={handleAddQuest}
-          icon={<Plus size={16} />}
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={handleCreateQuest}
         >
-          Add Quest
+          Create Quest
         </Button>
-      </div>
+      </Box>
 
-      <div className="grid gap-4">
-        {state.quests?.map((quest) => (
-          <motion.div
-            key={quest.id}
-            layout
-            className="card"
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="font-semibold">{quest.title}</h3>
-                <p className="text-sm text-muted">{quest.description}</p>
-                <div className="flex items-center space-x-2 mt-2">
-                  <span className={`badge ${
-                    quest.type === 'epic' ? 'badge-warning' :
-                    quest.type === 'weekly' ? 'badge-info' :
-                    'badge-success'
-                  }`}>
-                    {quest.type}
-                  </span>
-                  <span className="text-sm text-muted">
-                    XP: {quest.xpReward} | Coins: {quest.coinReward}
-                  </span>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleEditQuest(quest)}
-                icon={<Settings size={16} />}
-              >
-                Edit
-              </Button>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Quest</TableCell>
+              <TableCell>Type</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {state.quests?.active.map((quest: QuestWithId) => (
+              <TableRow key={quest.id}>
+                <TableCell>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                    {quest.title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {quest.description}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Chip label={quest.type} />
+                </TableCell>
+                <TableCell>
+                  <Chip 
+                    label={quest.is_active ? 'Active' : 'Inactive'} 
+                    color={quest.is_active ? 'success' : 'error'} 
+                  />
+                </TableCell>
+                <TableCell>
+                  <IconButton
+                    onClick={() => handleEditQuest(quest)}
+                    size="small"
+                    sx={{ mr: 1 }}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => handleAssignQuest(quest.id)}
+                    size="small"
+                    sx={{ mr: 1 }}
+                  >
+                    <PersonAddIcon />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => handleDeleteQuest(quest.id)}
+                    size="small"
+                    color="error"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-      {localState.showEditor && (
-        <QuestEditor
-          quest={localState.selectedQuest}
-          onSave={handleSaveQuest}
-          onClose={() => setLocalState({
-            ...localState,
-            showEditor: false
-          })}
+      <CreateQuestDialog
+        open={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        onQuestCreated={syncQuests}
+      />
+
+      {selectedQuestId && (
+        <AssignQuestDialog
+          open={showAssignDialog}
+          onClose={() => {
+            setShowAssignDialog(false);
+            setSelectedQuestId(null);
+          }}
+          questId={selectedQuestId}
         />
       )}
-    </div>
+
+      {managerState.showEditor && managerState.selectedQuest && (
+        <QuestEditor
+          quest={managerState.selectedQuest}
+          onSave={handleSaveQuest}
+          onCancel={() => setManagerState(prev => ({
+            ...prev,
+            showEditor: false,
+            selectedQuest: undefined,
+          }))}
+        />
+      )}
+    </Box>
   );
 }

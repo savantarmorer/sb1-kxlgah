@@ -1,109 +1,67 @@
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
-import { NotificationItem } from '../types/notifications';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
-interface NotificationState {
-  queue: NotificationItem[];
-  current: NotificationItem | null;
+export type NotificationType = 'success' | 'error' | 'info' | 'warning';
+
+export interface NotificationItem {
+  id: string;
+  message: string;
+  type: NotificationType;
+  duration?: number;
 }
 
 interface NotificationContextType {
-  state: NotificationState;
+  notifications: NotificationItem[];
   showNotification: (notification: Omit<NotificationItem, 'id'>) => void;
-  dismissNotification: (id?: string) => void;
-  clearNotifications: () => void;
-  updateNotification: (id: string, updates: Partial<NotificationItem>) => void;
+  showSuccess: (message: string) => void;
+  showError: (message: string) => void;
+  removeNotification: (id: string) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-type NotificationAction =
-  | { type: 'SHOW_NOTIFICATION'; payload: NotificationItem }
-  | { type: 'DISMISS_NOTIFICATION'; payload?: string }
-  | { type: 'CLEAR_NOTIFICATIONS' }
-  | { type: 'UPDATE_NOTIFICATION'; payload: { id: string; updates: Partial<NotificationItem> } };
-
-function notificationReducer(state: NotificationState, action: NotificationAction): NotificationState {
-  switch (action.type) {
-    case 'SHOW_NOTIFICATION': {
-      const newQueue = [...state.queue, action.payload];
-      return {
-        ...state,
-        queue: newQueue,
-        current: state.current || action.payload
-      };
-    }
-    case 'DISMISS_NOTIFICATION': {
-      if (action.payload) {
-        const newQueue = state.queue.filter(n => n.id !== action.payload);
-        return {
-          ...state,
-          queue: newQueue,
-          current: state.current?.id === action.payload ? newQueue[0] || null : state.current
-        };
-      }
-      const newQueue = state.queue.slice(1);
-      return {
-        ...state,
-        queue: newQueue,
-        current: newQueue[0] || null
-      };
-    }
-    case 'UPDATE_NOTIFICATION': {
-      const { id, updates } = action.payload;
-      const newQueue = state.queue.map(notification =>
-        notification.id === id ? { ...notification, ...updates } : notification
-      );
-      return {
-        ...state,
-        queue: newQueue,
-        current: state.current?.id === id 
-          ? { ...state.current, ...updates }
-          : state.current
-      };
-    }
-    case 'CLEAR_NOTIFICATIONS':
-      return { queue: [], current: null };
-    default:
-      return state;
-  }
-}
-
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(notificationReducer, {
-    queue: [],
-    current: null
-  });
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  const removeNotification = useCallback((id: string) => {
+    setNotifications(prev => prev.filter(notification => notification.id !== id));
+  }, []);
 
   const showNotification = useCallback((notification: Omit<NotificationItem, 'id'>) => {
-    const id = `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    dispatch({
-      type: 'SHOW_NOTIFICATION',
-      payload: { ...notification, id }
+    const id = Math.random().toString(36).substring(7);
+    setNotifications(prev => [...prev, { ...notification, id }]);
+
+    // Auto remove notification after duration
+    setTimeout(() => {
+      removeNotification(id);
+    }, notification.duration || 3000);
+  }, [removeNotification]);
+
+  const showSuccess = useCallback((message: string) => {
+    showNotification({
+      message,
+      type: 'success',
+      duration: 3000
     });
-  }, []);
+  }, [showNotification]);
 
-  const dismissNotification = useCallback((id?: string) => {
-    dispatch({ type: 'DISMISS_NOTIFICATION', payload: id });
-  }, []);
+  const showError = useCallback((message: string) => {
+    showNotification({
+      message,
+      type: 'error',
+      duration: 3000
+    });
+  }, [showNotification]);
 
-  const updateNotification = useCallback((id: string, updates: Partial<NotificationItem>) => {
-    dispatch({ type: 'UPDATE_NOTIFICATION', payload: { id, updates } });
-  }, []);
-
-  const clearNotifications = useCallback(() => {
-    dispatch({ type: 'CLEAR_NOTIFICATIONS' });
-  }, []);
+  const value = {
+    notifications,
+    showNotification,
+    showSuccess,
+    showError,
+    removeNotification
+  };
 
   return (
-    <NotificationContext.Provider 
-      value={{ 
-        state, 
-        showNotification, 
-        dismissNotification, 
-        clearNotifications,
-        updateNotification
-      }}
-    >
+    <NotificationContext.Provider value={value}>
       {children}
     </NotificationContext.Provider>
   );
@@ -111,9 +69,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
 export function useNotification() {
   const context = useContext(NotificationContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useNotification must be used within a NotificationProvider');
   }
   return context;
 } 
-

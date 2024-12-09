@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Code, Plus, Save, Play, X, Settings } from 'lucide-react';
-import { useGame } from '../contexts/GameContext';
+import { use_game } from '../contexts/GameContext';
 import Button from '../Button';
 
 interface BlockType {
@@ -19,14 +19,14 @@ interface VisualBlock {
 }
 
 export default function VisualEditor() {
-  const { dispatch } = useGame();
+  const { dispatch } = use_game();
   const [blocks, setBlocks] = useState<VisualBlock[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
   const [showBlockMenu, setShowBlockMenu] = useState(false);
 
   const availableBlocks: BlockType[] = [
     {
-      id: 'add_xp',
+      id: 'ADD_XP',
       type: 'action',
       name: 'Add XP',
       config: {
@@ -35,7 +35,7 @@ export default function VisualEditor() {
       }
     },
     {
-      id: 'add_coins',
+      id: 'ADD_COINS',
       type: 'action',
       name: 'Add Coins',
       config: {
@@ -43,7 +43,7 @@ export default function VisualEditor() {
       }
     },
     {
-      id: 'unlock_achievement',
+      id: 'UNLOCK_ACHIEVEMENT',
       type: 'action',
       name: 'Unlock Achievement',
       config: {
@@ -117,7 +117,7 @@ export default function VisualEditor() {
 
     // Execute block action based on type
     switch (block.type.id) {
-      case 'add_xp':
+      case 'ADD_XP':
         dispatch({
           type: 'ADD_XP',
           payload: {
@@ -126,7 +126,7 @@ export default function VisualEditor() {
           }
         });
         break;
-      case 'add_coins':
+      case 'ADD_COINS':
         dispatch({
           type: 'ADD_COINS',
           payload: block.type.config.amount
@@ -278,4 +278,3 @@ export default function VisualEditor() {
     </div>
   );
 } 
-

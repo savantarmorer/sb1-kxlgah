@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Share2, Lock, CheckCircle } from 'lucide-react';
 import { Achievement, AchievementCategory } from '../../types/achievements';
-import { useGame } from '../../contexts/GameContext';
+import { use_game } from '../../contexts/GameContext';
 import Button from '../Button';
 import { useAdmin } from '../../hooks/useAdmin';
 
@@ -11,7 +11,7 @@ export interface AchievementCardProps {
 }
 
 export default function AchievementCard({ achievement, category }: AchievementCardProps) {
-  const { dispatch } = useGame();
+  const { dispatch } = use_game();
   const { isAdmin } = useAdmin();
   const Icon = category.icon;
 

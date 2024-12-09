@@ -7,7 +7,7 @@ import {
   Play, 
   Save
 } from 'lucide-react';
-import { useGame } from '../../contexts/GameContext';
+import { use_game } from '../../contexts/GameContext';
 import { useAdmin } from '../../hooks/useAdmin';
 import Button from '../Button';
 
@@ -15,7 +15,7 @@ import Button from '../Button';
  * Interface for Debug Menu props
  */
 interface DebugMenuProps {
-  onClose: () => void;
+  on_close: () => void;
 }
 
 /**
@@ -60,8 +60,8 @@ interface DebugMenuState {
  * DebugMenu Component
  * Provides admin tools for testing and debugging game features
  */
-export default function DebugMenu({ onClose }: DebugMenuProps) {
-  const { state, dispatch } = useGame();
+export default function DebugMenu({ on_close }: DebugMenuProps) {
+  const { state, dispatch } = use_game();
   const { debugActions } = useAdmin();
   const [localState, setLocalState] = useState<DebugMenuState>({
     activeTab: 'quests',
@@ -323,7 +323,7 @@ export default function DebugMenu({ onClose }: DebugMenuProps) {
             <h2 className="text-2xl font-bold dark:text-white">Debug Menu</h2>
           </div>
           <button
-            onClick={onClose}
+            onClick={on_close}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
           >
             <CloseIcon size={20} className="text-gray-600 dark:text-gray-400" />
@@ -356,7 +356,7 @@ export default function DebugMenu({ onClose }: DebugMenuProps) {
 
 /**
  * Component Dependencies:
- * - useGame: For accessing and modifying game state
+ * - use_game: For accessing and modifying game state
  * - useAdmin: For admin-specific actions
  * - Button: For UI interactions
  * - Framer Motion: For animations

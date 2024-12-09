@@ -25,13 +25,13 @@ export function QuestToast({ visible, quest }: QuestToastProps) {
             <div className="flex items-center">
               <Star className="text-yellow-500" size={16} />
               <span className="text-sm text-gray-600 dark:text-gray-400 ml-1">
-                +{quest.xpReward} XP
+                +{quest.xp_reward} XP
               </span>
             </div>
             <div className="flex items-center">
               <Star className="text-yellow-500" size={16} />
               <span className="text-sm text-gray-600 dark:text-gray-400 ml-1">
-                +{quest.coinReward} Coins
+                +{quest.coin_reward} Coins
               </span>
             </div>
           </div>

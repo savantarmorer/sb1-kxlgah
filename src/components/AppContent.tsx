@@ -1,73 +1,63 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Navigation from './Navigation';
-import UserProgress from './UserProgress';
-import QuestSystem from './QuestSystem';
-import Leaderboard from './Leaderboard';
-import Store from './Store';
-import { useGame } from '../contexts/GameContext';
-import { Achievements } from './RewardSystem/Achievements';
-import DailyRewardSystem from './DailyRewards/DailyRewardSystem';
-import ProfileDashboard from './UserProfile/ProfileDashboard';
-import Inventory from './UserProfile/Inventory';
-import { BattleMode } from './Battle';
-import AdminDashboard from './admin/AdminDashboard';
+import Dashboard from './Dashboard/Dashboard';
+import BattleMode from './Battle/BattleMode';
+import InventorySystem from './inventory/InventorySystem';
+import ShopSystem from './Shop/ShopSystem';
+import Settings from './Settings/Settings';
+import UserProfile from './UserProfile/ProfileDashboard';
+import UserProgress from './UserProfile/UserProgress';
 import { View } from '../types/navigation';
+import { use_game } from '../contexts/GameContext';
+import AchievementSystem from './Achievements/AchievementSystem';
+import TournamentMode from './Tournament/TournamentMode';
 
 export default function AppContent() {
-  const [currentView, setCurrentView] = useState<View>('home');
-  const { state } = useGame();
-  const isAdmin = state.user.roles?.includes('admin');
-
-  const renderContent = () => {
-    switch (currentView) {
-      case 'home':
-        return (
-          <div className="space-y-6">
-            <DailyRewardSystem />
-            <QuestSystem />
-          </div>
-        );
-      case 'leaderboard':
-        return <Leaderboard />;
-      case 'quests':
-        return <QuestSystem />;
-      case 'store':
-        return <Store />;
-      case 'profile':
-        return <ProfileDashboard />;
-      case 'inventory':
-        return <Inventory />;
-      case 'admin':
-        return isAdmin ? <AdminDashboard onClose={() => setCurrentView('home')} /> : null;
-      case 'battle':
-        return <BattleMode onClose={() => setCurrentView('home')} />;
-      default:
-        return null;
-    }
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { state } = use_game();
+  
+  const handleBattleClose = () => {
+    navigate('/home');
   };
 
+  const handleViewChange = (view: View) => {
+    console.log('Navigation clicked:', view);
+    // Remove /home from the current path to get the base route
+    const baseRoute = view === '/' ? '/home' : `/home${view}`;
+    navigate(baseRoute);
+  };
+
+  // Get the current view by removing /home prefix
+  const currentView = location.pathname.replace('/home', '') as View;
+  console.log('Current view:', currentView);
+
   return (
-    <div className="app-container">
-      {/* Header - Always show UserProgress */}
-      <header className="app-header">
-        <div className="content-container">
-          <UserProgress showSettings={currentView === 'home'} />
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="app-content">
-        <div className="content-container">
-          {renderContent()}
-        </div>
-      </main>
-
-      {/* Navigation */}
-      <Navigation
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="pb-16">
+        <main className="max-w-screen-xl mx-auto px-4 py-6">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/battle" element={<BattleMode on_close={handleBattleClose} />} />
+            <Route path="/inventory" element={<InventorySystem />} />
+            <Route path="/shop" element={<ShopSystem />} />
+            <Route path="/tournament" element={<TournamentMode />} />
+            <Route path="/settings" element={
+              <div className="space-y-6">
+                <UserProgress />
+                <UserProfile />
+                <AchievementSystem />
+                <Settings />
+              </div>
+            } />
+          </Routes>
+        </main>
+      </div>
+      <Navigation 
         currentView={currentView}
-        onViewChange={setCurrentView}
-        showInventory={state.user.roles?.includes('premium')}
-        isAdmin={isAdmin}
+        onViewChange={handleViewChange}
+        isAdmin={state.user.roles?.includes('admin')}
       />
     </div>
   );

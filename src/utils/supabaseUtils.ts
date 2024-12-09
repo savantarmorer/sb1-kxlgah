@@ -21,10 +21,10 @@ export function convertQuestToDB(quest: Partial<Quest>): Record<string, any> {
 
   return {
     ...quest,
-    xp_reward: quest.xpReward,
-    coin_reward: quest.coinReward,
+    xp_reward: quest.xp_reward,
+    coin_reward: quest.coin_reward,
     requirements,
-    is_active: quest.isActive ?? true
+    is_active: quest.is_active ?? true
   };
 }
 
@@ -43,11 +43,11 @@ export function convertQuestFromDB(dbQuest: any): Quest {
     type: dbQuest.type,
     status: dbQuest.status,
     category: dbQuest.category,
-    xpReward: dbQuest.xp_reward,
-    coinReward: dbQuest.coin_reward,
+    xp_reward: dbQuest.xp_reward,
+    coin_reward: dbQuest.coin_reward,
     requirements: dbQuest.requirements || [],
     progress: dbQuest.progress || 0,
-    isActive: dbQuest.is_active
+    is_active: dbQuest.is_active
   };
 }
 

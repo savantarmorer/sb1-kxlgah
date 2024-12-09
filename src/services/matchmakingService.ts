@@ -36,10 +36,10 @@ export class MatchmakingService {
     const expectedLoser = 1 - expectedWinner;
 
     const winnerRating = Math.round(
-      winner.rating + BATTLE_CONFIG.matchmaking.kFactor * (1 - expectedWinner)
+      winner.rating + BATTLE_CONFIG.matchmaking.k_factor * (1 - expectedWinner)
     );
     const loserRating = Math.round(
-      loser.rating + BATTLE_CONFIG.matchmaking.kFactor * (0 - expectedLoser)
+      loser.rating + BATTLE_CONFIG.matchmaking.k_factor * (0 - expectedLoser)
     );
 
     return { winnerRating, loserRating };

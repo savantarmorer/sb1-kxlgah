@@ -9,63 +9,63 @@ interface LevelUpReward {
 
 export class LevelSystem {
   static calculateLevel(xp: number): number {
-    const baseXP = 1000;
+    const base_xp = 1000;
     const scalingFactor = 1.5;
     
     let level = 1;
-    let requiredXP = baseXP;
+    let requiredXP = base_xp;
     
     while (xp >= requiredXP) {
       level++;
-      requiredXP = Math.floor(baseXP * Math.pow(scalingFactor, level - 1));
+      requiredXP = Math.floor(base_xp * Math.pow(scalingFactor, level - 1));
     }
     
     return level;
   }
 
   static getXPForLevel(level: number): number {
-    const baseXP = 1000;
+    const base_xp = 1000;
     const scalingFactor = 1.5;
     
-    return Math.floor(baseXP * Math.pow(scalingFactor, level - 1));
+    return Math.floor(base_xp * Math.pow(scalingFactor, level - 1));
   }
 
   static getProgressToNextLevel(xp: number): number {
-    const currentLevel = this.calculateLevel(xp);
-    const currentLevelXP = this.getXPForLevel(currentLevel);
-    const nextLevelXP = this.getXPForLevel(currentLevel + 1);
+    const current_level = this.calculateLevel(xp);
+    const current_levelXP = this.getXPForLevel(current_level);
+    const next_level_xp = this.getXPForLevel(current_level + 1);
     
-    return ((xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
+    return ((xp - current_levelXP) / (next_level_xp - current_levelXP)) * 100;
   }
 
-  static calculateXPForLevel(level: number): number {
-    return Math.floor(LEVEL_CONFIG.baseXP * Math.pow(LEVEL_CONFIG.scalingFactor, level - 1));
+  static calculate_xp_for_level(level: number): number {
+    return Math.floor(LEVEL_CONFIG.base_xp * Math.pow(LEVEL_CONFIG.scalingFactor, level - 1));
   }
 
-  static calculateTotalXPForLevel(level: number): number {
+  static calculatetotal_xp_for_level(level: number): number {
     let total = 0;
     for (let i = 1; i < level; i++) {
-      total += this.calculateXPForLevel(i);
+      total += this.calculate_xp_for_level(i);
     }
     return total;
   }
 
-  static calculateProgress(xp: number): number {
-    const currentLevel = this.calculateLevel(xp);
-    const totalXPForCurrentLevel = this.calculateTotalXPForLevel(currentLevel);
-    const xpInCurrentLevel = xp - totalXPForCurrentLevel;
-    const xpNeededForNextLevel = this.calculateXPForLevel(currentLevel);
+  static calculate_progress(xp: number): number {
+    const current_level = this.calculateLevel(xp);
+    const totalXPForcurrent_level = this.calculatetotal_xp_for_level(current_level);
+    const xpIncurrent_level = xp - totalXPForcurrent_level;
+    const xpNeededForNextLevel = this.calculate_xp_for_level(current_level);
     
-    return (xpInCurrentLevel / xpNeededForNextLevel) * 100;
+    return (xpIncurrent_level / xpNeededForNextLevel) * 100;
   }
 
-  static calculateXPToNextLevel(xp: number): number {
-    const currentLevel = this.calculateLevel(xp);
-    const totalXPForCurrentLevel = this.calculateTotalXPForLevel(currentLevel);
-    const xpInCurrentLevel = xp - totalXPForCurrentLevel;
-    const xpNeededForNextLevel = this.calculateXPForLevel(currentLevel);
+  static calculate_xp_to_next_level(xp: number): number {
+    const current_level = this.calculateLevel(xp);
+    const totalXPForcurrent_level = this.calculatetotal_xp_for_level(current_level);
+    const xpIncurrent_level = xp - totalXPForcurrent_level;
+    const xpNeededForNextLevel = this.calculate_xp_for_level(current_level);
     
-    return xpNeededForNextLevel - xpInCurrentLevel;
+    return xpNeededForNextLevel - xpIncurrent_level;
   }
 
   static getLevelUpRewards(level: number): {

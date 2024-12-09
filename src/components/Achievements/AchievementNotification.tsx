@@ -5,10 +5,10 @@ import Button from '../Button';
 
 interface AchievementNotificationProps {
   achievement: Achievement;
-  onClose: () => void;
+  on_close: () => void;
 }
 
-export default function AchievementNotification({ achievement, onClose }: AchievementNotificationProps) {
+export default function AchievementNotification({ achievement, on_close }: AchievementNotificationProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 50 }}
@@ -34,11 +34,11 @@ export default function AchievementNotification({ achievement, onClose }: Achiev
         <Button
           variant="outline"
           size="sm"
-          onClick={onClose}
+          onClick={on_close}
           icon={<X size={16} />}
           className="!p-1"
         />
       </div>
     </motion.div>
   );
-} 
+}

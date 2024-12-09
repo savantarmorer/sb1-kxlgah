@@ -1,12 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Star, Target, TrendingUp, Medal, Swords, Award, Crown } from 'lucide-react';
-import { useGame } from '../../contexts/GameContext';
-import { BattleStats as BattleStatsType } from '../../types/battle';
+import { use_game } from '../../contexts/GameContext';
 
-export default function BattleStats() {
-  const { state } = useGame();
-  const stats = state.battleStats;
+export default function battle_stats() {
+  const { state } = use_game();
+  const stats = state.battle_stats;
 
   if (!stats) {
     return (
@@ -16,10 +15,10 @@ export default function BattleStats() {
     );
   }
 
-  const calculateWinRate = (stats: BattleStatsType) => {
-    if (!stats.totalBattles) return 0;
-    return ((stats.wins / stats.totalBattles) * 100).toFixed(1);
-  };
+  const calculateWinRate = useMemo(() => {
+    if (!stats.total_battles) return 0;
+    return ((stats.wins / stats.total_battles) * 100).toFixed(1);
+  }, [stats.total_battles, stats.wins]);
 
   const getRankInfo = (rating: number): { title: string; color: string; icon: JSX.Element } => {
     if (rating >= 2000) return { 
@@ -54,7 +53,21 @@ export default function BattleStats() {
     };
   };
 
-  const rankInfo = getRankInfo(state.user.battleRating || 0);
+  const rankInfo = getRankInfo(state.user.battle_rating || 0);
+
+  const derived_stats = useMemo(() => {
+    const total_battles = stats.total_battles || 0;
+    const wins = stats.wins || 0;
+    const losses = stats.losses || 0;
+    
+    return {
+      win_rate: calculateWinRate,
+      average_score: total_battles > 0 ? (stats.total_xp_earned / total_battles) : 0,
+      current_streak: stats.win_streak || 0,
+      total_matches: total_battles,
+      win_loss_ratio: losses > 0 ? wins / losses : wins
+    };
+  }, [stats, calculateWinRate]);
 
   return (
     <div className="space-y-8">
@@ -76,7 +89,7 @@ export default function BattleStats() {
                   {rankInfo.title}
                 </p>
                 <p className="text-gray-400">
-                  Rating: {state.user.battleRating || 0}
+                  Rating: {state.user.battle_rating || 0}
                 </p>
               </div>
             </div>
@@ -87,34 +100,34 @@ export default function BattleStats() {
               scale: [1, 1.1, 1],
             }}
             transition={{
-              duration: 3,
+              duration: 2,
+              ease: "easeInOut",
+              times: [0, 0.5, 1],
               repeat: Infinity,
-              repeatType: "reverse"
+              repeatDelay: 1
             }}
-            className={`${rankInfo.color} opacity-20`}
+            className="relative"
           >
-            {rankInfo.icon}
+            <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full blur-lg opacity-50"></div>
+            <Trophy className="h-12 w-12 text-yellow-400" />
           </motion.div>
         </div>
       </motion.div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <motion.div 
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
-          whileHover={{ scale: 1.02 }}
+          className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-md"
         >
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <Swords className="text-blue-500 h-6 w-6" />
-            </div>
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">Total Battles</p>
-              <p className="text-2xl font-bold">{stats.totalBattles}</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">Win Rate</p>
+              <p className="text-2xl font-bold">{derived_stats.win_rate}%</p>
             </div>
+            <TrendingUp className="h-8 w-8 text-green-500" />
           </div>
         </motion.div>
 
@@ -122,22 +135,14 @@ export default function BattleStats() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
-          whileHover={{ scale: 1.02 }}
+          className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-md"
         >
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-              <Trophy className="text-yellow-500 h-6 w-6" />
-            </div>
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">Win Rate</p>
-              <div className="flex items-baseline space-x-2">
-                <p className="text-2xl font-bold">{calculateWinRate(stats)}%</p>
-                <p className="text-sm text-gray-500">
-                  ({stats.wins}W - {stats.losses}L)
-                </p>
-              </div>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">Current Streak</p>
+              <p className="text-2xl font-bold">{derived_stats.current_streak}</p>
             </div>
+            <Star className="h-8 w-8 text-yellow-500" />
           </div>
         </motion.div>
 
@@ -145,22 +150,29 @@ export default function BattleStats() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
-          whileHover={{ scale: 1.02 }}
+          className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-md"
         >
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-              <Star className="text-green-500 h-6 w-6" />
-            </div>
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">Win Streak</p>
-              <div className="flex items-baseline space-x-2">
-                <p className="text-2xl font-bold">{stats.winStreak}</p>
-                <p className="text-sm text-gray-500">
-                  (Best: {stats.highestStreak})
-                </p>
-              </div>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">Total Matches</p>
+              <p className="text-2xl font-bold">{derived_stats.total_matches}</p>
             </div>
+            <Swords className="h-8 w-8 text-blue-500" />
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-md"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">W/L Ratio</p>
+              <p className="text-2xl font-bold">{derived_stats.win_loss_ratio.toFixed(2)}</p>
+            </div>
+            <Medal className="h-8 w-8 text-purple-500" />
           </div>
         </motion.div>
       </div>
@@ -181,12 +193,12 @@ export default function BattleStats() {
             <div>
               <div className="flex justify-between text-sm mb-2">
                 <span className="text-gray-600 dark:text-gray-400">Average Score</span>
-                <span className="font-medium">{stats.averageScore.toFixed(1)}%</span>
+                <span className="font-medium">{derived_stats.average_score.toFixed(1)}%</span>
               </div>
               <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <motion.div 
                   initial={{ width: 0 }}
-                  animate={{ width: `${stats.averageScore}%` }}
+                  animate={{ width: `${Math.min(derived_stats.average_score, 100)}%` }}
                   transition={{ duration: 1, delay: 0.5 }}
                   className="h-full bg-orange-500 rounded-full"
                 />
@@ -194,15 +206,29 @@ export default function BattleStats() {
             </div>
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-600 dark:text-gray-400">Current Streak</span>
-                <span className="font-medium">{stats.winStreak} / {stats.highestStreak}</span>
+                <span className="text-gray-600 dark:text-gray-400">Win Rate</span>
+                <span className="font-medium">{derived_stats.win_rate}%</span>
               </div>
               <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <motion.div 
                   initial={{ width: 0 }}
-                  animate={{ width: `${(stats.winStreak / stats.highestStreak) * 100}%` }}
+                  animate={{ width: `${derived_stats.win_rate}%` }}
                   transition={{ duration: 1, delay: 0.6 }}
                   className="h-full bg-green-500 rounded-full"
+                />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-gray-600 dark:text-gray-400">Current Streak</span>
+                <span className="font-medium">{derived_stats.current_streak}</span>
+              </div>
+              <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(derived_stats.current_streak / 10) * 100}%` }}
+                  transition={{ duration: 1, delay: 0.7 }}
+                  className="h-full bg-blue-500 rounded-full"
                 />
               </div>
             </div>
@@ -228,7 +254,7 @@ export default function BattleStats() {
                 transition={{ delay: 0.7 }}
                 className="font-medium"
               >
-                {stats.totalXpEarned.toLocaleString()}
+                {stats.total_xp_earned?.toLocaleString() || '0'}
               </motion.span>
             </div>
             <div className="flex justify-between items-center">
@@ -239,13 +265,13 @@ export default function BattleStats() {
                 transition={{ delay: 0.8 }}
                 className="font-medium"
               >
-                {stats.totalCoinsEarned.toLocaleString()}
+                {stats.total_coins_earned?.toLocaleString() || '0'}
               </motion.span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600 dark:text-gray-400">Last Battle</span>
               <span className="text-sm text-gray-500">
-                {stats.lastBattleDate ? new Date(stats.lastBattleDate).toLocaleDateString() : 'Never'}
+                {stats.last_battle_date ? new Date(stats.last_battle_date).toLocaleDateString() : 'Never'}
               </span>
             </div>
           </div>

@@ -1,24 +1,27 @@
 import { useEffect } from 'react';
-import { useGame } from '../contexts/GameContext';
+import { use_game } from '../contexts/GameContext';
 import { LevelSystem } from '../lib/levelSystem';
 import { useNotification } from '../contexts/NotificationContext';
-import { useLanguage } from '../contexts/LanguageContext';
+import { use_language } from '../contexts/LanguageContext';
 
 export function useLevelSystem() {
-  const { state, dispatch } = useGame();
+  const { state, dispatch } = use_game();
   const { showNotification } = useNotification();
-  const { t } = useLanguage();
+  const { t } = use_language();
 
   useEffect(() => {
-    const currentLevel = LevelSystem.calculateLevel(state.user.xp);
-    if (currentLevel > state.user.level) {
-      const rewards = LevelSystem.getLevelRewards(currentLevel);
+    const current_level = LevelSystem.calculate_level(state.user.xp);
+    if (current_level > state.user.level) {
+      const rewards = LevelSystem.get_level_rewards(current_level);
       
       dispatch({
         type: 'LEVEL_UP',
         payload: {
-          level: currentLevel,
-          rewards
+          level: current_level,
+          rewards: {
+            xp: rewards.reduce((sum, r) => r.type === 'xp' ? sum + r.value : sum, 0),
+            coins: rewards.reduce((sum, r) => r.type === 'coins' ? sum + r.value : sum, 0)
+          }
         }
       });
 
@@ -26,7 +29,7 @@ export function useLevelSystem() {
       showNotification({
         type: 'achievement',
         message: {
-          title: t('levelUp.title', { level: currentLevel }),
+          title: t('levelUp.title', { level: current_level }),
           description: t('levelUp.description'),
           rewards
         },
@@ -36,11 +39,10 @@ export function useLevelSystem() {
   }, [state.user.xp, state.user.level, dispatch, showNotification, t]);
 
   return {
-    currentLevel: state.user.level,
-    currentXP: state.user.xp,
-    progress: LevelSystem.calculateProgress(state.user.xp),
-    xpToNextLevel: LevelSystem.calculateXPToNextLevel(state.user.xp),
-    totalXPForCurrentLevel: LevelSystem.calculateTotalXPForLevel(state.user.level)
+    current_level: state.user.level,
+    current_xp: state.user.xp,
+    progress: LevelSystem.calculate_progress(state.user.xp),
+    xp_to_next_level: LevelSystem.calculate_xp_to_next_level(state.user.xp),
+    total_xp_for_current_level: LevelSystem.calculate_total_xp_for_level(state.user.level)
   };
-} 
-
+}

@@ -1,74 +1,52 @@
 import { Achievement } from '../types/achievements';
-import { Quest } from '../types/quests';
-import { Reward } from '../types/rewards';
 import { useNotification } from '../contexts/NotificationContext';
 
+let notificationHandler: ReturnType<typeof useNotification> | null = null;
+
+export function NotificationHandler() {
+  notificationHandler = useNotification();
+  return null;
+}
+
 export const NotificationSystem = {
-  showAchievement: (achievement: Achievement) => {
-    const { showNotification } = useNotification();
-    showNotification({
-      type: 'achievement',
-      message: achievement,
-      duration: 4000,
-      variant: 'default'
-    });
-  },
-
-  showQuestComplete: (quest: Quest) => {
-    const { showNotification } = useNotification();
-    showNotification({
-      type: 'quest',
-      message: quest,
-      duration: 4000,
-      variant: 'default'
-    });
-  },
-
-  showReward: (reward: Reward) => {
-    const { showNotification } = useNotification();
-    showNotification({
-      type: 'reward',
-      message: reward,
-      duration: 3000,
-      variant: 'default'
-    });
+  showSuccess: (message: string) => {
+    if (!notificationHandler) {
+      console.warn('NotificationHandler not initialized');
+      return;
+    }
+    notificationHandler.showSuccess(message);
   },
 
   showError: (message: string) => {
-    const { showNotification } = useNotification();
-    showNotification({
-      type: 'error',
-      message,
-      duration: 5000,
-      variant: 'default'
-    });
+    if (!notificationHandler) {
+      console.warn('NotificationHandler not initialized');
+      return;
+    }
+    notificationHandler.showError(message);
   },
 
-  showSuccess: (message: string) => {
-    const { showNotification } = useNotification();
-    showNotification({
-      type: 'success',
-      message,
-      duration: 3000,
-      variant: 'default'
-    });
-  }
+  showWarning: (message: string) => {
+    if (!notificationHandler) {
+      console.warn('NotificationHandler not initialized');
+      return;
+    }
+    notificationHandler.showWarning(message);
+  },
+
+  showInfo: (message: string) => {
+    if (!notificationHandler) {
+      console.warn('NotificationHandler not initialized');
+      return;
+    }
+    notificationHandler.showInfo(message);
+  },
 };
 
-/**
- * Dependencies:
- * - NotificationContext for state management
- * - Achievement, Quest, and Reward types
- * 
- * Used by:
- * - GameContext for game events
- * - AdminContext for admin actions
- * - Various components
- * 
- * Features:
- * - Type-safe notifications
- * - Consistent styling
- * - Duration control
- * - Variant support
- */ 
+export const notifyAchievementUnlock = (achievement: Achievement) => {
+  if (!notificationHandler) {
+    console.warn('NotificationHandler not initialized');
+    return;
+  }
+  notificationHandler.showSuccess(`Achievement unlocked: ${achievement.title}`);
+};
 

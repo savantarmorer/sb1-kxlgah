@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { Quest, QuestRequirement } from '../types/quests';
+import { Quest, QuestRequirementDB } from '../types/quests';
 import { formatQuestForDB, formatQuestFromDB } from '../utils/formatters';
 import { NotificationSystem } from '../utils/notifications';
 
@@ -17,12 +17,18 @@ export class QuestService {
 
       // Create requirements if any
       if (quest.requirements?.length) {
+        const requirements: QuestRequirementDB[] = quest.requirements.map(req => ({
+          quest_id: data.id,
+          type: req.type,
+          value: req.amount,
+          description: req.type,
+          completed: false,
+          id: `req_${Date.now()}_${Math.random()}`
+        }));
+
         const { error: reqError } = await supabase
           .from('quest_requirements')
-          .insert(quest.requirements.map(req => ({
-            quest_id: data.id,
-            ...req
-          })));
+          .insert(requirements);
 
         if (reqError) throw reqError;
       }
@@ -51,19 +57,23 @@ export class QuestService {
 
       // Update requirements
       if (quest.requirements?.length) {
-        // Delete existing requirements
         await supabase
           .from('quest_requirements')
           .delete()
           .eq('quest_id', quest.id);
 
-        // Insert new requirements
+        const requirements: QuestRequirementDB[] = quest.requirements.map(req => ({
+          quest_id: quest.id,
+          type: req.type,
+          value: req.amount,
+          description: req.type,
+          completed: false,
+          id: `req_${Date.now()}_${Math.random()}`
+        }));
+
         const { error: reqError } = await supabase
           .from('quest_requirements')
-          .insert(quest.requirements.map(req => ({
-            quest_id: quest.id,
-            ...req
-          })));
+          .insert(requirements);
 
         if (reqError) throw reqError;
       }

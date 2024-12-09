@@ -1,31 +1,102 @@
-import { Achievement } from './achievements';
 import { InventoryItem } from './items';
+import { DBbattle_stats } from './battle';
+import { Achievement } from './achievements';
+
+export interface XPGain {
+  amount: number;
+  timestamp: string | number;
+}
+
+export interface LoginStreak {
+  current: number;
+  best: number;
+  last_login: string;
+}
+
+export interface UserSettings {
+  notifications_enabled: boolean;
+  email_notifications: boolean;
+  privacy: {
+    profile_visible: boolean;
+    stats_visible: boolean;
+    inventory_visible: boolean;
+  };
+}
+
+export interface QuizStats {
+  total_questions: number;
+  correct_answers: number;
+  accuracy: number;
+  average_time: number;
+  completed_quizzes: number;
+  streak: number;
+}
+
+export interface UserStats {
+  matches_played: number;
+  matches_won: number;
+  tournaments_played: number;
+  tournaments_won: number;
+  win_rate: number;
+  average_score: number;
+  highest_score: number;
+  current_streak: number;
+  best_streak: number;
+  total_correct_answers: number;
+  total_questions_answered: number;
+  accuracy_rate: number;
+  fastest_answer_time: number;
+  average_answer_time: number;
+}
 
 export interface User {
+  // Core properties from profiles table
   id: string;
   name: string;
-  email: string;
+  email?: string;
+  title?: string;
+  avatar?: string;
+  is_super_admin?: boolean;
   level: number;
   xp: number;
-  streak: number;
   coins: number;
-  achievements: Achievement[];
-  battleRating: number;
-  rewardMultipliers: {
+  streak: number;
+  study_time: number;
+  constitutional_score: number;
+  civil_score: number;
+  criminal_score: number;
+  administrative_score: number;
+  created_at?: string;
+  updated_at?: string;
+  is_bot?: boolean;
+
+  // Game-related properties
+  battle_rating?: number;
+  achievements?: Achievement[];
+  battle_stats?: DBbattle_stats;
+  quiz_stats?: QuizStats;
+  streakMultiplier?: number;
+  rewardMultipliers?: {
     xp: number;
     coins: number;
   };
-  streakMultiplier: number;
-  lastLoginDate?: string;
-  title: string | null;
+  roles?: string[];
+  is_online?: boolean;
+
+  // Inventory
   inventory?: InventoryItem[];
   backpack?: InventoryItem[];
-  roles?: string[];
+
+  // Login streak
+  login_streak?: LoginStreak;
+
+  // Computed properties
+  isAdmin?: boolean;
 }
 
-export interface RewardMultipliers {
-  xp: number;
-  coins: number;
+export interface UserUpdateData extends Partial<User> {
+  id: string;
+  roles?: string[];
 }
 
 /**
@@ -33,6 +104,7 @@ export interface RewardMultipliers {
  * Dependencies:
  * - Achievement type
  * - InventoryItem type
+ * - battle_stats type
  * Used by:
  * - GameContext
  * - User components

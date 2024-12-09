@@ -36,7 +36,7 @@ export function checkQuestAchievements(quests: Quest[]): Achievement[] {
       unlockedAt: new Date(),
       prerequisites: [],
       dependents: [],
-      triggerConditions: [{
+      trigger_conditions: [{
         type: 'quest_completion',
         value: 10,
         comparison: 'gte'
@@ -67,7 +67,7 @@ export function checkQuestRequirements(quest: Quest, userState: GameState['user'
       case 'time':
         return userState.studyTime >= req.value;
       case 'battles':
-        return userState.battleStats.wins >= req.value;
+        return userState.battle_stats.wins >= req.value;
       case 'streak':
         return userState.streak >= req.value;
       default:
@@ -80,22 +80,19 @@ export function checkQuestRequirements(quest: Quest, userState: GameState['user'
  * Calculates current progress percentage for a quest
  * 
  * @param quest - Quest to calculate progress for
- * @param userState - Current user state
- * @returns Progress percentage (0-100)
+ * @param progress - Current progress percentage (0-100)
+ * @returns QuestProgress object
  */
-export function calculateQuestProgress(quest: Quest, userState: GameState['user']): number {
-  if (!quest.requirements || quest.requirements.length === 0) return 0;
-
-  const progress = quest.requirements.map(req => {
-    if (req.type === 'score') {
-      const scoreField = `${req.description.toLowerCase()}Score` as UserScoreField;
-      const current = userState[scoreField] || 0;
-      return Math.min((current / req.value) * 100, 100);
+export function calculateQuestProgress(quest: Quest, progress: number): QuestProgress {
+  const completed = progress >= quest.requirements[0].value;
+  return {
+    completed,
+    rewards: {
+      xp: completed ? quest.xp_reward : 0,
+      coins: completed ? quest.coin_reward : 0,
+      items: []
     }
-    return 0;
-  });
-
-  return Math.floor(progress.reduce((a, b) => a + b) / progress.length);
+  };
 }
 
 /**

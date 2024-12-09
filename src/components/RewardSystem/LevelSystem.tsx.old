@@ -1,8 +1,8 @@
 import React from 'react';
 import { Trophy, Star, Lock, Gift } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useGame } from '../../contexts/GameContext';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { use_game } from '../../contexts/GameContext';
+import { use_language } from '../../contexts/LanguageContext';
 import { LevelSystem as LevelCalculator } from '../../lib/levelSystem';
 
 const LEVEL_REWARDS = [
@@ -53,16 +53,16 @@ const LEVEL_REWARDS = [
 ];
 
 export function LevelSystem() {
-  const { state } = useGame();
-  const { t } = useLanguage();
-  const currentLevel = state.user.level;
+  const { state } = use_game();
+  const { t } = use_language();
+  const current_level = state.user.level;
 
   return (
     <div className="card">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="heading text-xl">{t('common.level')} {currentLevel}</h2>
+        <h2 className="heading text-xl">{t('common.level')} {current_level}</h2>
         <div className="text-sm text-muted">
-          {state.user.xp} / {LevelCalculator.calculateXPForLevel(currentLevel + 1)} XP
+          {state.user.xp} / {LevelCalculator.calculate_xp_for_level(current_level + 1)} XP
         </div>
       </div>
 
@@ -72,11 +72,11 @@ export function LevelSystem() {
             key={level}
             initial={false}
             animate={{
-              scale: currentLevel >= level ? [1.02, 1] : 1,
+              scale: current_level >= level ? [1.02, 1] : 1,
               transition: { duration: 0.3 }
             }}
             className={`p-4 rounded-lg ${
-              currentLevel >= level
+              current_level >= level
                 ? 'bg-brand-teal-50 dark:bg-brand-teal-900/20 border border-brand-teal-200 dark:border-brand-teal-800'
                 : 'bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700'
             }`}
@@ -85,7 +85,7 @@ export function LevelSystem() {
               <h3 className="font-semibold text-gray-900 dark:text-white">
                 Nível {level}
               </h3>
-              {currentLevel >= level ? (
+              {current_level >= level ? (
                 <span className="text-brand-teal-600 dark:text-brand-teal-400 text-sm font-medium">
                   {t('common.unlocked')}
                 </span>

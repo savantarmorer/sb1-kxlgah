@@ -1,42 +1,64 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useGame } from '../contexts/GameContext';
+import { use_game } from '../contexts/GameContext';
 import { supabase } from '../lib/supabase';
-import { Quest } from '../types/quests';
+import { Quest, QuestStatus } from '../types/quests';
 
 export function useQuests() {
-  const { state, dispatch } = useGame();
+  const { state, dispatch } = use_game();
   const [loading, setLoading] = useState(false);
 
   const syncQuests = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Get all active quests with optional user progress
+      const { data: questsData, error: questsError } = await supabase
         .from('quests')
-        .select('*')
+        .select(`
+          *,
+          user_quests (
+            status,
+            progress,
+            completed_at
+          )
+        `)
         .eq('is_active', true)
+        .eq('user_quests.user_id', state.user?.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (questsError) throw questsError;
 
-      const formattedQuests = data?.map(quest => ({
+      const formattedQuests = questsData?.map(quest => ({
         id: quest.id,
         title: quest.title,
         description: quest.description,
         type: quest.type,
-        status: quest.status,
-        category: quest.category,
-        xpReward: quest.xp_reward,
-        coinReward: quest.coin_reward,
+        status: (quest.user_quests?.[0]?.status || QuestStatus.AVAILABLE) as QuestStatus,
+        category: quest.category || 'general',
+        xp_reward: quest.xp_reward,
+        coin_reward: quest.coin_reward,
         requirements: quest.requirements || [],
-        progress: quest.progress || 0,
-        isActive: quest.is_active
+        progress: quest.user_quests?.[0]?.progress || 0,
+        is_active: quest.is_active !== false,
+        completed: quest.user_quests?.[0]?.completed_at !== null,
+        created_at: quest.created_at,
+        updated_at: quest.updated_at
       })) as Quest[];
 
       console.log('Synced quests:', formattedQuests);
 
+      // Separate quests into active and completed
+      const activeQuests = formattedQuests.filter(q => !q.completed);
+      const completedQuests = formattedQuests.filter(q => q.completed);
+
+      console.log('Active quests:', activeQuests);
+      console.log('Completed quests:', completedQuests);
+
       dispatch({
-        type: 'INITIALIZE_QUESTS',
-        payload: formattedQuests
+        type: 'UPDATE_QUESTS',
+        payload: {
+          active: activeQuests,
+          completed: completedQuests
+        }
       });
 
       return formattedQuests;
@@ -46,7 +68,7 @@ export function useQuests() {
     } finally {
       setLoading(false);
     }
-  }, [dispatch]);
+  }, [dispatch, state.user?.id]);
 
   useEffect(() => {
     syncQuests();

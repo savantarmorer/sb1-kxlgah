@@ -1,17 +1,59 @@
 /**
  * Core item type definitions
+ * Aligned with database schema
  */
-export type ItemType = 'consumable' | 'equipment' | 'material' | 'cosmetic';
-export type ItemRarity = 'common' | 'rare' | 'epic' | 'legendary';
+export interface Item {
+  id: string;
+  name: string;
+  description: string;
+  type: ItemType;
+  rarity: ItemRarity;
+  basePrice: number;
+  effects: ItemEffect[];
+}
+
+export enum ItemType {
+  CONSUMABLE = 'consumable',
+  EQUIPMENT = 'equipment',
+  COSMETIC = 'cosmetic',
+  MATERIAL = 'material',
+  QUEST = 'quest',
+  LOOTBOX = 'lootbox'
+}
+
+export enum ItemRarity {
+  COMMON = 'common',
+  UNCOMMON = 'uncommon',
+  RARE = 'rare',
+  EPIC = 'epic',
+  LEGENDARY = 'legendary'
+}
 
 /**
  * Item effect definition
  * Represents temporary or permanent bonuses from items
  */
+export type ItemEffectType = 
+  | 'xp_boost'
+  | 'coin_boost'
+  | 'battle_boost'
+  | 'streak_protection'
+  | 'instant_xp'
+  | 'instant_coins'
+  | 'quest_boost'
+  | 'unlock_content';
+
 export interface ItemEffect {
-  type: 'xp_boost' | 'coin_boost' | 'study_boost';
+  type: ItemEffectType;
   value: number;
-  duration?: number; // Duration in seconds, undefined means permanent
+  duration?: number; // in seconds, undefined means permanent
+  metadata?: {
+    boost_percentage?: number;
+    max_uses?: number;
+    content_id?: string;
+    requirements?: string[];
+    [key: string]: any;
+  };
 }
 
 /**
@@ -25,15 +67,16 @@ export interface ItemRequirement {
 }
 
 /**
- * Base inventory item interface
- * Contains core item properties
+ * Database item interface
+ * Matches the 'items' table schema
  */
-export interface InventoryItem {
+export interface DBItem {
   id: string;
   name: string;
   description: string;
   type: ItemType;
   rarity: ItemRarity;
+  cost: number;
   effects: ItemEffect[];
   requirements: ItemRequirement[];
   metadata: Record<string, any>;
@@ -43,12 +86,38 @@ export interface InventoryItem {
 }
 
 /**
- * Extended game item interface
- * Adds shop-specific properties
+ * User inventory item interface
+ * Matches the 'user_inventory' table schema
  */
-export interface GameItem extends InventoryItem {
+export interface UserInventoryItem {
+  user_id: string;
+  item_id: string;
+  quantity: number;
+  equipped: boolean;
+  acquired_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Base item interface with common properties
+ */
+export interface BaseItem {
+  id: string;
+  name: string;
+  description: string;
+  type: ItemType;
+  rarity: ItemRarity;
   cost: number;
-  available: boolean;
+  effects: ItemEffect[];
+  imageUrl: string;
+  is_active: boolean;
+}
+
+/**
+ * Game item interface for shop display and management
+ */
+export interface GameItem extends BaseItem {
   shopData?: {
     featured: boolean;
     discount?: number;
@@ -57,8 +126,32 @@ export interface GameItem extends InventoryItem {
 }
 
 /**
+ * Inventory item interface for user inventory
+ */
+export interface InventoryItem {
+  id: string;
+  name: string;
+  description: string;
+  type: ItemType;
+  rarity: ItemRarity;
+  equipped: boolean;
+  quantity: number;
+  imageUrl: string;
+  metadata?: {
+    uses?: number;
+    [key: string]: any;
+  };
+  itemId?: string;
+  stats?: Record<string, any>;
+  effects?: ItemEffect[];
+  acquired_at?: string;
+}
+
+/**
  * Type Dependencies:
- * - None (self-contained type system)
+ * - Matches database schema
+ * - Used by inventory system
+ * - Used by shop system
  * 
  * Used By:
  * - Inventory system
@@ -74,21 +167,25 @@ export interface GameItem extends InventoryItem {
  * - Shop integration
  * - Metadata support
  * 
- * Scalability:
- * - Easy to add new item types
- * - Extensible effect system
- * - Flexible requirements
- * - Metadata for custom properties
- * 
- * Related Systems:
- * - Inventory management
- * - Shop system
- * - Quest system
- * - Achievement system
- * 
  * Database Mapping:
- * - Matches Supabase schema
- * - Supports JSON metadata
- * - Handles timestamps
- */ 
+ * - DBItem -> items table
+ * - UserInventoryItem -> user_inventory table
+ * - InventoryItem -> Combined view of items and user_inventory
+ * - GameItem -> Shop view of items
+ */
 
+export enum TransactionType {
+  PURCHASE = 'purchase',
+  USE = 'use',
+  EQUIP = 'equip',
+  UNEQUIP = 'unequip'
+}
+
+export const ItemTypes = {
+  CONSUMABLE: ItemType.CONSUMABLE,
+  EQUIPMENT: ItemType.EQUIPMENT,
+  COSMETIC: ItemType.COSMETIC,
+  MATERIAL: ItemType.MATERIAL,
+  QUEST: ItemType.QUEST,
+  LOOTBOX: ItemType.LOOTBOX
+} as const;

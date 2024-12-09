@@ -1,7 +1,7 @@
 export const LEVEL_CONFIG = {
-  baseXP: 1000,
+  base_xp: 1000,
   scalingFactor: 1.5, // Each level requires 1.5x more XP than the previous
-  maxLevel: 100,
+  max_level: 100,
   bonusPerLevel: 100,
 };
 

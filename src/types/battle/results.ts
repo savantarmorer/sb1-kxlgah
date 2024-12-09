@@ -1,8 +1,8 @@
 export interface BattleResults {
   isVictory: boolean;
-  experienceGained: number;
+  experience_gained: number;
   coinsEarned: number;
-  streakBonus: number;
+  streak_bonus: number;
   totalScore: number;
   rewards?: {
     items?: string[];
@@ -24,4 +24,5 @@ export interface BattleResults {
  * - Achievement system
  * - Reward system
  * - Battle scoring system
+ * attle scoring system
  */ 

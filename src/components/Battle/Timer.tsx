@@ -1,44 +1,58 @@
 import React from 'react';
+import { Box, LinearProgress, Typography } from '@mui/material';
+import { Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Timer as TimerIcon } from 'lucide-react';
 
 interface TimerProps {
-  timeLeft: number;
-  totalTime: number;
+  time_left: number;
+  total_time: number;
 }
 
-export default function Timer({ timeLeft, totalTime }: TimerProps) {
-  const progress = (timeLeft / totalTime) * 100;
-  const isLow = timeLeft <= 5;
-
+export default function Timer({ time_left, total_time }: TimerProps) {
+  const progress = (time_left / total_time) * 100;
+  const isLow = time_left <= 5;
+  
   return (
-    <div className="relative">
+    <Box sx={{ width: '100%' }}>
       <motion.div
         animate={isLow ? {
-          scale: [1, 1.1, 1],
+          scale: [1, 1.05, 1],
           transition: {
             duration: 0.5,
             repeat: Infinity
           }
         } : {}}
-        className={`flex items-center space-x-2 ${
-          isLow ? 'text-red-500' : 'text-gray-600 dark:text-gray-400'
-        }`}
       >
-        <TimerIcon className="w-5 h-5" />
-        <span className="font-medium">{timeLeft}s</span>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Clock 
+            size={20} 
+            className={isLow ? 'text-red-500' : 'text-gray-600 dark:text-gray-400'}
+          />
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              fontWeight: 'medium',
+              color: isLow ? 'error.main' : 'text.secondary'
+            }}
+          >
+            Time Remaining: {time_left}s
+          </Typography>
+        </Box>
       </motion.div>
-      
-      <motion.div
-        className="absolute -bottom-2 left-0 h-1 bg-brand-teal-500 dark:bg-brand-teal-400 rounded-full"
-        initial={{ width: '100%' }}
-        animate={{ width: `${progress}%` }}
-        transition={{ duration: 1, ease: "linear" }}
-        style={{
-          backgroundColor: isLow ? '#EF4444' : undefined
+      <LinearProgress 
+        variant="determinate" 
+        value={progress}
+        sx={{ 
+          height: 8, 
+          borderRadius: 4,
+          bgcolor: 'background.paper',
+          '& .MuiLinearProgress-bar': {
+            bgcolor: isLow ? 'error.main' : 'primary.main',
+            borderRadius: 4,
+            transition: 'width 0.3s ease'
+          }
         }}
       />
-    </div>
+    </Box>
   );
-} 
-
+}

@@ -1,14 +1,14 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Flame, Award } from 'lucide-react';
-import { useGame } from '../../contexts/GameContext';
+import { use_game } from '../../contexts/GameContext';
 
 interface StreakDisplayProps {
   streak: number;
 }
 
 export default function StreakDisplay({ streak }: StreakDisplayProps) {
-  const { dispatch } = useGame();
+  const { dispatch } = use_game();
 
   useEffect(() => {
     // Check for streak-based achievements
@@ -28,7 +28,7 @@ export default function StreakDisplay({ streak }: StreakDisplayProps) {
             unlockedAt: new Date(),
             prerequisites: [],
             dependents: [],
-            triggerConditions: [{
+            trigger_conditions: [{
               type: 'streak',
               value: milestone,
               comparison: 'gte'
@@ -40,7 +40,7 @@ export default function StreakDisplay({ streak }: StreakDisplayProps) {
     });
   }, [streak]);
 
-  const getStreakBonus = (streak: number) => {
+  const getstreak_bonus = (streak: number) => {
     if (streak >= 30) return 100;
     if (streak >= 14) return 80;
     if (streak >= 7) return 50;
@@ -48,7 +48,7 @@ export default function StreakDisplay({ streak }: StreakDisplayProps) {
     return 0;
   };
 
-  const bonus = getStreakBonus(streak);
+  const bonus = getstreak_bonus(streak);
 
   return (
     <div className="card">

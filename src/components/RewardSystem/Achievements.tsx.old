@@ -5,11 +5,11 @@
  * 1. Each achievement has:
  *    - prerequisites: IDs of achievements that must be unlocked first
  *    - dependents: IDs of achievements that depend on this one
- *    - triggerConditions: Array of conditions that must be met to unlock
+ *    - trigger_conditions: Array of conditions that must be met to unlock
  *    - order: Number indicating display order within its category
  * 
  * Dependencies:
- * - useLanguage: For internationalization
+ * - use_language: For internationalization
  * - useAchievements: For achievement state and logic
  * - ACHIEVEMENT_CATEGORIES: For category metadata
  * 
@@ -18,7 +18,7 @@
  * - UserProfile (achievement showcase)
  */
 
-import { useLanguage } from '../../contexts/LanguageContext';
+import { use_language } from '../../contexts/LanguageContext';
 import { motion } from 'framer-motion';
 import { Award, Lock, CheckCircle } from 'lucide-react';
 import { useAchievements } from '../../hooks/useAchievements';
@@ -26,7 +26,7 @@ import { ACHIEVEMENT_CATEGORIES } from '../Achievements/AchievementSystem';
 import type { AchievementCategory } from '../../types/achievements';
 
 export function Achievements() {
-  const { t } = useLanguage();
+  const { t } = use_language();
   const { achievements } = useAchievements();
 
   /**

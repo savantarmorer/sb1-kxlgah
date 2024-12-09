@@ -1,8 +1,8 @@
-export interface BattleStats {
+export interface battle_stats {
   totalBattles: number;
   wins: number;
   losses: number;
-  winStreak: number;
+  win_streak: number;
   highestStreak: number;
   totalXpEarned: number;
   totalCoinsEarned: number;

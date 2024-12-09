@@ -7,17 +7,19 @@ export function convertQuestToDB(quest: Partial<Quest>) {
   const now = new Date().toISOString();
   
   return {
+    id: quest.id,
     title: quest.title,
     description: quest.description,
     type: quest.type || 'daily',
     status: quest.status || 'available',
     category: quest.category || 'general',
-    xp_reward: quest.xpReward || 0,
-    coin_reward: quest.coinReward || 0,
+    xp_reward: quest.xp_reward || 0,
+    coin_reward: quest.coin_reward || 0,
     requirements: quest.requirements || [],
     progress: quest.progress || 0,
-    is_active: true,
-    created_at: now,
+    is_active: quest.is_active !== false,
+    completed: quest.completed || false,
+    created_at: quest.created_at || now,
     updated_at: now
   };
 }
@@ -33,11 +35,14 @@ export function convertQuestFromDB(dbQuest: any): Quest {
     type: dbQuest.type,
     status: dbQuest.status,
     category: dbQuest.category,
-    xpReward: dbQuest.xp_reward,
-    coinReward: dbQuest.coin_reward,
+    xp_reward: dbQuest.xp_reward,
+    coin_reward: dbQuest.coin_reward,
     requirements: dbQuest.requirements || [],
     progress: dbQuest.progress || 0,
-    isActive: dbQuest.is_active
+    is_active: dbQuest.is_active !== false,
+    completed: dbQuest.completed || false,
+    created_at: dbQuest.created_at,
+    updated_at: dbQuest.updated_at
   };
 } 
 

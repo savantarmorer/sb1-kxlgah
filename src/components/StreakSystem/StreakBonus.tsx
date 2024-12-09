@@ -1,10 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Flame, Star, Trophy } from 'lucide-react';
-import { useGame } from '../../contexts/GameContext';
+import { use_game } from '../../contexts/GameContext';
 
-export function StreakBonus() {
-  const { state } = useGame();
+export function streak_bonus() {
+  const { state } = use_game();
   const { streak } = state.user;
 
   const getStreakMultiplier = () => {

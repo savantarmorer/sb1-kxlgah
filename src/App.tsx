@@ -1,19 +1,27 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext';
-import AppContent from './components/AppContent';
-import LoadingScreen from './components/LoadingScreen';
-import AuthForm from './components/Auth/AuthForm';
-import { RouteGuard } from './components/RouteGuard';
-import { SoundProvider } from './contexts/SoundContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { LanguageProvider } from './contexts/LanguageContext';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { GameProvider } from './contexts/GameContext';
-import { BattleProvider } from './contexts/BattleContext';
-import { AdminProvider } from './contexts/AdminContext';
 import { NotificationProvider } from './contexts/NotificationContext';
-import ErrorBoundary from './components/ErrorBoundary';
+import { LanguageProvider } from './contexts/LanguageContext';
+import { SoundProvider } from './contexts/SoundContext';
+import { TournamentProvider } from './contexts/TournamentContext';
+import { AdminProvider } from './contexts/AdminContext';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterLuxon } from '@mui/x-date-pickers/AdapterLuxon';
+import { ThemeProvider as MUIThemeProvider } from '@mui/material/styles';
+import { muiTheme } from './theme/mui';
+import LoadingScreen from './components/LoadingScreen';
+import { RouteGuard } from './components/RouteGuard';
+import AppContent from './components/AppContent';
+import ShopSystem from './components/Shop/ShopSystem';
+import { InventoryPage } from './routes/InventoryPage';
+import AuthForm from './components/Auth/AuthForm';
+import NotificationHandler from './components/notifications/NotificationHandler';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { TournamentLobby } from '@/components/Tournament/TournamentLobby';
+import { TournamentView } from '@/components/Tournament/TournamentView';
 
 function AppRoutes() {
   const { user, loading, initialized } = useAuth();
@@ -26,44 +34,53 @@ function AppRoutes() {
     <Routes>
       <Route 
         path="/" 
-        element={
-          !user ? <AuthForm /> : <Navigate to="/home" replace />
-        } 
+        element={!user ? <AuthForm /> : <Navigate to="/home" replace />} 
       />
       <Route 
-        path="/home/*" 
+        path="/*" 
         element={
           <RouteGuard>
-            <AppContent />
+            <Routes>
+              <Route path="/home/*" element={<AppContent />} />
+              <Route path="/shop" element={<ShopSystem />} />
+              <Route path="/inventory" element={<InventoryPage />} />
+              <Route path="/tournament" element={<TournamentLobby />} />
+              <Route path="/tournament/:id" element={<TournamentView />} />
+              {/* other routes */}
+            </Routes>
           </RouteGuard>
         } 
       />
-      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
 
 function App() {
   return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <ThemeProvider>
-          <LanguageProvider>
-            <GameProvider>
-              <BattleProvider>
-                <AdminProvider>
+    <LocalizationProvider dateAdapter={AdapterLuxon}>
+      <ErrorBoundary>
+        <AuthProvider>
+          <GameProvider>
+            <ThemeProvider>
+              <MUIThemeProvider theme={muiTheme}>
+                <LanguageProvider>
                   <NotificationProvider>
+                    <NotificationHandler />
                     <SoundProvider>
-                      <AppRoutes />
+                      <TournamentProvider>
+                        <AdminProvider>
+                          <AppRoutes />
+                        </AdminProvider>
+                      </TournamentProvider>
                     </SoundProvider>
                   </NotificationProvider>
-                </AdminProvider>
-              </BattleProvider>
-            </GameProvider>
-          </LanguageProvider>
-        </ThemeProvider>
-      </AuthProvider>
-    </ErrorBoundary>
+                </LanguageProvider>
+              </MUIThemeProvider>
+            </ThemeProvider>
+          </GameProvider>
+        </AuthProvider>
+      </ErrorBoundary>
+    </LocalizationProvider>
   );
 }
 

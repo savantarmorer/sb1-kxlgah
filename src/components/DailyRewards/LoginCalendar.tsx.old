@@ -13,15 +13,15 @@ interface LoginCalendarProps {
       rarity: string;
     };
   }>;
-  currentStreak: number;
+  current_streak: number;
 }
 
 export default function LoginCalendar({
   loginDates,
   rewards,
-  currentStreak
+  current_streak
 }: LoginCalendarProps) {
-  const currentDay = currentStreak % 7 || 7;
+  const currentDay = current_streak % 7 || 7;
 
   return (
     <div className="card">

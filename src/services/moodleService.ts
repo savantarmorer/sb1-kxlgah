@@ -28,13 +28,13 @@ export class MoodleService {
         const percentage = (score / maxScore) * 100;
         
         // Calculate rewards
-        const baseXP = Math.floor(percentage * MOODLE_CONFIG.rewards.quiz.xpBase);
+        const base_xp = Math.floor(percentage * MOODLE_CONFIG.rewards.quiz.xpBase);
         const bonusXP = percentage >= 90 ? MOODLE_CONFIG.rewards.quiz.xpBonus : 0;
-        const totalXP = baseXP + bonusXP;
+        const totalXP = base_xp + bonusXP;
 
-        const baseCoins = Math.floor(percentage * MOODLE_CONFIG.rewards.quiz.coinBase);
+        const base_coins = Math.floor(percentage * MOODLE_CONFIG.rewards.quiz.coinBase);
         const bonusCoins = percentage >= 90 ? MOODLE_CONFIG.rewards.quiz.coinBonus : 0;
-        const totalCoins = baseCoins + bonusCoins;
+        const totalCoins = base_coins + bonusCoins;
 
         // Update user progress
         await supabase.rpc('update_user_progress', {

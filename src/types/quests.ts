@@ -1,7 +1,20 @@
+import { InventoryItem } from './items';
+import { Reward } from './rewards';
+
 /**
  * Available quest types
  */
-export type QuestType = 'daily' | 'weekly' | 'achievement' | 'story';
+export enum QuestType {
+  DAILY = 'daily',
+  WEEKLY = 'weekly',
+  STORY = 'story',
+  BATTLE = 'battle',
+  STUDY = 'study',
+  ACHIEVEMENT = 'achievement',
+  STREAK = 'streak',
+  COLLECTION = 'collection',
+  SOCIAL = 'social'
+}
 
 /**
  * Quest rarity levels
@@ -16,22 +29,46 @@ export type QuestRequirementType = 'score' | 'time' | 'battles' | 'streak';
 /**
  * Quest statuses
  */
-export type QuestStatus = 'available' | 'in_progress' | 'completed' | 'failed';
+export enum QuestStatus {
+  AVAILABLE = 'available',
+  IN_PROGRESS = 'in_progress',
+  COMPLETED = 'completed',
+  FAILED = 'failed'
+}
 
 /**
  * Quest categories
  */
-export type QuestCategory = 'general' | 'battle' | 'study' | 'social';
+export type QuestCategory = 
+  | 'general' 
+  | 'battle' 
+  | 'study' 
+  | 'social'
+  | 'achievement'
+  | 'streak'
+  | 'collection';
 
 /**
- * Interface for quest requirements
+ * Interface for quest requirements in database
  */
-export interface QuestRequirement {
-  id: string;
+export interface QuestRequirementDB {
+  quest_id: string;
   type: string;
   value: number;
   description: string;
   completed: boolean;
+  id: string;
+}
+
+/**
+ * Interface for quest requirements in application
+ */
+export interface QuestRequirement {
+  type: string;
+  target: number;
+  current: number;
+  description: string;
+  amount: number;
 }
 
 /**
@@ -47,20 +84,50 @@ export interface QuestLootbox {
 }
 
 /**
+ * Interface for quest progress updates
+ */
+export interface QuestProgressUpdate {
+  quest_id: string;
+  progress: number;
+  timestamp: string;
+  xp_reward?: number;
+  coin_reward?: number;
+  metadata?: {
+    score?: number;
+    time_bonus?: boolean;
+    streak?: number;
+    [key: string]: any;
+  };
+}
+
+/**
  * Core Quest interface
  */
 export interface Quest {
-  id?: string;
+  id: string;
   title: string;
   description: string;
   type: QuestType;
   status: QuestStatus;
   category: QuestCategory;
-  xpReward: number;
-  coinReward: number;
+  xp_reward: number;
+  coin_reward: number;
   requirements: QuestRequirement[];
   progress: number;
-  isActive: boolean;
+  is_active: boolean;
+  completed: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/**
+ * Interface for user quests
+ */
+export interface UserQuest {
+  user_id: string;
+  quest_id: string;
+  status: QuestStatus;
+  progress: number;
 }
 
 /**
@@ -87,3 +154,48 @@ export interface Quest {
  * - Maintains database compatibility
  */ 
 
+/**
+ * Add the missing utility functions
+ */
+export function isQuestComplete(quest: Quest): boolean {
+  return quest.status === QuestStatus.COMPLETED;
+}
+
+export function calculateQuestProgress(quest: Quest): number {
+  return quest.progress;
+}
+
+/**
+ * Interface for quest progress
+ */
+export interface QuestProgress {
+  completed: boolean;
+  rewards: {
+    xp: number;
+    coins: number;
+    items?: InventoryItem[];
+  };
+}
+
+/**
+ * Interface for quest rewards
+ */
+export interface QuestRewards {
+  xp: number;
+  coins: number;
+  items?: InventoryItem[];
+}
+
+export interface QuestAssignment {
+  user_id: string;
+  name?: string;
+  email?: string;
+  status: QuestStatus;
+  progress: number;
+  completed_at?: string;
+}
+
+export interface QuestWithAssignments extends Quest {
+  assigned_users: number;
+  user_assignments: QuestAssignment[];
+}

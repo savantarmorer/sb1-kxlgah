@@ -1,39 +1,59 @@
 /**
- * Battle system configuration
+ * Battle system configuration aligned with database schema
  */
 export const BATTLE_CONFIG = {
+  // Battle structure (battle_questions table)
+  questions_per_battle: 5,
+  points_per_question: 10,
+  
   // Time settings
-  questionTime: 30,
-  readyTime: 3,
-  searchTime: 2,
-  timePerQuestion: 30,
+  question_time: 30, // seconds
+  time_per_question: 30, // seconds (alias for question_time for backwards compatibility)
+  ready_time: 3,
+  search_time: 2,
+  
+  // XP and Progress (user_progress & battle_history tables)
+  progress: {
+    base_xp: 100,
+    base_coins: 50,
+    max_level: 100,
+    growth_factor: 1.5,
+    streak_multiplier: 0.2,
+    max_daily_battles: 20
+  },
 
-  // Battle structure
-  questionsPerBattle: 5,
-  pointsPerQuestion: 10,
-
-  // Reward configuration
+  // Battle rewards (battle_history table)
   rewards: {
-    baseXP: 50,
-    baseCoins: 20,
-    timeBonus: {
+    time_bonus: {
       multiplier: 0.5,
-      maxBonus: 50
+      max_bonus: 100
     },
-    streakBonus: {
-      multiplier: 0.1,
-      maxBonus: 100
+    streak_bonus: {
+      multiplier: 0.2,
+      max_bonus: 200
     },
-    victoryBonus: {
-      xpMultiplier: 1.5,
-      coinsMultiplier: 1.5
+    victory_bonus: {
+      xp_multiplier: 2.0,
+      coins_multiplier: 1.8
     }
   },
-  matchmaking: {
-    kFactor: 32,
-    defaultRating: 1000
+
+  // Bot configuration (profiles & battle_ratings tables)
+  bot: {
+    base_rating: 1000,
+    rating_multiplier: 100,
+    base_accuracy: 0.5,
+    accuracy_multiplier: 0.1,
+    min_response_time: 1000,
+    max_response_time: 5000
   },
-  victoryThreshold: 70
+
+  // Matchmaking (battle_ratings table)
+  matchmaking: {
+    k_factor: 32,
+    default_rating: 1000,
+    victory_threshold: 70
+  }
 } as const;
 
 /**
@@ -50,26 +70,23 @@ export const BATTLE_CONFIG = {
  * - Timing controls
  * - Scoring system
  * - Reward calculations
- * 
- * Scalability:
- * - Easy to modify values
- * - Extensible structure
- * - Type-safe constants
+ * - Matchmaking parameters
  */
 
-export const calculateStreakBonus = (streak: number): number => {
-  if (streak <= 0) return 0;
-  return Math.min(streak * BATTLE_CONFIG.rewards.streakBonus.multiplier, 
-                 BATTLE_CONFIG.rewards.streakBonus.maxBonus);
-};
+export function calculate_streak_bonus(streak: number): number {
+  return Math.min(
+    streak * BATTLE_CONFIG.rewards.streak_bonus.multiplier,
+    BATTLE_CONFIG.rewards.streak_bonus.max_bonus
+  );
+}
 
-export const calculateBattleRewards = (score: number, streak: number) => {
-  const baseXP = BATTLE_CONFIG.rewards.baseXP * (score / 100);
-  const baseCoins = BATTLE_CONFIG.rewards.baseCoins * (score / 100);
-  const streakBonus = calculateStreakBonus(streak);
+export function calculate_battle_rewards(score: number, streak: number) {
+  const base_xp = score * BATTLE_CONFIG.progress.base_xp;
+  const base_coins = score * BATTLE_CONFIG.progress.base_coins;
+  const streak_bonus = calculate_streak_bonus(streak);
 
   return {
-    xp: Math.round(baseXP * (1 + streakBonus)),
-    coins: Math.round(baseCoins * (1 + streakBonus))
+    xp: base_xp + streak_bonus,
+    coins: base_coins + Math.floor(streak_bonus / 2)
   };
-}; 
+}

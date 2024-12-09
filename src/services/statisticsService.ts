@@ -27,7 +27,32 @@ export class StatisticsService {
         battlesWon: battles.filter((b: any) => b.isVictory).length,
         averageScore: this.calculateAverageScore(battles),
         lastUpdated: new Date().toISOString(),
-        recentActivity
+        recentActivity,
+        items: itemsData || [],
+        login_history: [],
+        recentXPGains: [],
+        leaderboard: [],
+        statistics: {
+          activeUsers: 0,
+          completedQuests: 0,
+          purchasedItems: 0,
+          battlesPlayed: 0,
+          battlesWon: 0,
+          averageScore: 0,
+          lastUpdated: new Date().toISOString(),
+          recentActivity: [],
+          items: [],
+          login_history: [],
+          recentXPGains: [],
+          leaderboard: [],
+          statistics: null as any,
+          syncing: false,
+          debugMode: false,
+          lastLevelUpRewards: []
+        },
+        syncing: false,
+        debugMode: false,
+        lastLevelUpRewards: []
       };
     } catch (error) {
       console.error('Error fetching statistics:', error);

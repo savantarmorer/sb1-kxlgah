@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Zap, Book, Users, Crown, Star } from 'lucide-react';
-import { useGame } from '../contexts/GameContext';
-import { useLanguage } from '../contexts/LanguageContext';
+import { use_game } from '../contexts/GameContext';
+import { use_language } from '../contexts/LanguageContext';
 
 interface StoreItem {
   id: string;
@@ -16,8 +16,8 @@ interface StoreItem {
 }
 
 export default function Store() {
-  const { state, dispatch } = useGame();
-  const { t } = useLanguage();
+  const { state, dispatch } = use_game();
+  const { t } = use_language();
   const [selectedCategory, setSelectedCategory] = useState<'all' | StoreItem['type']>('all');
   const [purchaseStatus, setPurchaseStatus] = useState<{
     id: string;
@@ -71,7 +71,7 @@ export default function Store() {
       
       dispatch({
         type: 'PURCHASE_ITEM',
-        payload: { itemId: item.id, cost: item.price }
+        payload: { item_id: item.id, cost: item.price }
       });
       
       setPurchaseStatus({ id: item.id, status: 'success' });
@@ -197,7 +197,7 @@ interface PurchaseButtonProps {
 }
 
 function PurchaseButton({ item, status, canAfford, onPurchase }: PurchaseButtonProps) {
-  const { t } = useLanguage();
+  const { t } = use_language();
   const isProcessing = status.id === item.id && status.status === 'processing';
   const isSuccess = status.id === item.id && status.status === 'success';
 

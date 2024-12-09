@@ -8,7 +8,7 @@ import type { Json } from '../../types/supabase';
 interface ItemEditorProps {
   item?: Partial<GameItem>;
   onSave: (item: Partial<GameItem>) => Promise<void>;
-  onClose: () => void;
+  on_close: () => void;
 }
 
 // Add FormData interface
@@ -24,7 +24,7 @@ interface FormData extends Partial<GameItem> {
   is_active: boolean;
 }
 
-interface ValidationError {
+interface Validation_error {
   field: string;
   message: string;
 }
@@ -40,7 +40,7 @@ interface ValidationError {
  * - Button component
  * - Framer Motion for animations
  */
-export default function ItemEditor({ item, onSave, onClose }: ItemEditorProps) {
+export default function ItemEditor({ item, onSave, on_close }: ItemEditorProps) {
   const [formData, setFormData] = useState<FormData>({
     name: item?.name || '',
     description: item?.description || '',
@@ -60,8 +60,8 @@ export default function ItemEditor({ item, onSave, onClose }: ItemEditorProps) {
    * Validates form data before submission
    * Returns true if valid, false otherwise
    */
-  const validateForm = (): { valid: boolean; errors: ValidationError[] } => {
-    const errors: ValidationError[] = [];
+  const validateForm = (): { valid: boolean; errors: Validation_error[] } => {
+    const errors: Validation_error[] = [];
 
     if (!formData.name?.trim()) {
       errors.push({ field: 'name', message: 'Name is required' });
@@ -92,7 +92,7 @@ export default function ItemEditor({ item, onSave, onClose }: ItemEditorProps) {
     
     try {
       await onSave(formData);
-      onClose();
+      on_close();
     } catch (error) {
       setError('Failed to save item');
     }
@@ -103,6 +103,7 @@ export default function ItemEditor({ item, onSave, onClose }: ItemEditorProps) {
    */
   const addEffect = () => {
     setFormData(prev => ({
+
       ...prev,
       effects: [
         ...(prev.effects || []),
@@ -116,6 +117,7 @@ export default function ItemEditor({ item, onSave, onClose }: ItemEditorProps) {
    */
   const addRequirement = () => {
     setFormData(prev => ({
+
       ...prev,
       requirements: [
         ...(prev.requirements || []),
@@ -142,7 +144,7 @@ export default function ItemEditor({ item, onSave, onClose }: ItemEditorProps) {
             {item ? 'Edit Item' : 'Create Item'}
           </h2>
           <button
-            onClick={onClose}
+            onClick={on_close}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
           >
             <X size={20} className="text-gray-600 dark:text-gray-400" />
@@ -354,7 +356,7 @@ export default function ItemEditor({ item, onSave, onClose }: ItemEditorProps) {
         <div className="flex justify-end space-x-4 mt-6">
           <Button
             variant="outline"
-            onClick={onClose}
+            onClick={on_close}
           >
             Cancel
           </Button>
@@ -369,4 +371,4 @@ export default function ItemEditor({ item, onSave, onClose }: ItemEditorProps) {
       </motion.div>
     </motion.div>
   );
-} 
+}

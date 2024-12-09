@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   initialized: boolean;
+  isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<{ error: Error | null }>;
@@ -17,6 +18,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const checkAdminStatus = async (userId: string) => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_super_admin')
+        .eq('id', userId)
+        .single();
+
+      setIsAdmin(profile?.is_super_admin || false);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setIsAdmin(false);
+    }
+  };
 
   useEffect(() => {
     // Check active session and subscribe to auth changes
@@ -24,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         if (event === 'SIGNED_OUT') {
           setUser(null);
+          setIsAdmin(false);
           window.location.href = '/';
           return;
         }
@@ -35,17 +53,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .eq('id', session.user.id)
             .single();
 
-          setUser({
-            id: session.user.id,
-            email: session.user.email!,
-            name: profile?.name || 'User',
-            roles: profile?.roles || ['user'],
-            level: profile?.level || 1,
-            xp: profile?.xp || 0,
-            coins: profile?.coins || 0,
-            streak: profile?.streak || 0,
-            battleRating: profile?.battle_rating || 1000
-          });
+          if (profile) {
+            setIsAdmin(profile.is_super_admin || false);
+            setUser({
+              ...profile,
+              id: session.user.id,
+              email: session.user.email!,
+              roles: profile.roles || ['user']
+            });
+          }
         }
         setLoading(false);
       }
@@ -54,23 +70,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Initialize auth state
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
+        checkAdminStatus(session.user.id);
         supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single()
           .then(({ data: profile }) => {
-            setUser({
-              id: session.user.id,
-              email: session.user.email!,
-              name: profile?.name || 'User',
-              roles: profile?.roles || ['user'],
-              level: profile?.level || 1,
-              xp: profile?.xp || 0,
-              coins: profile?.coins || 0,
-              streak: profile?.streak || 0,
-              battleRating: profile?.battle_rating || 1000
-            });
+            if (profile) {
+              setUser({
+                ...profile,
+                id: session.user.id,
+                email: session.user.email!,
+                roles: profile.roles || ['user']
+              });
+            }
           });
       }
       setLoading(false);
@@ -84,23 +98,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('Attempting sign in for:', email);
-      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
-      if (error) {
-        console.error('Sign in error:', error);
-        throw error;
+      if (error) throw error;
+
+      if (data.user) {
+        await checkAdminStatus(data.user.id);
       }
 
-      if (!data.user) {
-        throw new Error('No user data returned');
-      }
-
-      console.log('Sign in successful:', data.user.email);
       return { error: null };
     } catch (error) {
       console.error('Sign in error:', error);
@@ -110,8 +118,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
-      console.log('Attempting sign up for:', email);
-      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -120,32 +126,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
-      if (error) {
-        console.error('Sign up error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       if (data?.user) {
+        const userId = data.user.id;
+        const now = new Date().toISOString();
+
         // Create initial profile
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert([
-            {
-              id: data.user.id,
-              email: data.user.email,
-              name: data.user.email?.split('@')[0] || 'User',
-              roles: ['user'],
-              level: 1,
-              xp: 0,
-              coins: 0,
-              streak: 0,
-              battle_rating: 1000
-            }
-          ]);
+          .insert([{
+            id: userId,
+            name: email.split('@')[0],
+            is_super_admin: false,
+            created_at: now,
+            updated_at: now
+          }]);
 
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-        }
+        if (profileError) throw profileError;
       }
 
       return { error: null };
@@ -157,35 +155,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      setLoading(true);
-      
-      // Sign out from Supabase
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      // Clear user state
       setUser(null);
+      setIsAdmin(false);
       
-      // Clear all storage
       localStorage.clear();
       sessionStorage.clear();
       
-      // Clear cookies
-      document.cookie.split(";").forEach((c) => {
-        document.cookie = c
-          .replace(/^ +/, "")
-          .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-      });
-      
-      // Use navigate instead of window.location
       window.location.href = '/';
       
       return { error: null };
     } catch (error) {
       console.error('Sign out error:', error);
       return { error: error as Error };
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -195,6 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         loading,
         initialized,
+        isAdmin,
         signIn,
         signUp,
         signOut

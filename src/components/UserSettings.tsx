@@ -1,40 +1,52 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Volume2, Bell, Globe, Camera, User, Save } from 'lucide-react';
-import { useGame } from '../contexts/GameContext';
-import { useLanguage } from '../contexts/LanguageContext';
+import { use_game } from '../contexts/GameContext';
+import { use_language } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import ThemeToggle from './ThemeToggle';
-import Modal from './Modal';
+import { Modal } from './Modal';
 
 interface UserSettingsProps {
-  onClose: () => void;
+  on_close: () => void;
 }
 
-export default function UserSettings({ onClose }: UserSettingsProps) {
-  const { state, dispatch } = useGame();
-  const { language, setLanguage, t } = useLanguage();
-  const { theme, toggleTheme } = useTheme();
-  const [formData, setFormData] = useState({
-    name: state.user.name,
-    title: state.user.title || '',
+interface UserProfile {
+  name: string;
+  title?: string;
+  avatar: string;
+}
+
+export default function UserSettings({ on_close }: UserSettingsProps) {
+  const { state, dispatch } = use_game();
+  const { language, setLanguage } = use_language();
+  const { theme } = useTheme();
+
+  const [formData, setFormData] = useState<UserProfile>({
+    name: state.user.name || '',
+    title: '',
     avatar: state.user.avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'
   });
+
   const [settings, setSettings] = useState({
     sound: true,
     notifications: true
   });
+
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulating API call
+      await new Promise(resolve => setTimeout(resolve, 500));
       dispatch({
-        type: 'UPDATE_PROFILE',
-        payload: formData
+        type: 'UPDATE_USER_PROFILE',
+        payload: {
+          name: formData.name,
+          avatar: formData.avatar
+        }
       });
-      onClose();
+      on_close();
     } finally {
       setIsLoading(false);
     }
@@ -42,8 +54,8 @@ export default function UserSettings({ onClose }: UserSettingsProps) {
 
   return (
     <Modal
-      isOpen={true}
-      onClose={onClose}
+      is_open={true}
+      on_close={on_close}
       title="Settings"
     >
       <div className="space-y-6">
@@ -168,7 +180,7 @@ export default function UserSettings({ onClose }: UserSettingsProps) {
         {/* Action Buttons */}
         <div className="flex justify-end space-x-3">
           <button
-            onClick={onClose}
+            onClick={on_close}
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors"
             disabled={isLoading}
           >

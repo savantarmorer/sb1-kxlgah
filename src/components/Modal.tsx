@@ -3,17 +3,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
 interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
   children: React.ReactNode;
-  maxWidth?: string;
+  is_open: boolean;
+  on_close: () => void;
+  title?: string;
+  max_width?: string;
 }
 
-export default function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' }: ModalProps) {
+export const Modal = ({ is_open, on_close, title, children, max_width = 'max-w-lg' }: ModalProps) => {
   return (
     <AnimatePresence>
-      {isOpen && (
+      {is_open && (
         <div className="modal-container">
           {/* Backdrop */}
           <motion.div
@@ -21,7 +21,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 'ma
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="modal-overlay"
-            onClick={onClose}
+            onClick={on_close}
           />
 
           {/* Modal Dialog */}
@@ -32,7 +32,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 'ma
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className={`modal-content ${maxWidth}`}
+                className={`modal-content ${max_width}`}
               >
                 {/* Header */}
                 <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
@@ -40,7 +40,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 'ma
                     {title}
                   </h2>
                   <button
-                    onClick={onClose}
+                    onClick={on_close}
                     className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   >
                     <X size={20} className="text-gray-500 dark:text-gray-400" />

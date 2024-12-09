@@ -20,7 +20,7 @@ export function notifyAchievementUnlock(achievement: Achievement) {
   notificationSystem.showAchievement(achievement);
 
   // If achievement has share reward, show additional notification
-  if (achievement.shareReward) {
+  if (achievement.share_reward) {
     notificationSystem.showSuccess(`Share this achievement to earn bonus rewards!`);
   }
 

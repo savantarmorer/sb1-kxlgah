@@ -138,3 +138,26 @@
 .animate-leave {
   animation: leave 0.15s ease-in forwards;
 }
+
+/* Add these styles */
+html {
+  scroll-padding-bottom: 4rem; /* Accounts for navigation bar */
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  overflow-y: auto;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+  padding-bottom: 4rem; /* Space for navigation */
+}

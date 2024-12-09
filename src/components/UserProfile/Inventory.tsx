@@ -1,24 +1,24 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Package, Star } from 'lucide-react';
-import { useGame } from '../../contexts/GameContext';
+import { use_game } from '../../contexts/GameContext';
 import { InventoryItem } from '../../types';
 
 export default function Inventory() {
-  const { state, dispatch } = useGame();
+  const { state, dispatch } = use_game();
   const { inventory = [], backpack = [] } = state.user;
 
   const handleEquip = (item: InventoryItem) => {
     dispatch({
       type: 'EQUIP_ITEM',
-      payload: { itemId: item.id }
+      payload: { item_id: item.id }
     });
   };
 
   const handleUnequip = (item: InventoryItem) => {
     dispatch({
       type: 'UNEQUIP_ITEM',
-      payload: { itemId: item.id }
+      payload: { item_id: item.id }
     });
   };
 
@@ -37,7 +37,7 @@ export default function Inventory() {
           <div className="space-y-2">
             {backpack.map((item) => (
               <motion.div
-                key={item.id}
+                key={`${item.type}_${item.id}`}
                 layout
                 className="p-3 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20"
               >
@@ -67,7 +67,7 @@ export default function Inventory() {
               .filter(item => !backpack.some(equipped => equipped.id === item.id))
               .map((item) => (
                 <motion.div
-                  key={item.id}
+                  key={`${item.type}_${item.id}`}
                   layout
                   className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"
                 >

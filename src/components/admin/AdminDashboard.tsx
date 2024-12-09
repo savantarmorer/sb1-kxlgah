@@ -1,5 +1,5 @@
 // src/components/admin/AdminDashboard.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   LayoutGrid, 
@@ -7,158 +7,101 @@ import {
   ScrollText, 
   Store, 
   Users, 
-  X
+  X,
+  BarChart2,
+  ShoppingBag,
+  Shield,
+  Settings,
+  Trophy
 } from 'lucide-react';
 import QuestManager from './QuestManager';
-import ItemManager from './ItemManager';
-import ShopManager from './ShopManager';
-import UserManager from './UserManager';
-import Statistics from './Statistics';
+import { ItemManager } from './ItemManager';
+import { ShopManager } from './ShopManager';
+import { UserManager } from './UserManager';
+import { Statistics } from './Statistics';
 import Button from '../Button';
 import { StatisticsService } from '../../services/statisticsService';
-import { useGame } from '../../contexts/GameContext';
+import { use_game } from '../../contexts/GameContext';
 import type { GameStatistics } from '../../types/game';
+import { TournamentManager } from './TournamentManager';
+import { 
+  Tabs, 
+  Tab, 
+  Box,
+  Typography 
+} from '@mui/material';
+import TabContext from '@mui/lab/TabContext';
+import TabList from '@mui/lab/TabList';
+import TabPanel from '@mui/lab/TabPanel';
 
-interface AdminDashboardProps {
-  onClose: () => void;
-}
+const AdminDashboard = () => {
+  const [activeTab, setActiveTab] = useState('overview');
 
-type Tab = 'overview' | 'quests' | 'items' | 'shop' | 'users' | 'achievements';
-
-export default function AdminDashboard({ onClose }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('overview');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { state, dispatch } = useGame();
-
-  useEffect(() => {
-    loadStatistics();
-  }, []);
-
-  const loadStatistics = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const stats = await StatisticsService.fetchStatistics();
-      
-      if (stats) {
-        dispatch({
-          type: 'SYNC_STATISTICS',
-          payload: stats
-        });
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load statistics');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: LayoutGrid },
-    { id: 'quests', label: 'Quests', icon: ScrollText },
-    { id: 'items', label: 'Items', icon: Package },
-    { id: 'shop', label: 'Shop', icon: Store },
-    { id: 'users', label: 'Users', icon: Users }
-  ];
-
-  const renderContent = () => {
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-        </div>
-      );
-    }
-
-    if (error) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full">
-          <p className="text-red-500 mb-4">{error}</p>
-          <Button onClick={loadStatistics}>Retry</Button>
-        </div>
-      );
-    }
-
-    switch (activeTab) {
-      case 'quests':
-        return <QuestManager />;
-      case 'items':
-        return <ItemManager />;
-      case 'shop':
-        return <ShopManager />;
-      case 'users':
-        return <UserManager />;
-      default:
-        return (
-          <Statistics
-            statistics={state.statistics}
-            onRefresh={loadStatistics}
-            isLoading={loading}
-            error={error}
-          />
-        );
-    }
+  const handleChange = (event: React.SyntheticEvent, newValue: string) => {
+    setActiveTab(newValue);
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50"
-    >
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-7xl mx-4 h-[90vh] flex flex-col"
-      >
-        <div className="flex justify-between items-center p-6 border-b dark:border-gray-700">
-          <h2 className="text-2xl font-bold dark:text-white">Admin Dashboard</h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            <X size={20} className="dark:text-gray-400" />
-          </button>
-        </div>
+    <Box sx={{ padding: '1rem' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '1.5rem' 
+      }}>
+        <Typography variant="h4">Admin Dashboard</Typography>
+        <Button
+          variant="outline"
+          icon={<X size={24} />}
+          onClick={() => {}}
+          className="!p-1"
+        />
+      </Box>
 
-        <div className="flex flex-1 overflow-hidden">
-          <nav className="w-64 border-r dark:border-gray-700 p-4">
-            <ul className="space-y-2">
-              {tabs.map(tab => (
-                <li key={tab.id}>
-                  <button
-                    onClick={() => setActiveTab(tab.id as Tab)}
-                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                      activeTab === tab.id
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <tab.icon size={20} />
-                    <span>{tab.label}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </nav>
+      <TabContext value={activeTab}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <TabList onChange={handleChange}>
+            <Tab label="Overview" value="overview" />
+            <Tab label="Quests" value="quests" />
+            <Tab label="Items" value="items" />
+            <Tab label="Shop" value="shop" />
+            <Tab label="Users" value="users" />
+            <Tab label="Achievements" value="achievements" />
+            <Tab label="Tournaments" value="tournaments" />
+            <Tab label="Settings" value="settings" />
+          </TabList>
+        </Box>
 
-          <main className="flex-1 overflow-y-auto p-6">
-            {renderContent()}
-          </main>
-        </div>
-
-        <div className="p-4 border-t dark:border-gray-700">
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            Last updated: {new Date(state.statistics.lastUpdated).toLocaleString()}
-          </div>
-        </div>
-      </motion.div>
-    </motion.div>
+        <TabPanel value="overview">
+          <Statistics />
+        </TabPanel>
+        <TabPanel value="quests">
+          <QuestManager />
+        </TabPanel>
+        <TabPanel value="items">
+          <ItemManager />
+        </TabPanel>
+        <TabPanel value="shop">
+          <ShopManager />
+        </TabPanel>
+        <TabPanel value="users">
+          <UserManager />
+        </TabPanel>
+        <TabPanel value="achievements">
+          {/* Achievements Content */}
+        </TabPanel>
+        <TabPanel value="tournaments">
+          <TournamentManager />
+        </TabPanel>
+        <TabPanel value="settings">
+          {/* Settings Content */}
+        </TabPanel>
+      </TabContext>
+    </Box>
   );
-}
+};
+
+export default AdminDashboard;
 
 /**
  * Component Role:

@@ -12,7 +12,7 @@ export type NotificationType =
   | 'debug'
   | 'quest'
   | 'reward'
-  | 'level_up'
+  | 'LEVEL_UP'
   | 'streak';
 
 export interface NotificationAction {
@@ -23,7 +23,7 @@ export interface NotificationAction {
 export interface NotificationItem {
   id: string;
   type: NotificationType;
-  message: string | ReactNode | Achievement | Quest | Reward;
+  message: string | ReactNode | Achievement | Quest | Reward | NotificationMessage;
   duration: number;
   data?: unknown;
   variant?: 'default' | 'persistent' | 'interactive';
@@ -38,4 +38,11 @@ export interface NotificationState {
 }
 
 export type NotificationPayload = Omit<NotificationItem, 'id'>; 
+
+export interface NotificationMessage {
+  title: string;
+  description: string;
+  questId?: string;
+  rewardsList?: Reward[];
+}
 

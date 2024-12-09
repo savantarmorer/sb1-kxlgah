@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Gift, Flame, Settings } from 'lucide-react';
-import { useGame } from '../../contexts/GameContext';
+import { use_game } from '../../contexts/GameContext';
 import LoginCalendar from './LoginCalendar';
 import RewardNotification from './RewardNotification';
 import StreakDisplay from './StreakDisplay';
@@ -19,7 +19,7 @@ interface DailyReward {
 }
 
 export default function DailyRewardSystem() {
-  const { state, dispatch } = useGame();
+  const { state, dispatch } = use_game();
   const [showNotification, setShowNotification] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [lastLoginDate, setLastLoginDate] = useLocalStorage<string>('lastLoginDate', '');
@@ -57,7 +57,7 @@ export default function DailyRewardSystem() {
       setShowNotification(true);
       setLastLoginDate(today);
       
-      if (!state.loginHistory?.includes(today)) {
+      if (!state.login_history?.includes(today)) {
         dispatch({ type: 'INCREMENT_STREAK' });
         dispatch({ type: 'RECORD_LOGIN', payload: today });
         dispatch({ type: 'UPDATE_STREAK_MULTIPLIER' });
@@ -88,27 +88,27 @@ export default function DailyRewardSystem() {
       <StreakDisplay streak={state.user.streak} />
       
       <LoginCalendar
-        loginDates={state.loginHistory || []}
+        loginDates={state.login_history || []}
         rewards={DAILY_REWARDS}
-        currentStreak={state.user.streak}
+        current_streak={state.user.streak}
       />
 
       <AnimatePresence>
         {showNotification && currentReward && (
           <RewardNotification
             reward={currentReward}
-            onClaim={handleClaimReward}
+            on_claim={handleClaimReward}
           />
         )}
       </AnimatePresence>
 
       {showAdminPanel && (
         <AdminPanel
-          onClose={() => setShowAdminPanel(false)}
+          on_close={() => setShowAdminPanel(false)}
           rewards={DAILY_REWARDS}
-          onUpdateRewards={(newRewards) => {
+          on_update_rewards={(new_rewards) => {
             // Handle reward updates
-            console.log('Updated rewards:', newRewards);
+            console.log('Updated rewards:', new_rewards);
           }}
         />
       )}

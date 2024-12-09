@@ -63,11 +63,11 @@ export class MoodleIntegration {
     const percentage = (score / maxScore) * 100;
     
     // Calculate XP based on score
-    const baseXP = Math.floor(percentage * 2);
+    const base_xp = Math.floor(percentage * 2);
     const bonusXP = percentage >= 90 ? 50 : 0;
     
     return {
-      xp: baseXP + bonusXP,
+      xp: base_xp + bonusXP,
       coins: Math.floor(percentage / 2),
       achievements: this.checkQuizAchievements(percentage)
     };

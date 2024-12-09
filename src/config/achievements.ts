@@ -14,7 +14,7 @@ export const BATTLE_ACHIEVEMENTS = {
     rarity: 'legendary',
     prerequisites: [],
     dependents: [],
-    triggerConditions: [{
+    trigger_conditions: [{
       type: 'battle_score',
       value: 100,
       comparison: 'eq'
@@ -34,7 +34,7 @@ export const BATTLE_ACHIEVEMENTS = {
     rarity: 'epic',
     prerequisites: [],
     dependents: [],
-    triggerConditions: [{
+    trigger_conditions: [{
       type: 'battle_streak',
       value: 3,
       comparison: 'gte'

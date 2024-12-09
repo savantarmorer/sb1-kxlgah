@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Crown, Star, Shield, Award } from 'lucide-react';
-import { useGame } from '../../contexts/GameContext';
+import { use_game } from '../../contexts/GameContext';
 
 const TITLE_ICONS = {
   legendary: Crown,
@@ -10,8 +10,14 @@ const TITLE_ICONS = {
   common: Award
 };
 
+/**
+ * A component to display all available titles and badges, and allow the user to
+ * select one of them as their active title.
+ *
+ * @returns {JSX.Element} The component element.
+ */
 export default function TitlesDisplay() {
-  const { state, dispatch } = useGame();
+  const { state, dispatch } = use_game();
   const { user } = state;
 
   const titles = [

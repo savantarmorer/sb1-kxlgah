@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useLocalStorage } from './useLocalStorage';
+import { savePerformanceMetric } from '../api/performanceMetrics';
 
 interface PerformanceConfig {
   enableAnimations: boolean;
@@ -13,6 +14,10 @@ export function usePerformance() {
     enableParticles: true,
     lowPowerMode: false
   });
+
+  const logPerformance = useCallback(async (context: string, duration: number, metadata?: any) => {
+    await savePerformanceMetric({ context, duration, metadata });
+  }, []);
 
   const checkDeviceCapabilities = useCallback(() => {
     const memory = (navigator as any).deviceMemory;
@@ -42,7 +47,8 @@ export function usePerformance() {
 
   return {
     config,
-    updateConfig
+    updateConfig,
+    logPerformance
   };
 }
 
