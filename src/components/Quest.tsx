@@ -1,5 +1,5 @@
 import React from 'react';
-import { Quest, QuestStatus, QuestType } from '../types/game';
+import { Quest, QuestStatus, QuestType, QuestRequirement } from '../types/quests';
 import {
   Box,
   Card,
@@ -12,14 +12,16 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
+// At the top of the file, define the status type to match the object keys
+type QuestStatusStyles = 'available' | 'in_progress' | 'completed' | 'failed' | 'expired';
+
 const QuestCard = styled(Card)<{ status: QuestStatus }>(({ theme, status }) => ({
   border: `2px solid ${
     {
-      available: theme.palette.info.main,
-      in_progress: theme.palette.warning.main,
-      completed: theme.palette.success.main,
-      failed: theme.palette.error.main,
-      expired: theme.palette.grey[500],
+      [QuestStatus.AVAILABLE]: theme.palette.info.main,
+      [QuestStatus.IN_PROGRESS]: theme.palette.warning.main,
+      [QuestStatus.COMPLETED]: theme.palette.success.main,
+      [QuestStatus.FAILED]: theme.palette.error.main
     }[status]
   }`,
   transition: 'transform 0.2s ease-in-out',
@@ -30,19 +32,17 @@ const QuestCard = styled(Card)<{ status: QuestStatus }>(({ theme, status }) => (
 
 const StatusChip = styled(Chip)<{ status: QuestStatus }>(({ theme, status }) => ({
   backgroundColor: {
-    available: theme.palette.info.main,
-    in_progress: theme.palette.warning.main,
-    completed: theme.palette.success.main,
-    failed: theme.palette.error.main,
-    expired: theme.palette.grey[500],
+    [QuestStatus.AVAILABLE]: theme.palette.info.main,
+    [QuestStatus.IN_PROGRESS]: theme.palette.warning.main,
+    [QuestStatus.COMPLETED]: theme.palette.success.main,
+    [QuestStatus.FAILED]: theme.palette.error.main
   }[status],
   color: theme.palette.getContrastText(
     {
-      available: theme.palette.info.main,
-      in_progress: theme.palette.warning.main,
-      completed: theme.palette.success.main,
-      failed: theme.palette.error.main,
-      expired: theme.palette.grey[500],
+      [QuestStatus.AVAILABLE]: theme.palette.info.main,
+      [QuestStatus.IN_PROGRESS]: theme.palette.warning.main,
+      [QuestStatus.COMPLETED]: theme.palette.success.main,
+      [QuestStatus.FAILED]: theme.palette.error.main
     }[status]
   ),
 }));
@@ -102,9 +102,9 @@ export const QuestComponent: React.FC<QuestComponentProps> = ({
   onAbandon,
 }) => {
   const totalProgress = quest.requirements.reduce(
-    (acc, req) => acc + (req.current / req.target) * 100,
+    (acc: number, req: QuestRequirement) => acc + (req.current / req.target) * 100,
     0
-  ) / quest.requirements.length;
+  );
 
   return (
     <QuestCard status={quest.status}>
@@ -125,7 +125,7 @@ export const QuestComponent: React.FC<QuestComponentProps> = ({
         </Typography>
 
         <Stack spacing={2}>
-          {quest.requirements.map((req, index) => (
+          {quest.requirements.map((req: QuestRequirement, index: number) => (
             <Box key={index}>
               <Typography variant="body2" color="text.secondary">
                 {req.type === QuestType.BATTLE && 'Win Battles'}
@@ -140,7 +140,7 @@ export const QuestComponent: React.FC<QuestComponentProps> = ({
           ))}
         </Stack>
 
-        <QuestRewards xp={quest.rewards.xp} coins={quest.rewards.coins} />
+        <QuestRewards xp={quest.xp_reward} coins={quest.coin_reward} />
 
         {quest.status === QuestStatus.AVAILABLE && onAccept && (
           <Button
@@ -166,13 +166,13 @@ export const QuestComponent: React.FC<QuestComponentProps> = ({
           </Button>
         )}
 
-        {quest.expiresAt && (
+        {quest.expires_at && (
           <Typography
             variant="body2"
             color="text.secondary"
             sx={{ mt: 2, textAlign: 'center' }}
           >
-            Expires: {new Date(quest.expiresAt).toLocaleDateString()}
+            Expires: {new Date(quest.expires_at).toLocaleDateString()}
           </Typography>
         )}
       </CardContent>

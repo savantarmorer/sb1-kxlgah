@@ -15,159 +15,355 @@
  * - BattleStatus type: From battle type definitions
  */
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Swords, Timer, Trophy, Pause, AlertCircle } from 'lucide-react';
-import { BattleStatus } from '../../types/battle';
+import { Swords, Play, Trophy, AlertCircle, User, Star } from 'lucide-react';
+import { BattleStatus, BattleState } from '../../types/battle/state';
+import { use_game } from '../../contexts/GameContext';
+import { useBattleStreak } from '../../hooks/useBattleStreak';
+import './BattleStateTransition.css';
 
-// Component Props Interface
-export interface BattleStateTransitionProps {
+// Animation variants
+const containerVariants = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -20 }
+};
+
+const cardVariants = {
+  initial: (side: 'left' | 'right') => ({
+    x: side === 'left' ? -100 : 100,
+    opacity: 0
+  }),
+  animate: {
+    x: 0,
+    opacity: 1,
+    transition: { duration: 0.5, ease: 'easeOut' }
+  },
+  exit: (side: 'left' | 'right') => ({
+    x: side === 'left' ? -100 : 100,
+    opacity: 0,
+    transition: { duration: 0.3 }
+  })
+};
+
+const iconVariants = {
+  initial: { scale: 0.8, opacity: 0 },
+  animate: { 
+    scale: 1, 
+    opacity: 1,
+    transition: {
+      duration: 0.5,
+      ease: 'easeOut'
+    }
+  },
+  exit: { 
+    scale: 0.8, 
+    opacity: 0,
+    transition: {
+      duration: 0.3
+    }
+  },
+  pulse: {
+    scale: [1, 1.1, 1],
+    transition: {
+      duration: 2,
+      repeat: Infinity,
+      ease: 'easeInOut'
+    }
+  }
+};
+
+const textVariants = {
+  initial: { opacity: 0, y: 10 },
+  animate: (delay: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      delay: delay * 0.2,
+      ease: 'easeOut'
+    }
+  }),
+  exit: { 
+    opacity: 0, 
+    y: -10,
+    transition: {
+      duration: 0.3
+    }
+  }
+};
+
+interface PlayerPreview {
+  id: string;
+  name: string;
+  avatar_url?: string;
+  level: number;
+  rating: number;
+  win_streak: number;
+}
+
+interface BattleStateTransitionProps {
   status: BattleStatus;
   message?: string;
   onComplete?: () => void;
 }
 
-/**
- * Type for transition content structure
- */
-type TransitionContent = {
-  readonly [K in BattleStatus]: {
-    readonly icon: JSX.Element;
-    readonly defaultText: string;
-    readonly defaultSubtext: string;
-  }
-};
+const PlayerCard = ({ player, side, isWinner }: { 
+  player: PlayerPreview; 
+  side: 'left' | 'right';
+  isWinner?: boolean;
+}) => (
+  <motion.div
+    custom={side}
+    variants={cardVariants}
+    initial="initial"
+    animate="animate"
+    exit="exit"
+    className={`player-card ${isWinner ? 'winner' : ''}`}
+    data-side={side}
+  >
+    <motion.div 
+      className="avatar-container"
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      transition={{ delay: 0.3, duration: 0.5, type: 'spring' }}
+    >
+      {player.avatar_url ? (
+        <img src={player.avatar_url} alt={player.name} className="avatar-image" />
+      ) : (
+        <User className="avatar-placeholder" />
+      )}
+      <motion.div 
+        className="level-badge"
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ delay: 0.5, duration: 0.3 }}
+      >
+        {player.level}
+      </motion.div>
+    </motion.div>
+    
+    <motion.div 
+      className="player-info"
+      variants={textVariants}
+      custom={1}
+    >
+      <h3 className="player-name">{player.name}</h3>
+      <div className="player-stats">
+        <motion.div 
+          className="rating"
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.6 }}
+        >
+          <Trophy size={16} />
+          <span>{player.rating}</span>
+        </motion.div>
+        {player.win_streak > 2 && (
+          <motion.div 
+            className="streak"
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.7 }}
+          >
+            <Star size={16} className="text-orange-500" />
+            <span>{player.win_streak}</span>
+          </motion.div>
+        )}
+      </div>
+    </motion.div>
+  </motion.div>
+);
 
-/**
- * Transition content configuration for each battle state
- * Maps battle states to their visual representation
- */
-const TRANSITION_CONTENT: TransitionContent = {
-  idle: {
-    icon: <Swords size={48} className="text-gray-400" />,
-    defaultText: 'Ready to Battle',
-    defaultSubtext: 'Start when you are ready'
-  },
-  searching: {
-    icon: <Swords size={48} className="text-brand-teal-500 animate-pulse" />,
-    defaultText: 'Finding Opponent...',
-    defaultSubtext: 'Please wait'
-  },
-  preparing: {
-    icon: <Swords size={48} className="text-brand-teal-500" />,
-    defaultText: 'Preparing Battle...',
-    defaultSubtext: 'Getting everything ready'
-  },
-  ready: {
-    icon: <Swords size={48} className="text-brand-teal-500 animate-bounce" />,
-    defaultText: 'Ready to Start!',
-    defaultSubtext: 'Get ready for battle'
-  },
-  active: {
-    icon: <Timer size={48} className="text-yellow-500" />,
-    defaultText: 'Battle in Progress',
-    defaultSubtext: 'Good luck!'
-  },
-  paused: {
-    icon: <Pause size={48} className="text-yellow-500" />,
-    defaultText: 'Battle Paused',
-    defaultSubtext: 'Take a breather'
-  },
-  completed: {
-    icon: <Trophy size={48} className="text-yellow-500" />,
-    defaultText: 'Battle Complete',
-    defaultSubtext: 'Calculating results...'
-  },
-  victory: {
-    icon: <Trophy size={48} className="text-green-500 animate-bounce" />,
-    defaultText: 'Victory!',
-    defaultSubtext: 'Well played!'
-  },
-  defeat: {
-    icon: <Trophy size={48} className="text-red-500" />,
-    defaultText: 'Defeat',
-    defaultSubtext: 'Better luck next time'
-  },
-  draw: {
-    icon: <Trophy size={48} className="text-yellow-500" />,
-    defaultText: 'Draw',
-    defaultSubtext: 'A close match!'
-  },
-  error: {
-    icon: <AlertCircle size={48} className="text-red-500" />,
-    defaultText: 'Battle Error',
-    defaultSubtext: 'Something went wrong'
-  }
-};
-
-export function BattleStateTransition({ 
-  status, 
+export function BattleStateTransition({
+  status,
   message,
-  onComplete 
+  onComplete
 }: BattleStateTransitionProps) {
-  const [hasCompleted, setHasCompleted] = useState(false);
+  const { state } = use_game();
+  const { current_streak } = useBattleStreak();
+  const battle = state.battle;
 
-  useEffect(() => {
-    if (status === 'completed' && !hasCompleted) {
-      setHasCompleted(true);
-      onComplete?.();
-    }
-  }, [status, onComplete, hasCompleted]);
-
-  // Render different content based on status
-  const renderContent = () => {
+  const getStateContent = () => {
     switch (status) {
+      case 'idle':
+        return {
+          icon: <Play className="text-brand-teal-500" size={48} />,
+          text: 'Ready to Battle',
+          subtext: 'Start when you are ready',
+          animation: 'pulse'
+        };
+      case 'waiting':
       case 'searching':
-        return (
-          <div className="battle-transition searching">
-            <div className="spinner" />
-            <p>Finding opponent...</p>
-          </div>
-        );
-
+        return {
+          icon: <Swords className="text-brand-teal-500" size={48} />,
+          text: 'Finding Opponent...',
+          subtext: 'Please wait',
+          animation: 'pulse'
+        };
+      case 'preparing':
+        return {
+          icon: <Swords className="text-brand-teal-500" size={48} />,
+          text: 'Preparing Battle',
+          subtext: 'Getting everything ready...',
+          animation: 'pulse'
+        };
       case 'ready':
-        return (
-          <div className="battle-transition ready">
-            <div className="countdown">
-              <p>Battle starting in...</p>
-              <div className="timer">3</div>
-            </div>
-          </div>
-        );
-
+        return {
+          icon: <Swords className="text-brand-teal-500" size={48} />,
+          text: 'Opponent Found!',
+          subtext: 'Preparing battle...',
+          animation: 'pulse'
+        };
+      case 'active':
+        return {
+          icon: <Swords className="text-brand-teal-500" size={48} />,
+          text: 'Battle in Progress',
+          subtext: `Score: ${battle?.score.player || 0} - ${battle?.score.opponent || 0}`
+        };
+      case 'paused':
+        return {
+          icon: <Swords className="text-brand-teal-500 opacity-50" size={48} />,
+          text: 'Battle Paused',
+          subtext: 'Resume when ready'
+        };
+      case 'victory':
+        return {
+          icon: <Trophy className="text-yellow-500" size={48} />,
+          text: 'Victory!',
+          subtext: battle?.rewards ? 
+            `XP: +${battle.rewards.xp_earned} | Coins: +${battle.rewards.coins_earned}${
+              battle.rewards.streak_bonus ? ` | Streak: ${current_streak}` : ''
+            }` : 'Congratulations!'
+        };
+      case 'defeat':
+        return {
+          icon: <Trophy className="text-gray-400" size={48} />,
+          text: 'Defeat',
+          subtext: 'Better luck next time!'
+        };
+      case 'draw':
+        return {
+          icon: <Trophy className="text-brand-teal-500" size={48} />,
+          text: 'Draw!',
+          subtext: 'A close battle!'
+        };
       case 'completed':
-        return (
-          <div className="battle-transition completed">
-            <Trophy className="trophy-icon" />
-            <h2>Battle Complete</h2>
-            <p>Calculating results...</p>
-          </div>
-        );
-
+        return {
+          icon: <Trophy className="text-brand-teal-500" size={48} />,
+          text: 'Battle Complete',
+          subtext: battle?.rewards ? 
+            `XP: +${battle.rewards.xp_earned} | Coins: +${battle.rewards.coins_earned}${
+              battle.rewards.streak_bonus ? ` | Streak: ${current_streak}` : ''
+            }` : 'Battle Complete'
+        };
       case 'error':
-        return (
-          <div className="battle-transition error">
-            <p>Error: {message}</p>
-          </div>
-        );
-
+        return {
+          icon: <AlertCircle className="text-red-500" size={48} />,
+          text: 'Error Occurred',
+          subtext: message || 'Please try again'
+        };
       default:
-        return null;
+        return {
+          icon: <Swords className="text-brand-teal-500" size={48} />,
+          text: 'Battle',
+          subtext: 'Loading...'
+        };
     }
   };
 
+  const content = getStateContent();
+  const playerScore = battle?.score.player ?? 0;
+  const opponentScore = battle?.score.opponent ?? 0;
+
   return (
-    <motion.div
-      className="battle-state-transition"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      {renderContent()}
-    </motion.div>
+    <AnimatePresence mode="wait" onExitComplete={onComplete}>
+      <motion.div
+        key={status}
+        variants={containerVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={{ duration: 0.3 }}
+        className="battle-transition"
+        data-status={status}
+      >
+        <div className="battle-transition-content">
+          {status === 'ready' && battle?.opponent ? (
+            <motion.div 
+              className="battle-preview"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <PlayerCard
+                player={{
+                  id: state.user.id,
+                  name: state.user.name,
+                  avatar_url: state.user.avatar_url,
+                  level: state.user.level,
+                  rating: state.battle_stats?.tournament_rating || 1000,
+                  win_streak: current_streak
+                }}
+                side="left"
+                isWinner={status === 'completed' && playerScore > opponentScore}
+              />
+              <motion.div 
+                className="versus-container"
+                variants={iconVariants}
+                initial="initial"
+                animate={content.animation === 'pulse' ? 'pulse' : 'animate'}
+              >
+                <Swords className="versus-icon" />
+                <motion.span 
+                  className="versus-text"
+                  variants={textVariants}
+                  custom={2}
+                >
+                  VS
+                </motion.span>
+              </motion.div>
+              <PlayerCard
+                player={{
+                  id: battle.opponent.id,
+                  name: battle.opponent.name,
+                  avatar_url: battle.opponent.avatar_url,
+                  level: battle.opponent.level,
+                  rating: battle.opponent.rating,
+                  win_streak: battle.opponent.win_streak || 0
+                }}
+                side="right"
+                isWinner={status === 'completed' && opponentScore > playerScore}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              variants={iconVariants}
+              initial="initial"
+              animate={content.animation === 'pulse' ? 'pulse' : 'animate'}
+            >
+              {content.icon}
+            </motion.div>
+          )}
+          <motion.h2 
+            className="transition-text"
+            variants={textVariants}
+            custom={1}
+          >
+            {content.text}
+          </motion.h2>
+          <motion.p 
+            className="transition-subtext"
+            variants={textVariants}
+            custom={2}
+          >
+            {content.subtext}
+          </motion.p>
+        </div>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
-// Export for use in other components
 export default BattleStateTransition;

@@ -190,12 +190,10 @@ export class BattleService {
       const processed_questions = data.map((q: BattleQuestion) => ({
         id: q.id,
         question: q.question,
-        alternatives: {
-          a: q.alternative_a || '',
-          b: q.alternative_b || '',
-          c: q.alternative_c || '',
-          d: q.alternative_d || ''
-        },
+        alternative_a: q.alternative_a || '',
+        alternative_b: q.alternative_b || '',
+        alternative_c: q.alternative_c || '',
+        alternative_d: q.alternative_d || '',
         correct_answer: q.correct_answer.toUpperCase(),
         category: q.category || 'general',
         difficulty: q.difficulty || 'medium'

@@ -1,65 +1,134 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSound } from '../../hooks/useSound';
 import { use_language } from '../../contexts/LanguageContext';
+import { EditProfileMenu } from '../Profile/EditProfileMenu';
+import { User, Moon, Sun, Volume2, Languages } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { PageContainer } from '../Layout/PageContainer';
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { volume, setVolume, isMuted, toggleMute } = useSound();
   const { language, setLanguage } = use_language();
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Settings</h2>
-      
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-lg font-medium mb-2">Theme</h3>
-          <select 
-            value={theme}
-            onChange={(e) => setTheme(e.target.value as 'light' | 'dark' | 'system')}
-            className="input"
+    <PageContainer>
+      <div className="max-w-4xl mx-auto p-6 space-y-8">
+        <motion.h2 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"
+        >
+          Settings
+        </motion.h2>
+        
+        <div className="grid gap-8">
+          {/* Theme Section */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
           >
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-            <option value="system">System</option>
-          </select>
-        </div>
-
-        <div>
-          <h3 className="text-lg font-medium mb-2">Sound</h3>
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={toggleMute}
-              className="btn btn-secondary"
+            <div className="flex items-center gap-3 mb-4">
+              {theme === 'dark' ? (
+                <Moon className="w-5 h-5 text-indigo-500" />
+              ) : (
+                <Sun className="w-5 h-5 text-indigo-500" />
+              )}
+              <h3 className="text-lg font-semibold">Theme</h3>
+            </div>
+            <select 
+              value={theme}
+              onChange={(e) => setTheme(e.target.value as 'light' | 'dark' | 'system')}
+              className="w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
             >
-              {isMuted ? 'Unmute' : 'Mute'}
-            </button>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={volume}
-              onChange={(e) => setVolume(Number(e.target.value))}
-              className="w-full"
-            />
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="system">System</option>
+            </select>
+          </motion.div>
+
+          {/* Sound Section */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <Volume2 className="w-5 h-5 text-indigo-500" />
+              <h3 className="text-lg font-semibold">Sound</h3>
+            </div>
+            <div className="flex items-center gap-6">
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={toggleMute}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  isMuted 
+                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    : 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
+                }`}
+              >
+                {isMuted ? 'Unmute' : 'Mute'}
+              </motion.button>
+              <div className="flex-1">
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={volume}
+                  onChange={(e) => setVolume(Number(e.target.value))}
+                  className="w-full accent-indigo-500"
+                />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Language Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-3 mb-4">
+              <Languages className="w-5 h-5 text-indigo-500" />
+              <h3 className="text-lg font-semibold">Language</h3>
+            </div>
+            <select 
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+            >
+              <option value="en">English</option>
+              <option value="pt">Português</option>
+              <option value="es">Español</option>
+            </select>
+          </div>
+
+          {/* Profile Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <User className="w-5 h-5 text-indigo-500" />
+                <h3 className="text-lg font-semibold">Profile</h3>
+              </div>
+              <button
+                onClick={() => setIsEditProfileOpen(true)}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+              >
+                <User className="w-4 h-4" />
+                Edit Profile
+              </button>
+            </div>
           </div>
         </div>
 
-        <div>
-          <h3 className="text-lg font-medium mb-2">Language</h3>
-          <select 
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            className="input"
-          >
-            <option value="en">English</option>
-            <option value="pt">Português</option>
-            <option value="es">Español</option>
-          </select>
-        </div>
+        <EditProfileMenu 
+          isOpen={isEditProfileOpen}
+          onClose={() => setIsEditProfileOpen(false)}
+        />
       </div>
-    </div>
+    </PageContainer>
   );
 } 

@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { use_game } from '../contexts/GameContext';
 
 export function useDailyRewards() {
@@ -10,6 +9,13 @@ export function useDailyRewards() {
     const isNewDay = lastLogin.getDate() !== today.getDate();
 
     if (isNewDay) {
+      return true;
+    }
+    return false;
+  };
+
+  const claimDailyReward = () => {
+    if (checkDailyReward()) {
       const streak = state.user.daily_rewards?.streak || 0;
       const newStreak = streak + 1;
       const multiplier = Math.min(2, 1 + (newStreak * 0.1));
@@ -22,7 +28,7 @@ export function useDailyRewards() {
         }
       });
 
-      // Calculate next reward
+      // Calculate reward
       const baseReward = 100;
       dispatch({
         type: 'CLAIM_DAILY_REWARD',
@@ -31,15 +37,15 @@ export function useDailyRewards() {
           reward_type: 'coins'
         }
       });
-    }
-  };
 
-  useEffect(() => {
-    checkDailyReward();
-  }, []);
+      return true;
+    }
+    return false;
+  };
 
   return {
     dailyRewards: state.user.daily_rewards,
-    checkDailyReward
+    canClaimDailyReward: checkDailyReward,
+    claimDailyReward
   };
 } 

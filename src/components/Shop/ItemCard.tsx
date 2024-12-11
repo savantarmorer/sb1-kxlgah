@@ -9,6 +9,17 @@ interface ItemCardProps {
   isLoading?: boolean;
 }
 
+const getRarityColor = (rarity: string) => {
+  switch (rarity.toLowerCase()) {
+    case 'common': return 'bg-gray-200 text-gray-800';
+    case 'uncommon': return 'bg-green-200 text-green-800';
+    case 'rare': return 'bg-blue-200 text-blue-800';
+    case 'epic': return 'bg-purple-200 text-purple-800';
+    case 'legendary': return 'bg-yellow-200 text-yellow-800';
+    default: return 'bg-gray-200 text-gray-800';
+  }
+};
+
 export function ItemCard({ item, onEdit, onDelete, isLoading }: ItemCardProps) {
   return (
     <motion.div

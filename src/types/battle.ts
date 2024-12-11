@@ -19,7 +19,17 @@ export enum BattlePhase {
  * Refined Battle Status
  * Represents all possible states a battle can be in
  */
-export type BattleStatus = 'idle' | 'active' | 'completed' | 'error';
+export type BattleStatus = 
+  | 'idle' 
+  | 'waiting'
+  | 'preparing'
+  | 'active'
+  | 'paused'
+  | 'completed'
+  | 'victory'
+  | 'defeat'
+  | 'draw'
+  | 'error';
 
 /**
  * Battle Score Interface
@@ -43,14 +53,14 @@ export interface BattleScore {
 export interface BattleQuestion {
   id: string;
   question: string;
+  correct_answer: string;
   alternative_a: string;
   alternative_b: string;
   alternative_c: string;
   alternative_d: string;
-  correct_answer: 'A' | 'B' | 'C' | 'D';
-  category: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  created_at: string;
+  category?: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  created_at?: string;
 }
 
 export interface BattleHistory {
@@ -80,11 +90,28 @@ export interface BattleRatings {
 /**
  * Base battle statistics interface
  * Used for tracking player battle performance and progress
- * 
- * Dependencies:
- * - Used by GameState for battle tracking
- * - Used by UserProgress for stats persistence
- * - Used by Achievement system for unlocks
+ */
+export interface battle_stats {
+  user_id: string;
+  total_battles: number;
+  wins: number;
+  losses: number;
+  win_streak: number;
+  highest_streak: number;
+  total_xp_earned: number;
+  total_coins_earned: number;
+  difficulty: number;
+  tournaments_played: number;
+  tournaments_won: number;
+  tournament_matches_played: number;
+  tournament_matches_won: number;
+  tournament_rating: number;
+  updated_at: string;
+}
+
+/**
+ * Database battle statistics interface
+ * Extends base stats with database-specific fields
  */
 export interface DBbattle_stats {
   user_id: string;
@@ -95,6 +122,11 @@ export interface DBbattle_stats {
   highest_streak: number;
   total_xp_earned: number;
   total_coins_earned: number;
+  tournaments_played: number;
+  tournaments_won: number;
+  tournament_matches_played: number;
+  tournament_matches_won: number;
+  tournament_rating: number;
   updated_at: string;
   difficulty: number;
 }
@@ -169,19 +201,25 @@ export interface BattleRewards {
  */
 export const initialBattleState: BattleState = {
   status: 'idle',
-  in_progress: false,
-  current_question: 0,
   questions: [],
+  current_question: 0,
+  total_questions: 0,
   score: {
     player: 0,
     opponent: 0
   },
+  time_left: 0,
+  time_per_question: 30,
   player_answers: [],
-  time_per_question: BATTLE_CONFIG.time_per_question,
-  time_left: BATTLE_CONFIG.time_per_question,
   opponent: {
-    id: 'bot-0',
-    name: 'Bot',
+    id: '',
+    name: '',
+    is_bot: true,
+    rating: 0,
+    level: 1
+  },
+  in_progress: false,
+  metadata: {
     is_bot: true
   },
   rewards: {
@@ -190,12 +228,24 @@ export const initialBattleState: BattleState = {
     streak_bonus: 0,
     time_bonus: 0
   },
-  metadata: {
-    is_bot: true,
-    difficulty: 1,
-    mode: 'practice'
+  error: {
+    message: '',
+    timestamp: 0
   }
 };
+
+/**
+ * Role: Provides initial state for battle system
+ * Dependencies:
+ * - BattleState interface
+ * - Used by BattleContext
+ * - Used by battle reducer
+ * 
+ * Integration Points:
+ * - BattleContext initialization
+ * - Battle reset functionality
+ * - New game creation
+ */
 
 /**
  * Battle State Interface
@@ -203,17 +253,15 @@ export const initialBattleState: BattleState = {
  */
 export interface BattleState {
   status: BattleStatus;
-  score: {
-    player: number;
-    opponent: number;
-  };
-  opponent: BotOpponent;
-  in_progress: boolean;
-  current_question: number;
   questions: BattleQuestion[];
+  current_question: number;
+  total_questions?: number;
+  score: { player: number; opponent: number };
   player_answers: boolean[];
   time_per_question: number;
   time_left: number;
+  in_progress: boolean;
+  opponent: BotOpponent | null;
   rewards: {
     xp_earned: number;
     coins_earned: number;
@@ -222,14 +270,13 @@ export interface BattleState {
   };
   metadata: {
     is_bot: boolean;
-    difficulty?: number;
-    mode?: string;
+    difficulty?: 'easy' | 'medium' | 'hard';
+    mode?: 'practice' | 'ranked' | 'tournament';
   };
-  error?: {
+  error: {
     message: string;
     timestamp: number;
   };
-  // Add other necessary properties
 }
 
 /**
@@ -316,29 +363,22 @@ export interface BattleResults {
   user_id: string;
   opponent_id: string;
   winner_id: string;
-  score_player: number;
-  score_opponent: number;
-  isVictory: boolean;
+  player_score: number;
+  opponent_score: number;
+  is_victory: boolean;
   is_bot_opponent: boolean;
   current_question: number;
   total_questions: number;
   time_left: number;
-  score: {
-    player: number;
-    opponent: number;
-  };
+  xp_earned: number;
   coins_earned: number;
   streak_bonus: number;
-  difficulty: number;
-  player_score: number;
-  opponent_score: number;
-  is_victory: boolean;
-  xp_earned: number;
-  xp_gained: number;
-  victory: boolean;
   questions_answered: number;
   correct_answers: number;
   time_spent: number;
+  time_bonus?: number;
+  streak?: number;
+  difficulty: number;
 }
 
 /**
@@ -363,6 +403,7 @@ export interface BotOpponent {
   name: string;
   is_bot: boolean;
   rating?: number;
+  level?: number;
 }
 
 /**
@@ -436,4 +477,40 @@ export interface BattleRewardState {
   coins_earned: number;
   streak_bonus: number;
   time_bonus: number;
+}
+
+export interface BattleInitPayload {
+  questions: BattleQuestion[];
+  time_per_question?: number;
+  opponent?: BotOpponent;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  is_bot?: boolean;
+}
+
+export interface XPGain {
+  amount: number;
+  source: string;
+  reason?: string;
+  timestamp?: number;
+  metadata?: {
+    battle_id?: string;
+    quest_id?: string;
+    achievement_id?: string;
+  };
+}
+
+export interface BattleMetadata {
+  is_bot: boolean;
+  difficulty: number;
+  mode: 'practice' | 'ranked' | 'tournament';
+}
+
+export interface AchievementCheckData {
+  type: 'battle_complete' | 'level_up' | 'streak_milestone' | string;
+  data: {
+    score?: number;
+    isVictory?: boolean;
+    totalQuestions?: number;
+    [key: string]: any;
+  };
 }

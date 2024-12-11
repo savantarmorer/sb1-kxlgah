@@ -231,7 +231,7 @@ export class StatsService {
           prerequisites: record.prerequisites || [],
           dependents: record.dependents || [],
           trigger_conditions: record.trigger_conditions || [],
-          order: record.order || 0
+          order_num: record.order || 0
         }
       });
     } else if (type === 'UPDATE') {

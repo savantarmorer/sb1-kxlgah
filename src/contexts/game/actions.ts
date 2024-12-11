@@ -21,11 +21,9 @@ export const gameActions = {
       dispatch({
         type: 'ADD_XP',
         payload: {
-          ...xpGain,
           amount: totalXP,
-          reason: `${xpGain.reason} (x${multiplier})`,
-          timestamp: new Date().toISOString(),
-          isCritical: false
+          source: xpGain.source,
+          reason: `${xpGain.reason} (x${multiplier})`
         }
       });
 
@@ -36,10 +34,24 @@ export const gameActions = {
           type: 'LEVEL_UP',
           payload: {
             level: newLevel,
-            rewards: {
-              xp: 0, 
-              coins: newLevel * 100 
-            }
+            rewards: [
+              {
+                id: 'level_up_xp',
+                type: 'xp',
+                amount: 0,
+                name: 'XP Bonus',
+                description: 'Level up XP reward',
+                value: 0
+              },
+              {
+                id: 'level_up_coins',
+                type: 'coins',
+                amount: newLevel * 100,
+                name: 'Coin Bonus',
+                description: 'Level up coin reward',
+                value: newLevel * 100
+              }
+            ]
           }
         });
       }
@@ -142,7 +154,7 @@ export const gameActions = {
       // Update inventory in state
       dispatch({
         type: 'UPDATE_INVENTORY',
-        payload: updatedInventory
+        payload: { items: updatedInventory }
       });
 
       if (type === 'purchase') {
@@ -186,10 +198,12 @@ export const gameActions = {
       
       if (questProgress.completed) {
         dispatch({
-          type: 'COMPLETE_QUEST',
+          type: 'UPDATE_USER_STATS',
           payload: {
-            quest,
-            rewards: questProgress.rewards
+            quest_progress: {
+              ...state.user.quest_progress,
+              [quest.id]: questProgress
+            }
           }
         });
 

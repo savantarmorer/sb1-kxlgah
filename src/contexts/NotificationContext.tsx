@@ -1,67 +1,84 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-
-export type NotificationType = 'success' | 'error' | 'info' | 'warning';
-
-export interface NotificationItem {
-  id: string;
-  message: string;
-  type: NotificationType;
-  duration?: number;
-}
+import React, { createContext, useContext, useCallback, ReactNode } from 'react';
+import { Achievement } from '../types/achievements';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import AchievementNotification from '../components/Achievements/AchievementNotification';
 
 interface NotificationContextType {
-  notifications: NotificationItem[];
-  showNotification: (notification: Omit<NotificationItem, 'id'>) => void;
   showSuccess: (message: string) => void;
   showError: (message: string) => void;
-  removeNotification: (id: string) => void;
+  showWarning: (message: string) => void;
+  showInfo: (message: string) => void;
+  showNotification: (notification: NotificationOptions) => void;
+  notifyAchievementUnlock: (achievement: Achievement) => void;
 }
 
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+export const NotificationContext = createContext<NotificationContextType | null>(null);
 
-export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+interface NotificationOptions {
+  content: React.ReactNode;
+  type?: 'success' | 'error' | 'warning' | 'info' | 'achievement';
+}
 
-  const removeNotification = useCallback((id: string) => {
-    setNotifications(prev => prev.filter(notification => notification.id !== id));
+export function NotificationProvider({ children }: { children: ReactNode }) {
+  const showSuccess = useCallback((message: string) => {
+    toast.success(message);
   }, []);
 
-  const showNotification = useCallback((notification: Omit<NotificationItem, 'id'>) => {
-    const id = Math.random().toString(36).substring(7);
-    setNotifications(prev => [...prev, { ...notification, id }]);
-
-    // Auto remove notification after duration
-    setTimeout(() => {
-      removeNotification(id);
-    }, notification.duration || 3000);
-  }, [removeNotification]);
-
-  const showSuccess = useCallback((message: string) => {
-    showNotification({
-      message,
-      type: 'success',
-      duration: 3000
-    });
-  }, [showNotification]);
-
   const showError = useCallback((message: string) => {
-    showNotification({
-      message,
-      type: 'error',
-      duration: 3000
-    });
-  }, [showNotification]);
+    toast.error(message);
+  }, []);
+
+  const showWarning = useCallback((message: string) => {
+    toast.warning(message);
+  }, []);
+
+  const showInfo = useCallback((message: string) => {
+    toast.info(message);
+  }, []);
+
+  const notifyAchievementUnlock = useCallback((achievement: Achievement) => {
+    toast(
+      ({ closeToast }) => (
+        <AchievementNotification
+          achievement={achievement}
+          onClose={closeToast}
+          onShare={() => {
+            navigator.share?.({
+              title: 'Achievement Unlocked!',
+              text: `I just unlocked ${achievement.title} in CepaC Play!`,
+              url: window.location.href,
+            }).catch(console.error);
+          }}
+        />
+      ),
+      {
+        position: "bottom-right",
+        autoClose: 5000,
+        closeOnClick: false,
+        pauseOnHover: true,
+        draggable: false,
+        className: "achievement-toast"
+      }
+    );
+  }, []);
+
+  const showNotification = (notification: NotificationOptions) => {
+    toast(notification.content);
+  };
 
   const value = {
-    notifications,
-    showNotification,
     showSuccess,
     showError,
-    removeNotification
+    showWarning,
+    showInfo,
+    notifyAchievementUnlock,
+    showNotification
   };
 
   return (
     <NotificationContext.Provider value={value}>
+      <ToastContainer />
       {children}
     </NotificationContext.Provider>
   );
@@ -69,7 +86,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
 export function useNotification() {
   const context = useContext(NotificationContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useNotification must be used within a NotificationProvider');
   }
   return context;

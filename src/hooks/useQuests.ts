@@ -27,10 +27,6 @@ export function useQuests() {
   const { state, dispatch } = use_game();
   const [loading, setLoading] = useState(false);
 
-  /**
-   * Syncs quests with database
-   * @returns Promise with quests array
-   */
   const syncQuests = useCallback(async () => {
     setLoading(true);
     try {
@@ -59,125 +55,13 @@ export function useQuests() {
     }
   }, [dispatch]);
 
-  /**
-   * Creates a new quest
-   * @param quest - Quest data to create
-   * @returns Promise with created quest
-   */
-  const createQuest = async (quest: Partial<Quest>) => {
-    try {
-      const dbQuest = formatQuestForDB(quest);
-      const { data, error } = await supabase
-        .from('quests')
-        .insert([dbQuest])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const formattedQuest = formatQuestFromDB(data);
-
-      dispatch({
-        type: 'ADD_QUEST',
-        payload: formattedQuest
-      });
-
-      return formattedQuest;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create quest';
-      console.error(message);
-      throw err;
-    }
-  };
-
-  /**
-   * Updates an existing quest
-   * @param quest - Quest data to update
-   * @returns Promise with updated quest
-   */
-  const updateQuest = async (quest: Partial<Quest>) => {
-    try {
-      if (!quest.id) throw new Error('Quest ID is required for updates');
-
-      const dbQuest = formatQuestForDB(quest);
-      const { data, error } = await supabase
-        .from('quests')
-        .update(dbQuest)
-        .eq('id', quest.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const formattedQuest = formatQuestFromDB(data);
-
-      dispatch({
-        type: 'UPDATE_QUEST',
-        payload: formattedQuest
-      });
-
-      return formattedQuest;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update quest';
-      console.error(message);
-      throw err;
-    }
-  };
-
-  /**
-   * Deletes a quest by ID
-   * @param id - ID of the quest to delete
-   */
-  const deleteQuest = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('quests')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      const payload: DeleteQuestPayload = { id };
-      dispatch({
-        type: 'REMOVE_QUEST',
-        payload
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete quest';
-      console.error(message);
-      throw err;
-    }
-  };
-
-  /**
-   * Updates quest progress
-   * @param questId - ID of the quest
-   * @param progress - New progress value
-   */
-  const updateProgress = async (questId: string, progress: number) => {
-    try {
-      const { error } = await supabase
-        .from('quests')
-        .update({ progress })
-        .eq('id', questId);
-
-      if (error) throw error;
-
-      const payload: QuestProgressUpdate = { questId, progress };
-      dispatch({
-        type: 'SYNC_QUEST_PROGRESS',
-        payload
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update quest progress';
-      console.error(message);
-      throw err;
-    }
-  };
-
-  // Auto-sync on mount and every 30 seconds
+  // Fetch quests on component mount
   useEffect(() => {
     syncQuests();
+  }, [syncQuests]);
+
+  // Auto-sync every 30 seconds
+  useEffect(() => {
     const interval = setInterval(syncQuests, 30 * 1000);
     return () => clearInterval(interval);
   }, [syncQuests]);
@@ -185,11 +69,7 @@ export function useQuests() {
   return {
     quests: state.quests,
     loading,
-    syncQuests,
-    createQuest,
-    updateQuest,
-    deleteQuest,
-    updateProgress
+    syncQuests
   };
 }
 

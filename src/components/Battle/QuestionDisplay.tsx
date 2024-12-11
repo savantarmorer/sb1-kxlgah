@@ -19,10 +19,10 @@ function QuestionDisplay({
 
   // Memoized answer handler to prevent re-renders
   const handleAnswer = useCallback((key: 'A' | 'B' | 'C' | 'D') => {
-    if (!disabled && battle.status === 'active') {
+    if (!disabled && battle?.status === 'active') {
       on_answer(key);
     }
-  }, [disabled, battle.status, on_answer]);
+  }, [disabled, battle?.status, on_answer]);
 
   // Show loading state if no question
   if (!question) {
@@ -35,17 +35,17 @@ function QuestionDisplay({
 
   // Map alternatives to array for easier rendering
   const alternatives = [
-    { key: 'A', value: question.alternatives.a },
-    { key: 'B', value: question.alternatives.b },
-    { key: 'C', value: question.alternatives.c },
-    { key: 'D', value: question.alternatives.d }
-  ];
+    { key: 'A', value: question.alternative_a },
+    { key: 'B', value: question.alternative_b },
+    { key: 'C', value: question.alternative_c },
+    { key: 'D', value: question.alternative_d }
+  ].filter(alt => alt.value && alt.value !== ''); // Remove empty alternatives
 
   return (
     <div className="space-y-6">
       {/* Question Text */}
       <div className="text-lg font-medium dark:text-white p-4 bg-white dark:bg-gray-800 rounded-lg">
-        {question.question}
+        {question.question || 'Loading question...'}
       </div>
 
       {/* Alternatives */}
@@ -61,11 +61,11 @@ function QuestionDisplay({
               className={`
                 w-full p-4 text-left rounded-lg border transition-all
                 ${disabled ? 'cursor-not-allowed opacity-50' : 'hover:border-brand-teal-500 hover:bg-brand-teal-50 dark:hover:bg-brand-teal-900/20'}
-                ${battle.selectedAnswer === key ? 'border-brand-teal-500 bg-brand-teal-50 dark:bg-brand-teal-900/20' : 'border-gray-200 dark:border-gray-700'}
+                ${battle?.selectedAnswer === key ? 'border-brand-teal-500 bg-brand-teal-50 dark:bg-brand-teal-900/20' : 'border-gray-200 dark:border-gray-700'}
                 bg-white dark:bg-gray-800
               `}
               onClick={() => handleAnswer(key as 'A' | 'B' | 'C' | 'D')}
-              disabled={disabled || battle.status !== 'active'}
+              disabled={disabled || battle?.status !== 'active'}
             >
               <div className="flex items-start space-x-4">
                 <span className="flex items-center justify-center w-8 h-8 rounded-full bg-brand-teal-100 dark:bg-brand-teal-900/30 text-brand-teal-600 dark:text-brand-teal-400 font-medium">

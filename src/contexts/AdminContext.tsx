@@ -1,5 +1,7 @@
 import React, { createContext, useContext } from 'react';
 import { use_game } from './GameContext';
+import { QuestService } from '../services/questService';
+import { NotificationSystem } from '../utils/notifications';
 
 interface AdminContextType {
   isAdmin: boolean;
@@ -8,6 +10,7 @@ interface AdminContextType {
     modifyRewards: (rewards: any) => void;
     simulateLogin: () => void;
   };
+  assignQuestToUser: (userId: string, questId: string) => Promise<void>;
 }
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
@@ -35,8 +38,18 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const assignQuestToUser = async (userId: string, questId: string) => {
+    try {
+      await QuestService.assignQuestToUser(userId, questId);
+      NotificationSystem.showSuccess('Quest assigned successfully');
+    } catch (error) {
+      console.error('Error assigning quest:', error);
+      NotificationSystem.showError('Failed to assign quest');
+    }
+  };
+
   return (
-    <AdminContext.Provider value={{ isAdmin, debugActions }}>
+    <AdminContext.Provider value={{ isAdmin, debugActions, assignQuestToUser }}>
       {children}
     </AdminContext.Provider>
   );

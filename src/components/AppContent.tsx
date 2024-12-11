@@ -10,8 +10,9 @@ import UserProfile from './UserProfile/ProfileDashboard';
 import UserProgress from './UserProfile/UserProgress';
 import { View } from '../types/navigation';
 import { use_game } from '../contexts/GameContext';
-import AchievementSystem from './Achievements/AchievementSystem';
 import TournamentMode from './Tournament/TournamentMode';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function AppContent() {
   const navigate = useNavigate();
@@ -47,7 +48,6 @@ export default function AppContent() {
               <div className="space-y-6">
                 <UserProgress />
                 <UserProfile />
-                <AchievementSystem />
                 <Settings />
               </div>
             } />
@@ -59,6 +59,7 @@ export default function AppContent() {
         onViewChange={handleViewChange}
         isAdmin={state.user.roles?.includes('admin')}
       />
+      <ToastContainer />
     </div>
   );
 }

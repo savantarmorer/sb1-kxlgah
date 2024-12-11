@@ -40,7 +40,7 @@ export function TournamentBracket({ tournament_id }: TournamentBracketProps) {
   };
 
   const rounds = Array.from(
-    new Set(matches.map(match => match.round_number))
+    new Set(matches.map(match => match.round))
   ).sort((a, b) => a - b);
 
   return (
@@ -60,7 +60,7 @@ export function TournamentBracket({ tournament_id }: TournamentBracketProps) {
 
             <div className="space-y-4">
               {matches
-                .filter(match => match.round_number === roundIndex)
+                .filter(match => match.round === roundIndex)
                 .map(match => (
                   <MatchCard
                     key={match.id}

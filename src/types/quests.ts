@@ -64,11 +64,13 @@ export interface QuestRequirementDB {
  * Interface for quest requirements in application
  */
 export interface QuestRequirement {
-  type: string;
+  type: QuestType;
+  amount: number;
   target: number;
   current: number;
   description: string;
-  amount: number;
+  progress?: number;
+  value?: number;
 }
 
 /**
@@ -107,17 +109,24 @@ export interface Quest {
   id: string;
   title: string;
   description: string;
-  type: QuestType;
-  status: QuestStatus;
-  category: QuestCategory;
+  rewards: Array<{
+    type: 'xp' | 'coins' | 'item';
+    value: number;
+    metadata?: {
+      item?: any;
+    };
+  }>;
+  type: string;
+  category: string;
   xp_reward: number;
   coin_reward: number;
   requirements: QuestRequirement[];
-  progress: number;
   is_active: boolean;
-  completed: boolean;
-  created_at?: string;
-  updated_at?: string;
+  status: QuestStatus;
+  progress: number;
+  created_at: string;
+  updated_at: string;
+  expires_at?: string;
 }
 
 /**
@@ -199,3 +208,25 @@ export interface QuestWithAssignments extends Quest {
   assigned_users: number;
   user_assignments: QuestAssignment[];
 }
+
+export interface QuestReward {
+  xp: number;
+  coins: number;
+  items?: string[];
+  metadata?: {
+    [key: string]: any;
+  };
+}
+
+/**
+ * Role: Defines reward structure for quests
+ * Dependencies:
+ * - Used by Quest interface
+ * - Used by QuestService
+ * - Used by quest reducer
+ * 
+ * Integration Points:
+ * - Quest completion handling
+ * - Reward distribution system
+ * - Progress tracking
+ */

@@ -1,52 +1,54 @@
 import { Achievement } from '../types/achievements';
-import { useNotification } from '../contexts/NotificationContext';
 
-let notificationHandler: ReturnType<typeof useNotification> | null = null;
-
-export function NotificationHandler() {
-  notificationHandler = useNotification();
-  return null;
+interface NotificationHandlers {
+  success: (message: string) => void;
+  error: (message: string) => void;
+  warning: (message: string) => void;
+  info: (message: string) => void;
+  achievementUnlock: (achievement: Achievement) => void;
 }
 
-export const NotificationSystem = {
-  showSuccess: (message: string) => {
-    if (!notificationHandler) {
-      console.warn('NotificationHandler not initialized');
-      return;
-    }
-    notificationHandler.showSuccess(message);
-  },
+export class NotificationSystem {
+  private static instance: NotificationSystem;
+  private handlers: NotificationHandlers = {
+    success: () => {},
+    error: () => {},
+    warning: () => {},
+    info: () => {},
+    achievementUnlock: () => {}
+  };
 
-  showError: (message: string) => {
-    if (!notificationHandler) {
-      console.warn('NotificationHandler not initialized');
-      return;
-    }
-    notificationHandler.showError(message);
-  },
+  private constructor() {}
 
-  showWarning: (message: string) => {
-    if (!notificationHandler) {
-      console.warn('NotificationHandler not initialized');
-      return;
+  static getInstance(): NotificationSystem {
+    if (!NotificationSystem.instance) {
+      NotificationSystem.instance = new NotificationSystem();
     }
-    notificationHandler.showWarning(message);
-  },
-
-  showInfo: (message: string) => {
-    if (!notificationHandler) {
-      console.warn('NotificationHandler not initialized');
-      return;
-    }
-    notificationHandler.showInfo(message);
-  },
-};
-
-export const notifyAchievementUnlock = (achievement: Achievement) => {
-  if (!notificationHandler) {
-    console.warn('NotificationHandler not initialized');
-    return;
+    return NotificationSystem.instance;
   }
-  notificationHandler.showSuccess(`Achievement unlocked: ${achievement.title}`);
-};
+
+  setHandlers(handlers: Partial<NotificationHandlers>) {
+    this.handlers = { ...this.handlers, ...handlers };
+  }
+
+  static showSuccess(message: string) {
+    NotificationSystem.getInstance().handlers.success(message);
+  }
+
+  static showError(message: string) {
+    NotificationSystem.getInstance().handlers.error(message);
+  }
+
+  static showWarning(message: string) {
+    NotificationSystem.getInstance().handlers.warning(message);
+  }
+
+  static showInfo(message: string) {
+    NotificationSystem.getInstance().handlers.info(message);
+  }
+
+  static notifyAchievementUnlock(achievement: Achievement) {
+    NotificationSystem.getInstance().handlers.achievementUnlock(achievement);
+  }
+}
 

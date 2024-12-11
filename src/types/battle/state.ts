@@ -1,23 +1,74 @@
 import type { BattleQuestion, BattleScore } from '../battle';
 
-export type BattleStatus = 'searching' | 'ready' | 'battle' | 'completed';
+export type BattleStatus = 
+  | 'idle'
+  | 'waiting'
+  | 'preparing'
+  | 'searching'
+  | 'ready'
+  | 'active'
+  | 'paused'
+  | 'completed'
+  | 'victory'
+  | 'defeat'
+  | 'draw'
+  | 'error';
 
 export interface BattleState {
   status: BattleStatus;
-  in_progress: boolean;
-  startTime?: string;
-  endTime?: string;
-  currentOpponent?: string;
-  win_streak: number;
-  totalBattles: number;
   questions: BattleQuestion[];
-  currentQuestion: number;
-  score: BattleScore;
-  timePerQuestion: number;
-  playerAnswers: boolean[];
-  time_left?: number;
-  streak_bonus?: number;
+  current_question: number;
+  score: {
+    player: number;
+    opponent: number;
+  };
+  player_answers: boolean[];
+  time_left: number;
+  time_per_question: number;
+  in_progress: boolean;
+  opponent?: {
+    id: string;
+    name: string;
+    avatar_url?: string;
+    level: number;
+    rating: number;
+    win_streak: number;
+    is_bot: boolean;
+  };
+  error: {
+    message: string;
+    code?: string;
+  } | null;
+  rewards?: {
+    xp_earned: number;
+    coins_earned: number;
+    streak_bonus: number;
+  };
+  metadata: {
+    is_bot: boolean;
+    difficulty: number;
+    category?: string;
+  };
 }
+
+export const initialBattleState: BattleState = {
+  status: 'idle',
+  questions: [],
+  current_question: 0,
+  score: {
+    player: 0,
+    opponent: 0
+  },
+  player_answers: [],
+  time_left: 0,
+  time_per_question: 30,
+  in_progress: false,
+  error: null,
+  metadata: {
+    is_bot: true,
+    difficulty: 1
+  }
+};
 
 /**
  * Dependencies:

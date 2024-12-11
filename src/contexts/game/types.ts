@@ -6,14 +6,14 @@ import type {
 } from '../../types/quests';
 import type { Achievement } from '../../types/achievements';
 import type { GameItem, InventoryItem } from '../../types/items';
-import type { GameStatistics } from '../../types/game';
+import type { GameStatistics, LeaderboardEntry } from '../../types/game';
 import type { BattleQuestion, BattleRewards, BattleHistory, BattleStatus, BattleState } from '../../types/battle';
-import type { LeaderboardEntry } from '../../types/game';
 import type { BotOpponent } from '../../types/battle';
 import type { UserProgressQueryResult } from '../../types/progress';
 import type { Reward } from '../../types/rewards';
 import type { QuestRewards } from '../../types/quests';
 import type { QuizStats } from '../../types/user';
+import { Dispatch } from 'react';
 
 export type {
   Quest,
@@ -29,10 +29,9 @@ export type {
 };
 
 export type BattleAction =
-  | { type: 'INITIALIZE_BATTLE'; payload: { questions: BattleQuestion[]; timePerQuestion: number; difficulty?: number; is_bot?: boolean } }
-  | { type: 'ANSWER_QUESTION'; payload: { isCorrect: boolean; timeSpent: number; answer: number } }
-  | { type: 'END_BATTLE'; payload: { victory: boolean; rewards: BattleRewards; stats: Partial<battle_stats> } }
-  | { type: 'SET_BATTLE_ERROR'; payload: { message: string; code?: string } }
+  | { type: 'INITIALIZE_BATTLE'; payload: BattleState }
+  | { type: 'END_BATTLE'; payload: { victory: boolean; score: number } }
+  | { type: 'UPDATE_BATTLE_SCORE'; payload: number }
   | { type: 'RESET_BATTLE' };
 
 /**
@@ -56,58 +55,54 @@ export type BattleAction =
  */
 export type GameAction =
   // Battle Actions
-  | { type: 'INITIALIZE_BATTLE'; payload: { questions: BattleQuestion[]; time_per_question: number; opponent: BotOpponent } }
-  | { type: 'ANSWER_QUESTION'; payload: { isCorrect: boolean } }
-  | { type: 'END_BATTLE'; payload: { status: BattleStatus; score: { player: number; opponent: number }; rewards: BattleRewards } }
   | { type: 'RESET_BATTLE' }
+  | { type: 'INITIALIZE_BATTLE'; payload: { questions: BattleQuestion[]; opponent: BotOpponent } }
+  | { type: 'ANSWER_QUESTION'; payload: { answer: string; is_correct: boolean } }
+  | { type: 'END_BATTLE'; payload: { rewards: BattleRewards } }
   | { type: 'SET_BATTLE_STATUS'; payload: BattleStatus }
-  | { type: 'UPDATE_BATTLE_SCORE'; payload: { player: number; opponent: number; is_correct: boolean } }
-  | { type: 'NEXT_BATTLE_QUESTION'; payload: null }
-  | { type: 'UPDATE_BATTLE_PROGRESS'; payload: { playerScore: number; opponentScore: number; currentQuestion: number; timeLeft: number; isCorrect: boolean } }
-  | { type: 'UPDATE_BATTLE_STATS'; payload: Partial<battle_stats> }
-
-  // User Actions
-  | { type: 'UPDATE_USER_STATS'; payload: { xp: number; coins: number; streak: number } }
-  | { type: 'UPDATE_USER_PROGRESS'; payload: UserProgressQueryResult }
-  | { type: 'UPDATE_USER_PROFILE'; payload: Partial<User> }
-  | { type: 'ADD_XP'; payload: XPGain }
-  | { type: 'ADD_COINS'; payload: { amount: number; source: string } }
-  | { type: 'LEVEL_UP'; payload: LevelUpReward }
-  | { type: 'CLAIM_REWARD'; payload: Reward }
-  | { type: 'UPDATE_STREAK_MULTIPLIER'; payload: number }
-  | { type: 'UPDATE_DAILY_STREAK'; payload: { streak: number; multiplier: number } }
-  | { type: 'UPDATE_STUDY_TIME'; payload: { today: number } }
-  | { type: 'UPDATE_LOGIN_STREAK'; payload: { streak: number; last_login_date?: string } }
-
-  // Quest Actions
-  | { type: 'UPDATE_QUEST_PROGRESS'; payload: { questId: string; progress: number } }
-  | { type: 'UPDATE_QUEST'; payload: Quest }
-  | { type: 'UPDATE_QUESTS'; payload: { active: Quest[]; completed: Quest[] } }
-  | { type: 'COMPLETE_QUEST'; payload: { quest: Quest; rewards: { xp: number; coins: number; items?: InventoryItem[] } } }
-
-  // Item Actions
-  | { type: 'UPDATE_INVENTORY'; payload: InventoryItem[] }
-  | { type: 'UPDATE_ITEM'; payload: GameItem }
-  | { type: 'ADD_ITEM'; payload: GameItem }
-  | { type: 'REMOVE_ITEM'; payload: { id: string } }
-  | { type: 'PURCHASE_ITEM'; payload: { item_id: string; cost: number } }
-  | { type: 'SYNC_ITEMS'; payload: GameItem[] }
+  | { type: 'UPDATE_BATTLE_SCORE'; payload: { player: number; opponent: number } }
+  | { type: 'NEXT_BATTLE_QUESTION' }
+  | { type: 'UPDATE_BATTLE_PROGRESS'; payload: { in_progress: boolean } }
 
   // Achievement Actions
-  | { type: 'ADD_ACHIEVEMENT'; payload: Achievement }
+  | { type: 'INITIALIZE_ACHIEVEMENTS'; payload: Achievement[] }
+  | { type: 'UNLOCK_ACHIEVEMENTS'; payload: Achievement[] }
   | { type: 'UPDATE_ACHIEVEMENT'; payload: Partial<Achievement> }
-  | { type: 'UNLOCK_ACHIEVEMENT'; payload: Achievement }
+  | { type: 'ADD_ACHIEVEMENT'; payload: Achievement }
 
-  // System Actions
-  | { type: 'UPDATE_QUIZ_STATS'; payload: any }
-  | { type: 'SYNC_STATISTICS'; payload: GameStatistics }
-  | { type: 'CLAIM_DAILY_REWARD'; payload: { reward_value: number; reward_type: string } }
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string }
-  | { type: 'INITIALIZE_USER'; payload: GameState['user'] }
-  | { type: 'INITIALIZE_QUESTS'; payload: Quest[] }
+  // Quest Actions
+  | { type: 'INITIALIZE_QUESTS'; payload: { active: Quest[]; completed: Quest[] } }
+  | { type: 'UPDATE_QUEST_PROGRESS'; payload: { questId: string; progress: number } }
+  | { type: 'COMPLETE_QUEST'; payload: { quest: Quest; rewards: Reward } }
+  | { type: 'SYNC_QUESTS'; payload: Quest[] }
+
+  // User Actions
+  | { type: 'UPDATE_USER_PROFILE'; payload: Partial<User> }
+  | { type: 'UPDATE_USER_STATS'; payload: { xp: number; coins: number; streak: number } }
+  | { type: 'ADD_XP'; payload: { amount: number; source: string; reason?: string } }
+  | { type: 'ADD_COINS'; payload: { amount: number; source: string } }
+  | { type: 'CLAIM_REWARD'; payload: Reward }
+  | { type: 'UPDATE_STREAK'; payload: { streak: number; highestStreak: number } }
+  | { type: 'UPDATE_DAILY_STREAK'; payload: { streak: number; multiplier: number } }
+  | { type: 'LEVEL_UP'; payload: { level: number; rewards: Reward[] } }
+
+  // Inventory Actions
   | { type: 'EQUIP_ITEM'; payload: { item_id: string } }
   | { type: 'UNEQUIP_ITEM'; payload: { item_id: string } }
+  | { type: 'UPDATE_ITEM'; payload: InventoryItem }
+  | { type: 'ADD_ITEM'; payload: InventoryItem }
+  | { type: 'UPDATE_INVENTORY'; payload: { items: InventoryItem[] } }
+
+  // System Actions
+  | { type: 'SET_ERROR'; payload: string }
+  | { type: 'SET_LOADING'; payload: boolean }
+
+  // Add missing actions
+  | { type: 'INITIALIZE_USER'; payload: User }
+  | { type: 'UPDATE_QUESTS'; payload: Quest[] }
+  | { type: 'UNLOCK_ACHIEVEMENT'; payload: Achievement }
+  | { type: 'UPDATE_USER_PROGRESS'; payload: Required<Pick<User, 'xp' | 'level' | 'coins' | 'streak'>> }
+  | { type: 'HANDLE_QUEST_COMPLETION'; payload: { quest: Quest; dispatch: Dispatch<GameAction> } };
 
 export interface GameContextValue {
   state: GameState;
@@ -132,7 +127,14 @@ export interface GameContextValue {
 
 export interface XPGain {
   amount: number;
+  source: string;
+  reason?: string;
   timestamp?: string;
+  details?: {
+    quest_id?: string;
+    battle_id?: string;
+    achievement_id?: string;
+  };
 }
 
 export interface LevelUpReward {
@@ -289,8 +291,7 @@ export interface User {
   streakMultiplier?: number;
   quiz_stats?: QuizStats;
   login_streak?: {
-    current: number;
-    best: number;
+    count: number;
     last_login: string;
   };
 }
@@ -311,3 +312,29 @@ export interface battle_stats {
   difficulty: number;
   updated_at: string;
 }
+
+// Achievement-related actions
+export type AchievementAction = 
+  | { type: 'SYNC_ACHIEVEMENTS'; payload: Achievement[] }
+  | { type: 'UNLOCK_ACHIEVEMENT'; payload: Achievement | Achievement[] }
+  | { type: 'UPDATE_ACHIEVEMENT'; payload: { id: string; progress: number } };
+
+// User stats update action
+export type UserStatsAction = {
+  type: 'UPDATE_USER_STATS';
+  payload: {
+    xp: number;
+    coins: number;
+    streak: number;
+  };
+};
+
+interface UserStats {
+  xp: number;
+  coins: number;
+  streak: number;
+  quest_progress: Record<string, QuestProgress>;
+}
+
+
+

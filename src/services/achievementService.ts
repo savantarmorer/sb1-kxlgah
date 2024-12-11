@@ -1,162 +1,284 @@
-import { supabase } from '@/lib/supabase';
-import { BattleResults } from '@/types/battle';
-import { AchievementTriggerType } from '@/hooks/useAchievements';
+import { supabase } from '../lib/supabaseClient';
+import { Achievement, AchievementProgress, TriggerCondition, AchievementRarity } from '../types/achievements';
 
-interface Achievement {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  condition: string;
-  points: number;
-  trigger_conditions: {
-    type: AchievementTriggerType;
-    value: number;
-    comparison: 'eq' | 'gt' | 'lt' | 'gte' | 'lte';
-  }[];
-  progress?: number;
-}
-
-interface UserAchievement {
-  user_id: string;
+interface UserAchievementRow {
   achievement_id: string;
-  unlocked_at: string;
-  progress?: number;
+  progress: number;
+  unlocked_at: string | null;
+  updated_at: string;
+  achievements: {
+    id: string;
+    title: string;
+    description: string;
+    category: string;
+    points: number;
+    rarity: AchievementRarity;
+    prerequisites: string[];
+    dependents: string[];
+    trigger_conditions: TriggerCondition[];
+    order_num: number;
+    metadata?: Record<string, any>;
+  };
 }
 
-/**
- * Updates battle-related achievements based on battle results
- */
-export async function updateBattleAchievements(
-  battleResult: BattleResults,
-  userId: string
-): Promise<void> {
-  try {
-    // Get user's current achievements
-    const { data: userAchievements, error: fetchError } = await supabase
+export class AchievementService {
+  static async getUserAchievements(userId: string): Promise<Achievement[]> {
+    const { data: userAchievements, error: userAchievementsError } = await supabase
       .from('user_achievements')
-      .select('*')
+      .select(`
+        achievement_id,
+        progress,
+        unlocked_at,
+        updated_at,
+        achievements (
+          id,
+          title,
+          description,
+          category,
+          points,
+          rarity,
+          prerequisites,
+          dependents,
+          trigger_conditions,
+          order_num,
+          metadata
+        )
+      `)
       .eq('user_id', userId);
 
-    if (fetchError) throw fetchError;
+    if (userAchievementsError) {
+      console.error('Error fetching user achievements:', userAchievementsError);
+      throw userAchievementsError;
+    }
 
-    // Get all battle-related achievements
-    const { data: battleAchievements, error: achievementsError } = await supabase
+    if (!userAchievements) {
+      return [];
+    }
+
+    return (userAchievements as unknown as UserAchievementRow[]).map(ua => ({
+      id: ua.achievements.id,
+      title: ua.achievements.title,
+      description: ua.achievements.description,
+      category: ua.achievements.category,
+      points: ua.achievements.points,
+      rarity: ua.achievements.rarity as AchievementRarity,
+      prerequisites: ua.achievements.prerequisites,
+      dependents: ua.achievements.dependents,
+      trigger_conditions: ua.achievements.trigger_conditions,
+      order_num: ua.achievements.order_num,
+      icon: ua.achievements.metadata?.icon || '🏆',
+      metadata: ua.achievements.metadata || {},
+      unlocked: !!ua.unlocked_at,
+      unlocked_at: ua.unlocked_at || undefined,
+      progress: ua.progress || 0
+    }));
+  }
+
+  static async checkTriggers(
+    userId: string,
+    triggerType: string,
+    value: number,
+    currentAchievements: Achievement[]
+  ): Promise<Achievement[]> {
+    const { data: achievements, error } = await supabase
       .from('achievements')
       .select('*')
-      .eq('category', 'battle');
+      .contains('trigger_conditions', [{ type: triggerType }]);
 
-    if (achievementsError) throw achievementsError;
-
-    // Check for new achievements
-    const newAchievements = battleAchievements?.filter(achievement => {
-      const hasAchievement = userAchievements?.some(
-        ua => ua.achievement_id === achievement.id
-      );
-      if (hasAchievement) return false;
-
-      return checkBattleAchievement(achievement, battleResult);
-    });
-
-    // Insert new achievements
-    if (newAchievements && newAchievements.length > 0) {
-      const { error: insertError } = await supabase
-        .from('user_achievements')
-        .insert(
-          newAchievements.map(achievement => ({
-            user_id: userId,
-            achievement_id: achievement.id,
-            unlocked_at: new Date().toISOString()
-          }))
-        );
-
-      if (insertError) throw insertError;
+    if (error) {
+      console.error('Error checking achievement triggers:', error);
+      throw error;
     }
 
-    // Update achievement progress
-    const progressUpdates = battleAchievements
-      ?.filter(achievement => achievement.has_progress)
-      .map(achievement => {
-        const currentProgress = userAchievements?.find(
-          ua => ua.achievement_id === achievement.id
-        )?.progress || 0;
+    if (!achievements) {
+      return [];
+    }
 
-        const newProgress = updateProgress(achievement, battleResult, currentProgress);
+    const unlockedAchievements: Achievement[] = [];
 
-        return {
-          user_id: userId,
-          achievement_id: achievement.id,
-          progress: newProgress
-        };
+    for (const achievement of achievements) {
+      const isUnlocked = currentAchievements.some(a => a.id === achievement.id && a.unlocked);
+      if (isUnlocked) continue;
+
+      const meetsConditions = achievement.trigger_conditions.every((condition: TriggerCondition) => {
+        if (condition.type !== triggerType) return true;
+        switch (condition.comparison) {
+          case 'eq': return value === condition.value;
+          case 'gt': return value > condition.value;
+          case 'gte': return value >= condition.value;
+          case 'lt': return value < condition.value;
+          case 'lte': return value <= condition.value;
+          default: return false;
+        }
       });
 
-    if (progressUpdates && progressUpdates.length > 0) {
-      const { error: updateError } = await supabase
-        .from('user_achievements')
-        .upsert(progressUpdates);
-
-      if (updateError) throw updateError;
+      if (meetsConditions) {
+        await this.unlockAchievement(userId, achievement.id);
+        unlockedAchievements.push({
+          ...achievement,
+          rarity: achievement.rarity as AchievementRarity,
+          icon: achievement.metadata?.icon || '🏆',
+          metadata: achievement.metadata || {},
+          unlocked: true,
+          unlocked_at: new Date().toISOString(),
+          progress: 100
+        });
+      }
     }
-  } catch (error) {
-    console.error('Error updating battle achievements:', error);
-    throw error;
+
+    return unlockedAchievements;
   }
-}
 
-/**
- * Gets all achievements for a user
- */
-export async function getUserAchievements(userId: string): Promise<Achievement[]> {
-  const { data, error } = await supabase
-    .from('achievements')
-    .select(`
-      *,
-      user_achievements!inner(*)
-    `)
-    .eq('user_achievements.user_id', userId);
+  static async unlockAchievement(userId: string, achievementId: string): Promise<void> {
+    const { error } = await supabase
+      .from('user_achievements')
+      .upsert({
+        user_id: userId,
+        achievement_id: achievementId,
+        unlocked_at: new Date().toISOString(),
+        progress: 100
+      });
 
-  if (error) throw error;
-  return data || [];
-}
+    if (error) {
+      console.error('Error unlocking achievement:', error);
+      throw error;
+    }
+  }
 
-/**
- * Gets achievement progress for a user
- */
-export async function getAchievementProgress(
-  userId: string,
-  achievementId: string
-): Promise<number> {
-  const { data, error } = await supabase
-    .from('user_achievements')
-    .select('progress')
-    .eq('user_id', userId)
-    .eq('achievement_id', achievementId)
-    .single();
+  static async updateProgress(
+    userId: string,
+    achievementId: string,
+    progress: number
+  ): Promise<void> {
+    const { error } = await supabase
+      .from('user_achievements')
+      .upsert({
+        user_id: userId,
+        achievement_id: achievementId,
+        progress,
+        updated_at: new Date().toISOString()
+      });
 
-  if (error) throw error;
-  return data?.progress || 0;
-}
+    if (error) {
+      console.error('Error updating achievement progress:', error);
+      throw error;
+    }
+  }
 
-const checkBattleAchievement = (achievement: Achievement, battleResult: BattleResults): boolean => {
-  switch (achievement.trigger_conditions[0]?.type) {
-    case 'battle_wins':
-      return battleResult.isVictory;
-    case 'battle_score':
-      return battleResult.score_player >= achievement.trigger_conditions[0].value;
-    case 'battle_streak':
-      return battleResult.streak_bonus >= achievement.trigger_conditions[0].value;
-    default:
+  static async getAll(): Promise<Achievement[]> {
+    const { data: achievements, error } = await supabase
+      .from('achievements')
+      .select('*')
+      .order('order_num', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching achievements:', error);
+      throw error;
+    }
+
+    return achievements?.map(achievement => ({
+      ...achievement,
+      rarity: achievement.rarity as AchievementRarity,
+      icon: achievement.metadata?.icon || '🏆',
+      metadata: achievement.metadata || {},
+      unlocked: false,
+      progress: 0
+    })) || [];
+  }
+
+  static async create(achievement: Partial<Achievement>): Promise<Achievement> {
+    const { data, error } = await supabase
+      .from('achievements')
+      .insert([{
+        id: crypto.randomUUID(),
+        ...achievement,
+        rarity: achievement.rarity || 'common',
+        metadata: {
+          ...(achievement.metadata || {}),
+          icon: achievement.icon || '🏆'
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating achievement:', error);
+      throw error;
+    }
+
+    if (!data) {
+      throw new Error('No data returned from create operation');
+    }
+
+    return {
+      ...data,
+      rarity: data.rarity as AchievementRarity,
+      icon: data.metadata?.icon || '🏆',
+      metadata: data.metadata || {},
+      unlocked: false,
+      progress: 0
+    };
+  }
+
+  static async update(id: string, achievement: Partial<Achievement>): Promise<Achievement> {
+    const { data, error } = await supabase
+      .from('achievements')
+      .update({
+        ...achievement,
+        metadata: {
+          ...(achievement.metadata || {}),
+          icon: achievement.icon || '🏆'
+        },
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating achievement:', error);
+      throw error;
+    }
+
+    if (!data) {
+      throw new Error('No data returned from update operation');
+    }
+
+    return {
+      ...data,
+      rarity: data.rarity as AchievementRarity,
+      icon: data.metadata?.icon || '🏆',
+      metadata: data.metadata || {},
+      unlocked: false,
+      progress: 0
+    };
+  }
+
+  static async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('achievements')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting achievement:', error);
+      throw error;
+    }
+  }
+
+  static async claimAchievement(userId: string, achievementId: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('user_achievements')
+      .update({ claimed: true })
+      .match({ user_id: userId, achievement_id: achievementId });
+
+    if (error) {
+      console.error('Error claiming achievement:', error);
       return false;
-  }
-};
+    }
 
-const updateProgress = (achievement: Achievement, battleResult: BattleResults, currentProgress: number): number => {
-  switch (achievement.trigger_conditions[0]?.type) {
-    case 'battle_wins':
-      return battleResult.isVictory ? currentProgress + 1 : currentProgress;
-    case 'battle_score':
-      return currentProgress + battleResult.score_player;
-    default:
-      return currentProgress;
+    return true;
   }
-}; 
+} 

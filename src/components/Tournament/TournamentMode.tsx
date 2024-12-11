@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import TournamentService from '@/services/tournamentService';
 import { Tournament, TournamentFormat, MatchFormat } from '@/types/tournament';
-import { TournamentService } from '@/services/TournamentService';
-import { TournamentAdmin } from '@/components/TournamentAdmin';
-import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { TournamentAdmin } from '@/components/TournamentAdmin';
 
 export default function TournamentMode() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -364,6 +364,9 @@ export default function TournamentMode() {
           {/* Upcoming Tournaments */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-2xl font-bold mb-4">Upcoming Tournaments</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Tournaments will automatically start when they reach max players or their start date.
+            </p>
             <div className="space-y-4">
               {tournaments
                 .filter(t => t.status === 'registration')
@@ -387,6 +390,11 @@ export default function TournamentMode() {
                       <div className="mt-2 flex justify-between items-center">
                         <span className="text-sm text-gray-500">
                           Players: {tournament.currentPlayers}/{tournament.maxPlayers}
+                          {tournament.currentPlayers >= 2 && tournament.currentPlayers < tournament.maxPlayers && (
+                            <span className="ml-2 text-green-500">
+                              (Ready to start)
+                            </span>
+                          )}
                         </span>
                         <button
                           onClick={(e) => {
@@ -477,23 +485,35 @@ export default function TournamentMode() {
                   ))}
                 </div>
               </div>
-              {activeTournament.status === 'registration' && (
+              {user && activeTournament.tournament_participants?.some(p => p.user_id === user.id) && (
+                <div>
+                  <h3 className="font-semibold mb-2">Your Match Status</h3>
+                  {activeTournament.status === 'registration' ? (
+                    <p className="text-gray-600">Waiting for tournament to start...</p>
+                  ) : (
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => navigate(`/tournament/${activeTournament.id}`)}
+                        className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                      >
+                        View Tournament Bracket
+                      </button>
+                      <p className="text-sm text-gray-600">
+                        Click above to view the tournament bracket and your matches
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              {activeTournament.status === 'registration' && 
+               user && 
+               !activeTournament.tournament_participants?.some(p => p.user_id === user.id) && (
                 <div className="flex justify-end space-x-4">
                   <button
                     onClick={() => handleRegister(activeTournament.id)}
                     className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
                   >
                     Register Now
-                  </button>
-                </div>
-              )}
-              {activeTournament.status === 'in_progress' && (
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => navigate(`/tournament/${activeTournament.id}`)}
-                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                  >
-                    View Tournament Bracket
                   </button>
                 </div>
               )}

@@ -24,22 +24,24 @@ import { CreateQuestDialog } from './CreateQuestDialog';
 import { AssignQuestDialog } from './AssignQuestDialog';
 import { Quest } from '../../types/quests';
 import { useNotification } from '../../contexts/NotificationContext';
-import { GameContext } from '../../contexts/GameContext';
-
-interface QuestWithId extends Quest {
-  id: string;
-}
+import { use_game } from '../../contexts/GameContext';
+import { QuestService } from '../../services/questService';
 
 interface QuestManagerState {
   showEditor: boolean;
-  selectedQuest?: QuestWithId;
+  selectedQuest?: Quest;
   isLoading: boolean;
   error: string | null;
 }
 
+interface CreateQuestDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onQuestCreated: (quest: Partial<Quest>) => Promise<void>;
+}
+
 export default function QuestManager() {
-  const { state } = useContext(GameContext);
-  const { saveQuest } = useAdminActions();
+  const { state, dispatch } = use_game();
   const { syncQuests } = useQuests();
   const { showSuccess, showError } = useNotification();
   
@@ -53,8 +55,20 @@ export default function QuestManager() {
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
 
-  const handleCreateQuest = () => {
-    setShowCreateDialog(true);
+  const handleCreateQuest = async (questData: Partial<Quest>) => {
+    try {
+      setManagerState(prev => ({ ...prev, isLoading: true }));
+      const newQuest = await QuestService.createQuest(questData);
+      await QuestService.assignQuestToUser(state.user.id, newQuest.id);
+      await syncQuests();
+      showSuccess('Quest created and assigned successfully');
+      setShowCreateDialog(false);
+    } catch (error) {
+      console.error('Error creating quest:', error);
+      showError('Failed to create quest');
+    } finally {
+      setManagerState(prev => ({ ...prev, isLoading: false }));
+    }
   };
 
   const handleAssignQuest = (questId: string) => {
@@ -62,7 +76,7 @@ export default function QuestManager() {
     setShowAssignDialog(true);
   };
 
-  const handleEditQuest = (quest: QuestWithId) => {
+  const handleEditQuest = (quest: Quest) => {
     setManagerState(prev => ({
       ...prev,
       showEditor: true,
@@ -73,7 +87,7 @@ export default function QuestManager() {
   const handleDeleteQuest = async (questId: string) => {
     try {
       setManagerState(prev => ({ ...prev, isLoading: true }));
-      await saveQuest({ id: questId, is_active: false });
+      await QuestService.deleteQuest(questId);
       await syncQuests();
       showSuccess('Quest deleted successfully');
     } catch (error) {
@@ -84,20 +98,18 @@ export default function QuestManager() {
     }
   };
 
-  const handleSaveQuest = async (quest: Partial<Quest>) => {
+  const handleSaveQuest = async (updatedQuest: Partial<Quest>) => {
     try {
       setManagerState(prev => ({ ...prev, isLoading: true }));
-      await saveQuest(quest);
+      if (updatedQuest.id) {
+        await QuestService.updateQuest(updatedQuest.id, updatedQuest);
+      }
       await syncQuests();
-      setManagerState(prev => ({
-        ...prev,
-        showEditor: false,
-        selectedQuest: undefined,
-      }));
-      showSuccess('Quest saved successfully');
+      setManagerState(prev => ({ ...prev, showEditor: false, selectedQuest: undefined }));
+      showSuccess('Quest updated successfully');
     } catch (error) {
-      console.error('Error saving quest:', error);
-      showError('Error saving quest');
+      console.error('Error updating quest:', error);
+      showError('Error updating quest');
     } finally {
       setManagerState(prev => ({ ...prev, isLoading: false }));
     }
@@ -111,7 +123,7 @@ export default function QuestManager() {
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
-          onClick={handleCreateQuest}
+          onClick={() => setShowCreateDialog(true)}
         >
           Create Quest
         </Button>
@@ -128,7 +140,7 @@ export default function QuestManager() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {state.quests?.active.map((quest: QuestWithId) => (
+            {state.quests?.active.map((quest: Quest) => (
               <TableRow key={quest.id}>
                 <TableCell>
                   <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
@@ -179,7 +191,7 @@ export default function QuestManager() {
       <CreateQuestDialog
         open={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
-        onQuestCreated={syncQuests}
+        onQuestCreated={handleCreateQuest}
       />
 
       {selectedQuestId && (

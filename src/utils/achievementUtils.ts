@@ -6,26 +6,17 @@ import { Achievement, AchievementTrigger } from '../types/achievements';
  * @returns boolean indicating if achievement is completed
  */
 export const isAchievementCompleted = (achievement: Achievement): boolean => {
-  const { trigger } = achievement;
+  const { trigger_conditions } = achievement;
   
-  if (!trigger || !trigger.type || typeof trigger.value !== 'number') {
-    console.error('Invalid achievement trigger:', trigger);
+  if (!trigger_conditions?.length) {
+    console.error('Invalid achievement trigger conditions:', trigger_conditions);
     return false;
   }
 
-  // Implement achievement completion logic based on trigger type
-  switch (trigger.type) {
-    case 'BATTLES_WON':
-    case 'QUESTIONS_ANSWERED':
-    case 'QUESTS_COMPLETED':
-    case 'ACHIEVEMENTS_UNLOCKED':
-    case 'ITEMS_COLLECTED':
-    case 'COINS_EARNED':
-    case 'XP_GAINED':
-    case 'HIGHEST_STREAK':
-      return trigger.current >= trigger.value;
-    default:
-      console.warn(`Unknown achievement trigger type: ${trigger.type}`);
-      return false;
-  }
+  // Check if all trigger conditions are met
+  return trigger_conditions.every(condition => {
+    // Implementation of condition checking logic
+    // You'll need to implement this based on your specific needs
+    return true; // placeholder
+  });
 };

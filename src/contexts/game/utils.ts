@@ -97,11 +97,7 @@ export const evaluateQuestProgress = (
   return {
     completed,
     progress: currentProgress,
-    rewards: completed ? {
-      xp: quest.rewards.reduce((sum, r) => r.type === 'xp' ? sum + Number(r.value) : sum, 0),
-      coins: quest.rewards.reduce((sum, r) => r.type === 'coins' ? sum + Number(r.value) : sum, 0),
-      items: quest.rewards.filter(r => r.type === 'item').map(r => r.metadata?.item)
-    } : undefined
+    rewards: completed ? calculateRewards(quest, completed) : undefined
   };
 };
 
@@ -165,4 +161,18 @@ export const processSubjectScores = (scoresData: any[] | null) => {
     ...acc,
     [score.subject]: Math.round(score.value * 100) / 100
   }), {});
+};
+
+const calculateRewards = (quest: Quest, completed: boolean) => {
+  if (!completed) return undefined;
+  
+  return {
+    xp: quest.rewards.reduce((sum: number, r) => 
+      r.type === 'xp' ? sum + Number(r.value) : sum, 0),
+    coins: quest.rewards.reduce((sum: number, r) => 
+      r.type === 'coins' ? sum + Number(r.value) : sum, 0),
+    items: quest.rewards
+      .filter((r): r is typeof r & { type: 'item' } => r.type === 'item')
+      .map(r => r.metadata?.item)
+  };
 };

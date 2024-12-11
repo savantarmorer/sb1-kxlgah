@@ -30,6 +30,7 @@ export interface QuizStats {
   average_time: number;
   completed_quizzes: number;
   streak: number;
+  last_quiz_date?: string;
 }
 
 export interface UserStats {
@@ -50,17 +51,28 @@ export interface UserStats {
 }
 
 export interface User {
-  // Core properties from profiles table
   id: string;
   name: string;
-  email?: string;
-  title?: string;
-  avatar?: string;
-  is_super_admin?: boolean;
+  email: string;
   level: number;
   xp: number;
   coins: number;
   streak: number;
+  avatar: string;
+  avatarFrame: string;
+  battle_rating: number;
+  achievements: Achievement[];
+  constitutionalScore: number;
+  civilScore: number;
+  criminalScore: number;
+  administrativeScore: number;
+  login_streak?: {
+    count: number;
+    last_login: string;
+  };
+  // Core properties from profiles table
+  title?: string;
+  is_super_admin?: boolean;
   study_time: number;
   constitutional_score: number;
   civil_score: number;
@@ -71,12 +83,10 @@ export interface User {
   is_bot?: boolean;
 
   // Game-related properties
-  battle_rating?: number;
-  achievements?: Achievement[];
   battle_stats?: DBbattle_stats;
   quiz_stats?: QuizStats;
   streakMultiplier?: number;
-  rewardMultipliers?: {
+  rewardMultipliers: {
     xp: number;
     coins: number;
   };
@@ -84,14 +94,36 @@ export interface User {
   is_online?: boolean;
 
   // Inventory
-  inventory?: InventoryItem[];
-  backpack?: InventoryItem[];
-
-  // Login streak
-  login_streak?: LoginStreak;
+  inventory: InventoryItem[];
+  backpack: InventoryItem[];
 
   // Computed properties
   isAdmin?: boolean;
+
+  gems?: number;
+  premium_currency?: {
+    gems: number;
+    shards: number;
+  };
+
+  // Add missing properties
+  username?: string;
+  avatar_url?: string;
+  stats?: UserStats;
+  daily_rewards?: {
+    claimed_today: boolean;
+    streak: number;
+    streak_multiplier: number;
+    next_reward: {
+      day: number;
+      rarity: string;
+      reward_value: number;
+      reward_type: string;
+    };
+  };
+  last_login_date?: string;
+  rating?: number;
+  avatar_id?: number;
 }
 
 export interface UserUpdateData extends Partial<User> {

@@ -1,108 +1,202 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Trophy, Star, Sword, Target, 
-  Clock, Award, TrendingUp, Crown 
-} from 'lucide-react';
+import { Trophy, Star, Target, Book, Award, Clock, TrendingUp, Medal } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '../Button';
+import { StyledBox } from '../Layout/StyledBox';
+import { PageContainer } from '../Layout/PageContainer';
 import { use_game } from '../../contexts/GameContext';
+
+interface ProfileDashboardProps {
+  onClose?: () => void;
+}
 
 interface StatCardProps {
   title: string;
   value: string | number;
   icon: React.ReactNode;
   trend?: number;
+  trendLabel?: string;
+  color?: string;
 }
 
-function StatCard({ title, value, icon, trend }: StatCardProps) {
+function StatCard({ title, value, icon, trend, trendLabel, color = 'text-app-primary' }: StatCardProps) {
   return (
-    <motion.div 
-      className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="card card-hover p-6"
     >
-      <div className="flex justify-between items-start">
-        <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
-          {icon}
+      <div className="flex items-center gap-3 mb-4">
+        {React.cloneElement(icon as React.ReactElement, {
+          className: `w-6 h-6 ${color}`
+        })}
+        <h3 className="text-lg font-semibold text-app-text-primary">{title}</h3>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-end justify-between">
+          <span className={`text-2xl font-bold ${color}`}>{value}</span>
+          {trend && (
+            <div className="flex items-center gap-1">
+              {trend > 0 ? (
+                <TrendingUp className="w-4 h-4 text-app-success" />
+              ) : (
+                <TrendingUp className="w-4 h-4 text-app-error rotate-180" />
+              )}
+              <span className={trend > 0 ? 'text-app-success' : 'text-app-error'}>
+                {Math.abs(trend)}%
+              </span>
+            </div>
+          )}
         </div>
-        {trend && (
-          <span className={`text-sm font-medium ${trend > 0 ? 'text-green-500' : 'text-red-500'}`}>
-            {trend > 0 ? '+' : ''}{trend}%
-          </span>
+        {trendLabel && (
+          <p className="text-sm text-app-text-muted">{trendLabel}</p>
         )}
       </div>
-      <h3 className="mt-4 text-sm font-medium text-gray-600 dark:text-gray-400">{title}</h3>
-      <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{value}</p>
     </motion.div>
   );
 }
 
-export default function ProfileDashboard() {
+export default function ProfileDashboard({ onClose }: ProfileDashboardProps) {
+  const navigate = useNavigate();
   const { state } = use_game();
 
+  // Valores padrão para user e stats
+  const user = {
+    name: state.user?.name || 'User',
+    avatar: state.user?.avatar_url || '/avatars/default1.jpg',
+    level: state.user?.level || 1,
+    xp: state.user?.xp || 0,
+    coins: state.user?.coins || 0,
+  };
+
+  const stats = {
+    totalBattles: state.battle_stats?.total_battles || 0,
+    wins: state.battle_stats?.wins || 0,
+    losses: state.battle_stats?.losses || 0,
+    winStreak: state.battle_stats?.win_streak || 0,
+    highestStreak: state.battle_stats?.highest_streak || 0,
+    averageScore: state.battle_stats?.total_battles 
+      ? Math.round((state.battle_stats.wins / state.battle_stats.total_battles) * 100)
+      : 0
+  };
+
+  const winRate = stats.totalBattles > 0 
+    ? Math.round((stats.wins / stats.totalBattles) * 100) 
+    : 0;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="container mx-auto px-4 py-8">
-        {/* Hero Section */}
-        <motion.div 
-          className="relative rounded-2xl bg-white dark:bg-gray-800 p-8 mb-8 shadow-xl"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div className="flex items-center space-x-6">
-            <div className="relative">
-              <img 
-                src={state.user.avatar} 
-                alt="Profile"
-                className="w-24 h-24 rounded-full border-4 border-purple-500"
-              />
-              <motion.div 
-                className="absolute -bottom-2 -right-2 bg-yellow-500 rounded-full p-2"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-              >
-                <Crown className="w-4 h-4 text-white" />
-              </motion.div>
-            </div>
-            
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {state.user.name}
-              </h1>
-              <p className="text-gray-500 dark:text-gray-400">
-                Level {state.user.level} • {state.user.avatarFrame || 'Adventurer'}
-              </p>
+    <PageContainer variant="gradient">
+      {/* Profile Header */}
+      <StyledBox variant="glass" className="mb-8 p-6">
+        <div className="flex items-center gap-6">
+          <div className="relative">
+            <img 
+              src={user.avatar} 
+              alt={user.name}
+              className="w-24 h-24 rounded-full border-4 border-app-primary/30"
+            />
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
+              <span className="badge-primary">
+                Level {user.level}
+              </span>
             </div>
           </div>
-        </motion.div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard 
-            title="Battle Rating"
-            value={`#${state.user.battle_rating || '???'}`}
-            icon={<Sword className="text-red-500" />}
-            trend={+15}
-          />
-          <StatCard 
-            title="Win Rate"
-            value={`${Math.round((state.battle_stats?.wins || 0) / (state.battle_stats?.total_battles || 1) * 100)}%`}
-            icon={<Target className="text-green-500" />}
-            trend={+5}
-          />
-          <StatCard 
-            title="Achievement Score"
-            value={state.user.achievements.length}
-            icon={<Trophy className="text-yellow-500" />}
-            trend={+30}
-          />
-          <StatCard 
-            title="Total Battles"
-            value={state.battle_stats?.total_battles || 0}
-            icon={<Star className="text-purple-500" />}
-            trend={+8}
-          />
+          
+          <div className="flex-1">
+            <h1 className="gradient-text-primary text-3xl font-bold mb-2">
+              {user.name}
+            </h1>
+            <div className="flex gap-4">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-app-primary" />
+                <span className="text-app-text-secondary">{user.xp} XP</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-app-warning" />
+                <span className="text-app-text-secondary">{user.coins} Coins</span>
+              </div>
+            </div>
+          </div>
+          
+          <Button
+            onClick={() => navigate('/battle')}
+            variant="primary"
+            size="lg"
+            icon={<Trophy />}
+          >
+            Battle Arena
+          </Button>
         </div>
+      </StyledBox>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <StatCard
+          title="Battle Stats"
+          value={`${winRate}%`}
+          icon={<Target />}
+          trend={5}
+          trendLabel={`${stats.wins}W - ${stats.losses}L`}
+          color="text-app-primary"
+        />
+
+        <StatCard
+          title="Win Streak"
+          value={stats.winStreak}
+          icon={<Award />}
+          trendLabel={`Best: ${stats.highestStreak}`}
+          color="text-app-warning"
+        />
+
+        <StatCard
+          title="Average Score"
+          value={`${stats.averageScore}%`}
+          icon={<Medal />}
+          trendLabel={`${stats.totalBattles} Total Battles`}
+          color="text-app-success"
+        />
       </div>
-    </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Button
+          onClick={() => navigate('/battle')}
+          variant="primary"
+          fullWidth
+          icon={<Trophy />}
+        >
+          Battle Arena
+        </Button>
+        
+        <Button
+          onClick={() => navigate('/practice')}
+          variant="secondary"
+          fullWidth
+          icon={<Book />}
+        >
+          Practice
+        </Button>
+        
+        <Button
+          onClick={() => navigate('/rankings')}
+          variant="outline"
+          fullWidth
+          icon={<Award />}
+        >
+          Rankings
+        </Button>
+        
+        <Button
+          onClick={() => navigate('/achievements')}
+          variant="outline"
+          fullWidth
+          icon={<Medal />}
+        >
+          Achievements
+        </Button>
+      </div>
+    </PageContainer>
   );
-} 
+}

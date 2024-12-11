@@ -24,12 +24,7 @@ export type AchievementTriggerType =
 export interface AchievementTrigger {
   type: AchievementTriggerType;
   value: number;
-  comparison: 'eq' | 'gt' | 'lt' | 'gte' | 'lte';
-  metadata?: {
-    score_type?: string;
-    battle_type?: string;
-    [key: string]: any;
-  };
+  current: number;
 }
 
 /**
@@ -50,22 +45,22 @@ export interface Achievement {
   title: string;
   description: string;
   category: string;
-  icon: LucideIcon;
-  progress: number;
-  total: number;
-  completed: boolean;
-  claimed: boolean;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
   points: number;
+  rarity: AchievementRarity;
   unlocked: boolean;
-  max_progress: number;
-  trigger_conditions: any[];
-  order_num: number;
+  unlocked_at?: string;
   prerequisites: string[];
   dependents: string[];
-  order: number;
-  unlocked_at?: string;
+  trigger_conditions: TriggerCondition[];
+  order_num: number;
+  progress: number;
+  icon: string | LucideIcon;
   metadata?: Record<string, any>;
+  created_at?: string;
+  updated_at?: string;
+  total?: number;
+  completed?: boolean;
+  claimed?: boolean;
 }
 
 /**
@@ -96,26 +91,9 @@ export interface Achievement {
 export type AchievementRarity = 'common' | 'rare' | 'epic' | 'legendary';
 
 export interface TriggerCondition {
-  type: string;
+  type: AchievementTriggerType;
   value: number;
   comparison: 'eq' | 'gt' | 'gte' | 'lt' | 'lte';
-}
-
-export interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  points: number;
-  rarity: AchievementRarity;
-  unlocked: boolean;
-  unlocked_at?: Date;
-  prerequisites: string[];
-  dependents: string[];
-  trigger_conditions: TriggerCondition[];
-  order: number;
-  created_at?: string;
-  updated_at?: string;
 }
 
 export interface AchievementProgress {

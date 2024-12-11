@@ -1,7 +1,12 @@
 import { useEffect } from 'react';
 import { use_game } from '../contexts/GameContext';
 
-export function useStudyTime() {
+interface StudyTimeData {
+  today: number;
+  total: number;
+}
+
+export function useStudyTime(): StudyTimeData {
   const { state, dispatch } = use_game();
   
   useEffect(() => {

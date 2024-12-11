@@ -1,16 +1,20 @@
 export interface BattleResults {
-  isVictory: boolean;
-  experience_gained: number;
-  coinsEarned: number;
-  streak_bonus: number;
-  totalScore: number;
-  rewards?: {
-    items?: string[];
-    achievements?: string[];
-    bonuses?: {
-      type: string;
-      amount: number;
-    }[];
+  victory: boolean;
+  draw: boolean;
+  score: {
+    player: number;
+    opponent: number;
+  };
+  rewards: {
+    xp_earned: number;
+    coins_earned: number;
+    streak_bonus: number;
+  };
+  stats: {
+    correct_answers: number;
+    total_questions: number;
+    time_taken: number;
+    average_time: number;
   };
 }
 

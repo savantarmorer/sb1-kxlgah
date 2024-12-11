@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback, ReactNode, Dispatch, useRef } from 'react';
 import { BattleState, BattleStatus, initialBattleState, BotOpponent as BattleOpponent, DBbattle_stats, BattleRatings } from '../types/battle';
 import { BATTLE_CONFIG } from '../config/battleConfig';
 import { supabase } from '../lib/supabaseClient';
@@ -15,14 +15,17 @@ import {
   calculate_xp_progress,
   update_streak_multiplier
 } from '../utils/gameUtils';
-import { Quest } from '../types/quests';
+import { Quest, QuestStatus, isQuestComplete } from '../types/quests';
 import { UserProgressQueryResult } from '../types/progress';
-import { notifyAchievementUnlock } from '../utils/notifications';
+import { NotificationSystem } from '../utils/notifications';
 import { handleQuestAction } from './game/questReducer';
-import type { GameAction as ImportedGameAction } from './game/types';
+import type { BattleQuestion, GameAction as ImportedGameAction } from './game/types';
 import { Trophy } from 'lucide-react';
 import type { User } from '../types/user';
 import { GameState as ImportedGameState } from './game/types';  // Rename to avoid conflict
+import { QuestService } from '../services/questService';
+
+const { showSuccess, showError } = NotificationSystem;
 
 interface LocalGameStatistics {
   items: any[];
@@ -62,13 +65,15 @@ interface GameState {
   lastLevelUpRewards: Reward[];
   roles: string[];
   rewardMultipliers: Record<string, number>;
-  constitutionalScore: number;
-  civilScore: number;
-  criminalScore: number;
-  administrativeScore: number;
+  constitutional_score: number;
+  civil_score: number;
+  criminal_score: number;
+  administrative_score: number;
   login_history: any[];
   recentXPGains: any[];
   leaderboard: any;
+  study_time: number;
+  loading: boolean;
 }
 
 type LocalGameAction = 
@@ -93,7 +98,13 @@ type LocalGameAction =
   | { type: 'CLAIM_REWARD'; payload: Reward }
   | { type: 'UPDATE_USER_STATS'; payload: { xp: number; coins: number; streak: number } }
   | { type: 'UPDATE_BATTLE_STATS'; payload: Partial<DBbattle_stats> }
-  | { type: 'LEVEL_UP'; payload: { level: number; rewards: Reward[] } }
+  | { type: 'LEVEL_UP'; payload: { 
+      level: number; 
+      rewards: { 
+        xp: number;
+        coins: number; 
+      }; 
+    }}
   | { type: 'SYNC_STATISTICS'; payload: LocalGameStatistics }
   | { type: 'UPDATE_STREAK_MULTIPLIER' }
   | { type: 'COMPLETE_QUEST'; payload: { quest_id: string; rewards: Reward[] } }
@@ -115,6 +126,24 @@ type LocalGameAction =
   | { type: 'UPDATE_ITEM'; payload: InventoryItem }
   | { type: 'ADD_ITEM'; payload: InventoryItem }
   | { type: 'UPDATE_COINS'; payload: number }
+  | { type: 'UPDATE_BATTLE_STATS'; payload: Partial<DBbattle_stats> }
+  | { type: 'SYNC_QUESTS'; payload: Quest[] }
+  | { type: 'UPDATE_QUEST_PROGRESS'; payload: { questId: string; progress: number } }
+  | { type: 'INITIALIZE_BATTLE'; payload: any }
+  | { type: 'UPDATE_BATTLE_PROGRESS'; payload: any }
+  | { type: 'END_BATTLE'; payload: any }
+  | { type: 'RESET_BATTLE' }
+  | { type: 'UPDATE_BATTLE_SCORE'; payload: any }
+  | { type: 'NEXT_BATTLE_QUESTION' }
+  | { type: 'HANDLE_QUEST_COMPLETION'; payload: { quest: Quest; dispatch: Dispatch<GameAction> } }
+  // Achievement Actions
+  | { type: 'INITIALIZE_ACHIEVEMENTS'; payload: Achievement[] }
+  | { type: 'UNLOCK_ACHIEVEMENTS'; payload: Achievement[] }
+  | { type: 'UPDATE_ACHIEVEMENT'; payload: Partial<Achievement> }
+  | { type: 'ADD_ACHIEVEMENT'; payload: Achievement }
+  | { type: 'UPDATE_QUEST'; payload: Quest }
+  | { type: 'SYNC_QUESTS'; payload: Quest[] }
+  | { type: 'SET_LOADING'; payload: boolean }
 
 type GameAction = ImportedGameAction | LocalGameAction;
 
@@ -122,8 +151,8 @@ export type GameDispatch = React.Dispatch<GameAction>;
 
 interface GameContextType {
   state: GameState;
-  dispatch: GameDispatch;
-  getCurrentQuestion: () => any;
+  dispatch: Dispatch<GameAction>;
+  getCurrentQuestion: () => BattleQuestion | null;
   getBattleStatus: () => BattleStatus;
   getBattleProgress: () => {
     currentQuestion: number;
@@ -137,100 +166,22 @@ interface GameContextType {
     streak_bonus: number;
     timeBonus: number;
   };
-  initialize_battle: () => Promise<void>;
-  handle_battle_answer: (answer: string) => Promise<void>;
 }
 
-export const GameContext = createContext<{
-  state: GameState;
-  dispatch: React.Dispatch<any>;
-}>({
-  state: {
-    user: {
-      id: '',
-      name: '',
-      email: '',
-      created_at: '',
-      updated_at: '',
-      is_online: false,
-      rating: 0,
-      level: 1,
-      xp: 0,
-      coins: 0,
-      streak: 0,
-      achievements: [],
-      inventory: [],
-      backpack: [],
-      stats: {
-        matches_played: 0,
-        matches_won: 0,
-        tournaments_played: 0,
-        tournaments_won: 0,
-        win_rate: 0,
-        average_score: 0,
-        highest_score: 0,
-        current_streak: 0,
-        best_streak: 0,
-        total_correct_answers: 0,
-        total_questions_answered: 0,
-        accuracy_rate: 0,
-        fastest_answer_time: 0,
-        average_answer_time: 0
-      },
-      roles: [],
-      rewardMultipliers: {},
-      constitutionalScore: 0,
-      civilScore: 0,
-      criminalScore: 0,
-      administrativeScore: 0
-    },
-    achievements: [],
-    quests: {
-      active: [],
-      completed: []
-    },
-    completedQuests: [],
-    items: [],
-    statistics: {
-      items: [],
-      login_history: [],
-      recentXPGains: [],
-      leaderboard: [],
-      statistics: null,
-      syncing: false,
-      debugMode: false,
-      lastLevelUpRewards: [],
-      activeUsers: 0,
-      completedQuests: 0,
-      purchasedItems: 0,
-      battlesPlayed: 0,
-      battlesWon: 0,
-      averageScore: 0,
-      lastUpdated: '',
-      recentActivity: []
-    },
-    syncing: false,
-    debugMode: false,
-    lastLevelUpRewards: [],
-    roles: [],
-    rewardMultipliers: {},
-    constitutionalScore: 0,
-    civilScore: 0,
-    criminalScore: 0,
-    administrativeScore: 0,
-    login_history: [],
-    recentXPGains: [],
-    leaderboard: {
-      score: 0,
-      updated_at: new Date().toISOString()
-    }
-  },
-  dispatch: () => null
-});
+const GameContext = createContext<GameContextType | undefined>(undefined);
 
-export function GameProvider({ children }: { children: React.ReactNode }) {
+export function use_game() {
+  const context = useContext(GameContext);
+  if (!context) {
+    throw new Error('use_game must be used within a GameProvider');
+  }
+  return context;
+}
+
+export function GameProvider({ children }: { children: ReactNode }) {
   const { user: authUser } = useAuth();
   const [state, dispatch] = useReducer(game_reducer, initialState);
+  const initialLoadRef = useRef(true);
 
   // Sync user state with auth state
   useEffect(() => {
@@ -292,6 +243,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // Sync with database whenever relevant state changes
   useEffect(() => {
+    // Skip the first render/mount
+    if (initialLoadRef.current) {
+      initialLoadRef.current = false;
+      return;
+    }
+
     if (state.user?.id) {
       update_user_progress(state.user.id, {
         xp: state.user.xp,
@@ -658,7 +615,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const getBattleStatus = useCallback(() => {
     return state.battle?.status || 'idle';
-  }, [state.battle?.status]);
+  }, [state.battle]);
 
   const getBattleProgress = useCallback(() => {
     return {
@@ -684,10 +641,32 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     getCurrentQuestion,
     getBattleStatus,
     getBattleProgress,
-    getRewards,
-    initialize_battle,
-    handle_battle_answer
+    getRewards
   };
+
+  // Periodically check for expired quests
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      await QuestService.expireQuests();
+      dispatch({ type: 'SYNC_QUESTS', payload: [] }); // Ensure quests are re-synced after expiration
+    }, 60 * 60 * 1000); // Every hour
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const syncUserProgress = async () => {
+      if (state.user.id) {
+        const userProgress = await QuestService.getUserQuests(state.user.id);
+        dispatch({
+          type: 'SYNC_QUESTS',
+          payload: userProgress
+        });
+      }
+    };
+
+    syncUserProgress();
+  }, [state.user.id, dispatch]);
 
   return (
     <GameContext.Provider value={contextValue}>
@@ -701,39 +680,30 @@ const initialState: GameState = {
     id: '',
     name: '',
     email: '',
-    created_at: '',
-    updated_at: '',
-    is_online: false,
-    rating: 0,
     level: 1,
     xp: 0,
     coins: 0,
     streak: 0,
-    achievements: [],
-    inventory: [],
-    backpack: [],
-    stats: {
-      matches_played: 0,
-      matches_won: 0,
-      tournaments_played: 0,
-      tournaments_won: 0,
-      win_rate: 0,
-      average_score: 0,
-      highest_score: 0,
-      current_streak: 0,
-      best_streak: 0,
-      total_correct_answers: 0,
-      total_questions_answered: 0,
-      accuracy_rate: 0,
-      fastest_answer_time: 0,
-      average_answer_time: 0
-    },
-    roles: [],
-    rewardMultipliers: {},
+    avatar: '',
+    avatarFrame: '',
+    battle_rating: 0,
     constitutionalScore: 0,
     civilScore: 0,
     criminalScore: 0,
-    administrativeScore: 0
+    administrativeScore: 0,
+    study_time: 0,
+    constitutional_score: 0,
+    civil_score: 0,
+    criminal_score: 0,
+    administrative_score: 0,
+    achievements: [],
+    inventory: [],
+    backpack: [],
+    roles: [],
+    rewardMultipliers: {
+      xp: 1,
+      coins: 1
+    }
   },
   achievements: [],
   quests: {
@@ -765,16 +735,18 @@ const initialState: GameState = {
   lastLevelUpRewards: [],
   roles: [],
   rewardMultipliers: {},
-  constitutionalScore: 0,
-  civilScore: 0,
-  criminalScore: 0,
-  administrativeScore: 0,
+  constitutional_score: 0,
+  civil_score: 0,
+  criminal_score: 0,
+  administrative_score: 0,
   login_history: [],
   recentXPGains: [],
   leaderboard: {
     score: 0,
     updated_at: new Date().toISOString()
-  }
+  },
+  study_time: 0,
+  loading: false
 };
 
 function game_reducer(state: GameState, action: GameAction): GameState {
@@ -945,7 +917,12 @@ function game_reducer(state: GameState, action: GameAction): GameState {
             total_xp_earned: 0,
             total_coins_earned: 0,
             updated_at: new Date().toISOString(),
-            difficulty: 1
+            difficulty: 1,
+            tournaments_played: 0,
+            tournaments_won: 0,
+            tournament_matches_played: 0,
+            tournament_matches_won: 0,
+            tournament_rating: 0
           };
         }
         return state.battle_stats;
@@ -1014,7 +991,7 @@ function game_reducer(state: GameState, action: GameAction): GameState {
 
       const isCorrect = 'is_correct' in action.payload 
         ? action.payload.is_correct 
-        : action.payload.isCorrect;
+        : (action.payload as any).isCorrect;
 
       const current_question = state.battle.current_question;
       const total_questions = state.battle.questions.length;
@@ -1087,7 +1064,16 @@ function game_reducer(state: GameState, action: GameAction): GameState {
         ...state,
         user: {
           ...state.user,
-          ...action.payload
+          ...action.payload,
+          battle_stats: action.payload.battle_stats ? {
+            ...state.user.battle_stats,
+            ...action.payload.battle_stats,
+            tournaments_played: action.payload.battle_stats.tournaments_played ?? state.user.battle_stats?.tournaments_played ?? 0,
+            tournaments_won: action.payload.battle_stats.tournaments_won ?? state.user.battle_stats?.tournaments_won ?? 0,
+            tournament_matches_played: action.payload.battle_stats.tournament_matches_played ?? state.user.battle_stats?.tournament_matches_played ?? 0,
+            tournament_matches_won: action.payload.battle_stats.tournament_matches_won ?? state.user.battle_stats?.tournament_matches_won ?? 0,
+            tournament_rating: action.payload.battle_stats.tournament_rating ?? state.user.battle_stats?.tournament_rating ?? 0
+          } : state.user.battle_stats
         }
       };
     }
@@ -1194,34 +1180,14 @@ function game_reducer(state: GameState, action: GameAction): GameState {
     }
 
     case 'LEVEL_UP': {
-      const rewards = Array.isArray(action.payload.rewards) 
-        ? action.payload.rewards 
-        : [
-            {
-              id: `LEVEL_UP_xp_${action.payload.level}`,
-              type: 'xp' as const,
-              value: action.payload.rewards.xp,
-              name: 'XP Bonus',
-              description: 'Level up XP bonus',
-              amount: 1,
-            },
-            {
-              id: `LEVEL_UP_coins_${action.payload.level}`,
-              type: 'coins' as const,
-              value: action.payload.rewards.coins,
-              name: 'Coin Bonus',
-              description: 'Level up coin bonus',
-              amount: 1,
-            }
-          ];
-      
+      const rewards = action.payload.rewards as { xp: number; coins: number };
       return {
         ...state,
         user: {
           ...state.user,
-          level: action.payload.level
-        },
-        lastLevelUpRewards: rewards
+          xp: state.user.xp + rewards.xp,
+          coins: state.user.coins + rewards.coins
+        }
       };
     }
 
@@ -1262,15 +1228,13 @@ function game_reducer(state: GameState, action: GameAction): GameState {
       };
 
     case 'COMPLETE_QUEST': {
-      const quest_id = 'quest' in action.payload ? action.payload.quest.id : action.payload.quest_id;
-      const rewards = action.payload.rewards;
+      const rewards = action.payload.rewards as { xp?: number; coins?: number };
       return {
         ...state,
-        completedQuests: [...state.completedQuests, quest_id],
         user: {
           ...state.user,
-          xp: state.user.xp + ('xp' in rewards ? rewards.xp : 0),
-          coins: state.user.coins + ('coins' in rewards ? rewards.coins : 0)
+          xp: state.user.xp + (rewards.xp || 0),
+          coins: state.user.coins + (rewards.coins || 0)
         }
       };
     }
@@ -1354,15 +1318,19 @@ function game_reducer(state: GameState, action: GameAction): GameState {
         achievements: [...state.achievements, action.payload]
       };
 
-    case 'UPDATE_ACHIEVEMENT':
+    case 'UPDATE_ACHIEVEMENT': {
       return {
         ...state,
-        achievements: state.achievements?.map(achievement =>
+        achievements: state.achievements.map(achievement => 
           achievement.id === action.payload.id
-            ? { ...achievement, ...action.payload }
+            ? { 
+                ...achievement, 
+                progress: action.payload.progress ?? achievement.progress ?? 0 
+              }
             : achievement
-        ) || []
+        )
       };
+    }
 
     case 'UPDATE_LOGIN_STREAK':
       return {
@@ -1469,15 +1437,28 @@ function game_reducer(state: GameState, action: GameAction): GameState {
       };
 
     case 'UNLOCK_ACHIEVEMENT': {
-      const achievement = action.payload;
-      notifyAchievementUnlock(achievement);
+      const achievements = Array.isArray(action.payload) 
+        ? action.payload 
+        : [action.payload];
+      
+      const updatedAchievements = state.achievements.map(achievement => {
+        const unlocked = achievements.find(a => a.id === achievement.id);
+        if (unlocked) {
+          const updatedAchievement = {
+            ...achievement,
+            unlocked: true,
+            unlocked_at: new Date().toISOString()
+          };
+          // Show notification for newly unlocked achievement
+          NotificationSystem.notifyAchievementUnlock(updatedAchievement);
+          return updatedAchievement;
+        }
+        return achievement;
+      });
+
       return {
         ...state,
-        achievements: state.achievements.map(a => 
-          a.id === achievement.id 
-            ? { ...a, unlocked: true, unlocked_at: new Date().toISOString() }
-            : a
-        )
+        achievements: updatedAchievements
       };
     }
 
@@ -1563,18 +1544,76 @@ function game_reducer(state: GameState, action: GameAction): GameState {
         }
       };
 
+    case 'HANDLE_QUEST_COMPLETION': {
+      const { quest, dispatch } = action.payload;
+      return handleQuestAction(state, { type: 'COMPLETE_QUEST', payload: quest });
+    }
+
+    case 'SYNC_QUESTS': {
+      if (!action.payload) return state;
+      return {
+        ...state,
+        quests: {
+          active: action.payload.filter((q: Quest) => !isQuestComplete(q)),
+          completed: action.payload.filter((q: Quest) => isQuestComplete(q))
+        }
+      };
+    }
+
+    case 'INITIALIZE_ACHIEVEMENTS':
+      return {
+        ...state,
+        achievements: action.payload
+      };
+
+    case 'UNLOCK_ACHIEVEMENTS':
+      return {
+        ...state,
+        achievements: [
+          ...state.achievements.filter(a => !action.payload.find(p => p.id === a.id)),
+          ...action.payload
+        ]
+      };
+
+    case 'UPDATE_ACHIEVEMENT':
+      return {
+        ...state,
+        achievements: state.achievements.map(achievement =>
+          achievement.id === action.payload.id
+            ? { ...achievement, ...action.payload }
+            : achievement
+        )
+      };
+
+    case 'ADD_ACHIEVEMENT':
+      return {
+        ...state,
+        achievements: [...state.achievements, action.payload]
+      };
+
+    case 'UPDATE_QUEST': {
+      return {
+        ...state,
+        quests: {
+          ...state.quests,
+          active: state.quests.active.map(q => 
+            q.id === action.payload.id ? action.payload : q
+          )
+        }
+      };
+    }
+
+    case 'SET_LOADING': {
+      return {
+        ...state,
+        loading: action.payload
+      };
+    }
+
     default: {
       return state;
     }
   }
-}
-
-export function use_game() {
-  const context = useContext(GameContext);
-  if (!context) {
-    throw new Error('use_game must be used within a GameProvider');
-  }
-  return context;
 }
 
 const defaultAchievement: Achievement = {
@@ -1590,10 +1629,35 @@ const defaultAchievement: Achievement = {
   rarity: 'common',
   points: 0,
   unlocked: false,
-  max_progress: 100,
   trigger_conditions: [],
   order_num: 0,
   prerequisites: [],
-  dependents: [],
-  order: 0
+  dependents: []
+};
+
+export const gameActions = {
+  // ... existing actions ...
+
+  handleQuestCompletion: async (
+    state: GameState,
+    quest: Quest,
+    dispatch: Dispatch<GameAction>
+  ): Promise<void> => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      await QuestService.updateQuestProgress(state.user.id, quest.id, quest.progress);
+
+      // Optionally, trigger achievement checks here
+
+      dispatch({ type: 'SYNC_QUESTS', payload: [] });
+      showSuccess('Quest completed!');
+    } catch (error) {
+      console.error('Error completing quest:', error);
+      showError('Failed to complete quest.');
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  },
+
+  // ... remaining actions ...
 };

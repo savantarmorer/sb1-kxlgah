@@ -6,7 +6,8 @@ import Confetti from 'react-confetti';
 import { useNavigate } from 'react-router-dom';
 
 // Types
-import { BattleQuestion, BattleState, BattleStatus } from '../../types/battle';
+import { BattleQuestion } from '../../types/battle';
+import { BattleState, BattleStatus } from '../../types/battle/state';
 import { Reward } from '../../types/rewards';
 import type { Quest } from '../../types/quests';
 import { GameState } from '../../types/game';
@@ -358,8 +359,13 @@ function BattleModeContent({ on_close }: BattleModeContentProps) {
           highest_streak: 0,
           total_xp_earned: 0,
           total_coins_earned: 0,
+          tournaments_played: 0,
+          tournaments_won: 0,
+          tournament_matches_played: 0,
+          tournament_matches_won: 0,
+          tournament_rating: 0,
           updated_at: new Date().toISOString(),
-          difficulty: 1
+          difficulty: 'medium'
         }
       });
     }
@@ -598,6 +604,11 @@ function BattleModeContent({ on_close }: BattleModeContentProps) {
       highest_streak: 0,
       total_xp_earned: 0,
       total_coins_earned: 0,
+      tournaments_played: 0,
+      tournaments_won: 0,
+      tournament_matches_played: 0,
+      tournament_matches_won: 0,
+      tournament_rating: 0,
       updated_at: new Date().toISOString(),
       difficulty: 1
     },
@@ -610,6 +621,37 @@ function BattleModeContent({ on_close }: BattleModeContentProps) {
       streak: 0,
       highest_streak: 0,
       updated_at: new Date().toISOString()
+    }
+  };
+
+  const getBattleStatusMessage = (status: BattleStatus): string => {
+    switch (status) {
+      case 'idle':
+        return t('battle.idle');
+      case 'waiting':
+        return t('battle.waiting');
+      case 'preparing':
+        return t('battle.preparing');
+      case 'searching':
+        return t('battle.searching');
+      case 'ready':
+        return t('battle.ready');
+      case 'active':
+        return t('battle.active');
+      case 'paused':
+        return t('battle.paused');
+      case 'victory':
+        return t('battle.victory');
+      case 'defeat':
+        return t('battle.defeat');
+      case 'draw':
+        return t('battle.draw');
+      case 'completed':
+        return t('battle.completed');
+      case 'error':
+        return t('battle.error');
+      default:
+        return '';
     }
   };
 
@@ -698,9 +740,10 @@ function BattleModeContent({ on_close }: BattleModeContentProps) {
             {battle_state && (
               <BattleStateTransition
                 status={battle_state.status}
-                message={isBattleError ? battle_state.error?.message : undefined}
+                message={isBattleError ? battle_state.error?.message : getBattleStatusMessage(battle_state.status)}
                 onComplete={() => {
-                  if (isBattleCompleted && !rewards_claimed && !is_transitioning) {
+                  if ((battle_state.status === 'victory' || battle_state.status === 'defeat' || battle_state.status === 'draw') 
+                      && !rewards_claimed && !is_transitioning) {
                     set_battle_completed(true);
                   }
                 }}

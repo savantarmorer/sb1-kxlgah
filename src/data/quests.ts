@@ -8,9 +8,7 @@ export const SAMPLE_QUESTS: Quest[] = [
     description: 'Win your first 3 battles to prove your worth',
     type: QuestType.BATTLE,
     status: QuestStatus.AVAILABLE,
-    progress: 0,
     category: 'battle',
-    is_active: true,
     xp_reward: 500,
     coin_reward: 1000,
     requirements: [
@@ -22,26 +20,10 @@ export const SAMPLE_QUESTS: Quest[] = [
         description: 'Win battles'
       }
     ],
-    rewards: [
-      {
-        id: `quest_xp_${'quest-battle-1'}`,
-        type: 'xp',
-        value: 1000,
-        name: 'Quest XP',
-        description: 'XP earned from quest',
-        amount: 1,
-        rarity: 'common'
-      },
-      {
-        id: `quest_coins_${'quest-battle-1'}`,
-        type: 'coins',
-        value: 500,
-        name: 'Quest Coins',
-        description: 'Coins earned from quest',
-        amount: 1,
-        rarity: 'common'
-      }
-    ]
+    progress: 0,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   },
   {
     id: 'quest-study-1',
@@ -49,40 +31,23 @@ export const SAMPLE_QUESTS: Quest[] = [
     description: 'Study for a total of 2 hours',
     type: QuestType.STUDY,
     status: QuestStatus.AVAILABLE,
-    progress: 0,
     category: 'study',
-    is_active: true,
     xp_reward: 1000,
     coin_reward: 500,
     requirements: [
       {
         type: QuestType.STUDY,
-        amount: 0,
         target: 7200, // 2 hours in seconds
+        description: 'Study time',
+        progress: 0,
         current: 0,
-        description: 'Study time'
+        amount: 7200
       }
     ],
-    rewards: [
-      {
-        id: `quest_xp_quest-study-1`,
-        type: 'xp',
-        value: 1000,
-        name: 'Quest XP',
-        description: 'XP earned from quest',
-        amount: 1,
-        rarity: 'common'
-      },
-      {
-        id: `quest_coins_quest-study-1`,
-        type: 'coins',
-        value: 500,
-        name: 'Quest Coins',
-        description: 'Coins earned from quest',
-        amount: 1,
-        rarity: 'common'
-      }
-    ]
+    progress: 0,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   },
   {
     id: 'quest-achievement-1',
@@ -90,40 +55,23 @@ export const SAMPLE_QUESTS: Quest[] = [
     description: 'Unlock 5 achievements',
     type: QuestType.ACHIEVEMENT,
     status: QuestStatus.AVAILABLE,
-    progress: 0,
     category: 'achievement',
-    is_active: true,
     xp_reward: 2000,
     coin_reward: 2000,
     requirements: [
       {
         type: QuestType.ACHIEVEMENT,
-        amount: 0,
         target: 5,
+        description: 'Unlock achievements',
+        progress: 0,
         current: 0,
-        description: 'Unlock achievements'
+        amount: 5
       }
     ],
-    rewards: [
-      {
-        id: `quest_xp_quest-achievement-1`,
-        type: 'xp',
-        value: 2000,
-        name: 'Quest XP',
-        description: 'XP earned from quest',
-        amount: 1,
-        rarity: 'common'
-      },
-      {
-        id: `quest_coins_quest-achievement-1`,
-        type: 'coins',
-        value: 2000,
-        name: 'Quest Coins',
-        description: 'Coins earned from quest',
-        amount: 1,
-        rarity: 'common'
-      }
-    ]
+    progress: 0,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   },
   {
     id: 'quest-streak-1',
@@ -131,40 +79,23 @@ export const SAMPLE_QUESTS: Quest[] = [
     description: 'Maintain a 7-day study streak',
     type: QuestType.STREAK,
     status: QuestStatus.AVAILABLE,
-    progress: 0,
     category: 'streak',
-    is_active: true,
     xp_reward: 1500,
     coin_reward: 1500,
     requirements: [
       {
         type: QuestType.STREAK,
-        amount: 0,
         target: 7,
+        description: 'Maintain streak',
+        progress: 0,
         current: 0,
-        description: 'Maintain streak'
+        amount: 7
       }
     ],
-    rewards: [
-      {
-        id: `quest_xp_quest-streak-1`,
-        type: 'xp',
-        value: 1500,
-        name: 'Quest XP',
-        description: 'XP earned from quest',
-        amount: 1,
-        rarity: 'common'
-      },
-      {
-        id: `quest_coins_quest-streak-1`,
-        type: 'coins',
-        value: 1500,
-        name: 'Quest Coins',
-        description: 'Coins earned from quest',
-        amount: 1,
-        rarity: 'common'
-      }
-    ]
+    progress: 0,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   },
   {
     id: 'quest-collection-1',
@@ -172,40 +103,23 @@ export const SAMPLE_QUESTS: Quest[] = [
     description: 'Collect 5 different items',
     type: QuestType.COLLECTION,
     status: QuestStatus.AVAILABLE,
-    progress: 0,
     category: 'collection',
-    is_active: true,
     xp_reward: 1000,
     coin_reward: 1000,
     requirements: [
       {
         type: QuestType.COLLECTION,
-        amount: 0,
         target: 5,
+        description: 'Collect items',
+        progress: 0,
         current: 0,
-        description: 'Collect items'
+        amount: 5
       }
     ],
-    rewards: [
-      {
-        id: `quest_xp_quest-collection-1`,
-        type: 'xp',
-        value: 1000,
-        name: 'Quest XP',
-        description: 'XP earned from quest',
-        amount: 1,
-        rarity: 'common'
-      },
-      {
-        id: `quest_coins_quest-collection-1`,
-        type: 'coins',
-        value: 1000,
-        name: 'Quest Coins',
-        description: 'Coins earned from quest',
-        amount: 1,
-        rarity: 'common'
-      }
-    ]
+    progress: 0,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   },
   {
     id: 'quest-social-1',
@@ -213,40 +127,23 @@ export const SAMPLE_QUESTS: Quest[] = [
     description: 'Complete 3 battles with different opponents',
     type: QuestType.SOCIAL,
     status: QuestStatus.AVAILABLE,
-    progress: 0,
     category: 'social',
-    is_active: true,
     xp_reward: 800,
     coin_reward: 800,
     requirements: [
       {
         type: QuestType.SOCIAL,
-        amount: 0,
         target: 3,
+        description: 'Complete social actions',
+        progress: 0,
         current: 0,
-        description: 'Complete social actions'
+        amount: 3
       }
     ],
-    rewards: [
-      {
-        id: `quest_xp_quest-social-1`,
-        type: 'xp',
-        value: 800,
-        name: 'Quest XP',
-        description: 'XP earned from quest',
-        amount: 1,
-        rarity: 'common'
-      },
-      {
-        id: `quest_coins_quest-social-1`,
-        type: 'coins',
-        value: 800,
-        name: 'Quest Coins',
-        description: 'Coins earned from quest',
-        amount: 1,
-        rarity: 'common'
-      }
-    ]
+    progress: 0,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   }
 ];
 

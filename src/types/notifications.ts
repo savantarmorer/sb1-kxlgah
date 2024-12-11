@@ -8,12 +8,16 @@ export type NotificationType =
   | 'error' 
   | 'admin' 
   | 'achievement' 
-  | 'battle' 
+  | 'battle'
   | 'debug'
   | 'quest'
   | 'reward'
   | 'LEVEL_UP'
-  | 'streak';
+  | 'streak'
+  | 'info' 
+  | 'warning'
+  | 'match'
+  | 'tournament';
 
 export interface NotificationAction {
   label: string;
@@ -37,7 +41,13 @@ export interface NotificationState {
   current: NotificationItem | null;
 }
 
-export type NotificationPayload = Omit<NotificationItem, 'id'>; 
+export interface NotificationPayload {
+  type: NotificationType;
+  title: string;
+  message: string;
+  duration?: number;
+  data?: Record<string, any>;
+}
 
 export interface NotificationMessage {
   title: string;

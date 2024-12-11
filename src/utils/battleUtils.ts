@@ -21,13 +21,14 @@ export const calculate_battle_results = async (
   const final_score = state.battle.score.player + (is_correct ? 1 : 0);
   const is_victory = final_score > state.battle.score.opponent;
 
-  // Calculate rewards based on performance
+  // Base XP calculation
   const xp_earned = calculate_xp_reward(
     BATTLE_CONFIG.progress.base_xp * (final_score / total_questions),
     state.battle_stats.difficulty || 1,
     state.user.streak || 0
   );
 
+  // Base coins calculation
   const coins_earned = calculate_coin_reward(
     BATTLE_CONFIG.progress.base_coins * (final_score / total_questions),
     state.user.level,

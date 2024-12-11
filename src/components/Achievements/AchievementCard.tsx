@@ -1,98 +1,111 @@
+import React from 'react';
 import { motion } from 'framer-motion';
-import { Share2, Lock, CheckCircle } from 'lucide-react';
-import { Achievement, AchievementCategory } from '../../types/achievements';
-import { use_game } from '../../contexts/GameContext';
-import Button from '../Button';
-import { useAdmin } from '../../hooks/useAdmin';
+import { Achievement } from '../../types/achievements';
+import { AchievementProgress } from './AchievementProgress';
+import { AchievementRequirements } from './AchievementRequirements';
+import { Trophy, Lock } from 'lucide-react';
 
-export interface AchievementCardProps {
+interface AchievementCardProps {
   achievement: Achievement;
-  category: AchievementCategory;
 }
 
-export default function AchievementCard({ achievement, category }: AchievementCardProps) {
-  const { dispatch } = use_game();
-  const { isAdmin } = useAdmin();
-  const Icon = category.icon;
-
-  const handleShare = async () => {
-    if (!achievement.unlocked) return;
-
-    try {
-      await navigator.share({
-        title: 'Conquista Desbloqueada!',
-        text: `Acabei de desbloquear "${achievement.title}" no CepaC Play!`,
-        url: window.location.href
-      });
-    } catch (error) {
-      console.error('Error sharing:', error);
+export function AchievementCard({ achievement }: AchievementCardProps) {
+  const getRarityStyles = () => {
+    switch (achievement.rarity) {
+      case 'legendary':
+        return {
+          border: 'border-yellow-300',
+          bg: 'from-yellow-50',
+          icon: 'text-yellow-500',
+          badge: 'bg-yellow-100 text-yellow-800'
+        };
+      case 'epic':
+        return {
+          border: 'border-purple-300',
+          bg: 'from-purple-50',
+          icon: 'text-purple-500',
+          badge: 'bg-purple-100 text-purple-800'
+        };
+      case 'rare':
+        return {
+          border: 'border-blue-300',
+          bg: 'from-blue-50',
+          icon: 'text-blue-500',
+          badge: 'bg-blue-100 text-blue-800'
+        };
+      default:
+        return {
+          border: 'border-gray-200',
+          bg: 'from-gray-50',
+          icon: 'text-gray-500',
+          badge: 'bg-gray-100 text-gray-800'
+        };
     }
   };
 
-  const handleDebugUnlock = () => {
-    if (isAdmin && !achievement.unlocked) {
-      dispatch({
-        type: 'UPDATE_ACHIEVEMENT_PROGRESS',
-        payload: {
-          id: achievement.id,
-          progress: 100
-        }
-      });
-    }
-  };
+  const styles = getRarityStyles();
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      whileHover={{ scale: 1.02 }}
       className={`
-        relative overflow-hidden rounded-xl p-4 
+        relative overflow-hidden
+        rounded-lg border ${styles.border}
         ${achievement.unlocked 
-          ? 'bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900' 
-          : 'bg-gray-100 dark:bg-gray-800/50'
+          ? `bg-gradient-to-br ${styles.bg} to-white` 
+          : 'bg-gray-50'
         }
-        border border-gray-200 dark:border-gray-700
-        shadow-sm hover:shadow-md transition-all duration-200
+        p-4 h-full
       `}
+      whileHover={{ scale: 1.02 }}
+      transition={{ duration: 0.2 }}
     >
-      <div className="relative z-10">
-        <div className="flex items-start gap-4">
-          <motion.div 
-            className={`
-              p-3 rounded-lg bg-opacity-10 
-              ${category.color} 
-              ${achievement.unlocked ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-900' : ''}
-            `}
-            whileHover={{ rotate: [0, -10, 10, 0] }}
-            transition={{ duration: 0.5 }}
-          >
-            <Icon className={`${category.color} h-6 w-6`} />
-          </motion.div>
+      <div className="flex items-start gap-3">
+        <div className={`
+          p-2 rounded-lg ${achievement.unlocked ? styles.icon : 'text-gray-400'}
+          ${achievement.unlocked ? 'bg-white' : 'bg-gray-100'}
+        `}>
+          {achievement.unlocked ? (
+            <Trophy size={24} />
+          ) : (
+            <Lock size={24} />
+          )}
+        </div>
+        
+        <div className="flex-1">
+          <h3 className="font-semibold text-gray-900 dark:text-white">
+            {achievement.title}
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            {achievement.description}
+          </p>
           
-          <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 dark:text-white">
-              {achievement.title}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {achievement.description}
-            </p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className={`
+              px-2 py-0.5 rounded-full text-xs font-medium
+              ${styles.badge}
+            `}>
+              {achievement.rarity.charAt(0).toUpperCase() + achievement.rarity.slice(1)}
+            </span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {achievement.points} points
+            </span>
           </div>
         </div>
       </div>
 
+      <AchievementProgress achievement={achievement} />
+      <AchievementRequirements achievement={achievement} />
+
       {achievement.unlocked && (
-        <motion.div
-          className="absolute inset-0 opacity-20"
-          initial={{ backgroundPosition: '200% 0' }}
-          animate={{ backgroundPosition: '-200% 0' }}
-          transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-          style={{
-            background: 'linear-gradient(45deg, transparent, rgba(255,255,255,0.5), transparent)',
-            backgroundSize: '200% 100%'
-          }}
-        />
+        <div className="absolute top-2 right-2">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className={`w-6 h-6 rounded-full flex items-center justify-center ${styles.badge}`}
+          >
+            ✓
+          </motion.div>
+        </div>
       )}
     </motion.div>
   );

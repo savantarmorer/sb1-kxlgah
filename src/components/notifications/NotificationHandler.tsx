@@ -1,36 +1,19 @@
-import React from 'react';
-import { Snackbar, Alert } from '@mui/material';
+import { useEffect } from 'react';
 import { useNotification } from '../../contexts/NotificationContext';
+import { NotificationSystem } from '../../utils/notifications';
 
-export function NotificationHandler() {
-  const { notifications, removeNotification } = useNotification();
+export default function NotificationHandler() {
+  const notification = useNotification();
 
-  const handleClose = (id: string) => {
-    removeNotification(id);
-  };
+  useEffect(() => {
+    NotificationSystem.getInstance().setHandlers({
+      success: notification.showSuccess,
+      error: notification.showError,
+      warning: notification.showWarning,
+      info: notification.showInfo,
+      achievementUnlock: notification.notifyAchievementUnlock
+    });
+  }, [notification]);
 
-  return (
-    <>
-      {notifications?.map((notification) => (
-        <Snackbar
-          key={notification.id}
-          open={true}
-          autoHideDuration={notification.duration || 3000}
-          onClose={() => handleClose(notification.id)}
-          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        >
-          <Alert
-            onClose={() => handleClose(notification.id)}
-            severity={notification.type}
-            variant="filled"
-            sx={{ width: '100%' }}
-          >
-            {notification.message}
-          </Alert>
-        </Snackbar>
-      ))}
-    </>
-  );
-}
-
-export default NotificationHandler; 
+  return null;
+} 

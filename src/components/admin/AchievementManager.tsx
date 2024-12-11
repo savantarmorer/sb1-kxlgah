@@ -1,69 +1,30 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   Box,
-  IconButton,
-  Typography,
-  TableContainer,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  Paper,
   Button,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Grid,
-  SelectChangeEvent,
+  Card,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+  Tooltip
 } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
-import SaveIcon from '@mui/icons-material/Save';
-import { supabase } from "../../lib/supabase";
-import { useNotification } from "../../contexts/NotificationContext";
-import { Achievement, AchievementRarity, AchievementTrigger, AchievementTriggerType } from "../../types/achievements";
-
-interface EditForm {
-  title: string;
-  description: string;
-  category: string;
-  points: number;
-  rarity: AchievementRarity;
-  prerequisites: string[];
-  dependents: string[];
-  trigger_conditions: AchievementTrigger[];
-  order: number;
-}
-
-const initialTriggerCondition: AchievementTrigger = {
-  type: 'xp_gained' as AchievementTriggerType,
-  value: 0,
-  comparison: 'gte',
-  metadata: {}
-};
-
-const initialForm: EditForm = {
-  title: "",
-  description: "",
-  category: "",
-  points: 0,
-  rarity: "common",
-  prerequisites: [],
-  dependents: [],
-  trigger_conditions: [initialTriggerCondition],
-  order: 0
-};
+import { Edit, Trash2, Plus, Award } from 'lucide-react';
+import { Achievement } from '../../types/achievements';
+import { AchievementService } from '../../services/achievementService';
+import { CreateAchievementDialog } from './CreateAchievementDialog';
+import { toast } from 'react-hot-toast';
+import { ACHIEVEMENT_CATEGORIES } from '../../constants/achievements';
 
 export function AchievementManager() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [editing, setEditing] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<EditForm>(initialForm);
-  const { showSuccess, showError } = useNotification();
+  const [loading, setLoading] = useState(true);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
 
   useEffect(() => {
     loadAchievements();
@@ -71,218 +32,162 @@ export function AchievementManager() {
 
   const loadAchievements = async () => {
     try {
-      const { data, error } = await supabase
-        .from("achievements")
-        .select("*")
-        .order("order", { ascending: true });
-
-      if (error) throw error;
-      setAchievements(data || []);
+      setLoading(true);
+      const data = await AchievementService.getAll();
+      setAchievements(data);
     } catch (error) {
-      console.error("Error loading achievements:", error);
-      showError("Failed to load achievements");
-    }
-  };
-
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      const achievementData: Partial<Achievement> = {
-        title: editForm.title,
-        description: editForm.description,
-        category: editForm.category,
-        points: editForm.points,
-        rarity: editForm.rarity,
-        unlocked: false,
-        unlocked_at: undefined,
-        prerequisites: editForm.prerequisites,
-        dependents: editForm.dependents,
-        trigger_conditions: editForm.trigger_conditions,
-        order: editForm.order
-      };
-
-      const { error } = await supabase
-        .from("achievements")
-        .upsert(editing ? { ...achievementData, id: editing } : achievementData)
-        .select();
-
-      if (error) throw error;
-
-      showSuccess(editing ? "Achievement updated" : "Achievement created");
-      setEditing(null);
-      loadAchievements();
-    } catch (error) {
-      console.error("Error saving achievement:", error);
-      showError("Failed to save achievement");
+      console.error('Error loading achievements:', error);
+      toast.error('Failed to load achievements');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (achievement: Achievement) => {
-    setEditing(achievement.id);
-    setEditForm({
-      title: achievement.title,
-      description: achievement.description,
-      category: achievement.category,
-      points: achievement.points,
-      rarity: achievement.rarity,
-      prerequisites: achievement.prerequisites,
-      dependents: achievement.dependents,
-      trigger_conditions: achievement.trigger_conditions,
-      order: achievement.order
-    });
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this achievement?")) {
-      return;
-    }
-
-    setLoading(true);
+  const handleCreateAchievement = async (achievement: Partial<Achievement>) => {
     try {
-      const { error } = await supabase
-        .from("achievements")
-        .delete()
-        .eq("id", id);
+      const newAchievement = await AchievementService.create({
+        ...achievement,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
 
-      if (error) throw error;
-
-      showSuccess("Achievement deleted");
-      loadAchievements();
+      setAchievements(prev => [...prev, newAchievement]);
+      toast.success('Achievement created successfully');
+      setIsCreateDialogOpen(false);
     } catch (error) {
-      console.error("Error deleting achievement:", error);
-      showError("Failed to delete achievement");
-    } finally {
-      setLoading(false);
+      console.error('Error creating achievement:', error);
+      toast.error('Failed to create achievement');
     }
   };
 
-  const handleAdd = () => {
-    setEditing("new");
-    setEditForm({
-      ...initialForm,
-      order: achievements.length
-    });
+  const handleEditAchievement = async (achievement: Achievement) => {
+    try {
+      await AchievementService.update(achievement.id, {
+        ...achievement,
+        updated_at: new Date().toISOString()
+      });
+
+      setAchievements(prev => 
+        prev.map(a => a.id === achievement.id ? achievement : a)
+      );
+      toast.success('Achievement updated successfully');
+      setIsCreateDialogOpen(false);
+      setSelectedAchievement(null);
+    } catch (error) {
+      console.error('Error updating achievement:', error);
+      toast.error('Failed to update achievement');
+    }
   };
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setEditForm(prev => ({
-      ...prev,
-      [name]: name === 'points' || name === 'order' ? Number(value) : value
-    }));
+  const handleDeleteAchievement = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this achievement?')) return;
+
+    try {
+      await AchievementService.delete(id);
+      setAchievements(prev => prev.filter(a => a.id !== id));
+      toast.success('Achievement deleted successfully');
+    } catch (error) {
+      console.error('Error deleting achievement:', error);
+      toast.error('Failed to delete achievement');
+    }
   };
 
-  const handleSelectChange = (e: SelectChangeEvent) => {
-    const { name, value } = e.target;
-    setEditForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  const getCategoryLabel = (categoryId: string) => {
+    const category = ACHIEVEMENT_CATEGORIES.find(c => c.id === categoryId);
+    return category?.label || categoryId;
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4">Achievement Management</Typography>
+    <Box>
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h5" component="h2">
+          Achievement Manager
+        </Typography>
         <Button
           variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleAdd}
-          disabled={loading}
+          startIcon={<Plus />}
+          onClick={() => {
+            setSelectedAchievement(null);
+            setIsCreateDialogOpen(true);
+          }}
         >
-          Add Achievement
+          Create Achievement
         </Button>
       </Box>
 
-      <TableContainer component={Paper}>
+      <TableContainer component={Card}>
         <Table>
           <TableHead>
             <TableRow>
               <TableCell>Title</TableCell>
               <TableCell>Category</TableCell>
-              <TableCell>Rarity</TableCell>
               <TableCell>Points</TableCell>
-              <TableCell>Actions</TableCell>
+              <TableCell>Rarity</TableCell>
+              <TableCell>Order</TableCell>
+              <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {achievements.map((achievement) => (
               <TableRow key={achievement.id}>
-                {editing === achievement.id ? (
-                  <>
-                    <TableCell>
-                      <TextField
-                        fullWidth
-                        name="title"
-                        value={editForm.title}
-                        onChange={handleTextChange}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <FormControl fullWidth>
-                        <Select
-                          name="category"
-                          value={editForm.category}
-                          onChange={handleSelectChange}
-                        >
-                          <MenuItem value="study">Study</MenuItem>
-                          <MenuItem value="battle">Battle</MenuItem>
-                          <MenuItem value="social">Social</MenuItem>
-                          <MenuItem value="progress">Progress</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </TableCell>
-                    <TableCell>
-                      <FormControl fullWidth>
-                        <Select
-                          name="rarity"
-                          value={editForm.rarity}
-                          onChange={handleSelectChange}
-                        >
-                          <MenuItem value="common">Common</MenuItem>
-                          <MenuItem value="rare">Rare</MenuItem>
-                          <MenuItem value="epic">Epic</MenuItem>
-                          <MenuItem value="legendary">Legendary</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        type="number"
-                        name="points"
-                        value={editForm.points}
-                        onChange={handleTextChange}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <IconButton onClick={handleSave} disabled={loading}>
-                        <SaveIcon />
-                      </IconButton>
-                    </TableCell>
-                  </>
-                ) : (
-                  <>
-                    <TableCell>{achievement.title}</TableCell>
-                    <TableCell>{achievement.category}</TableCell>
-                    <TableCell>{achievement.rarity}</TableCell>
-                    <TableCell>{achievement.points}</TableCell>
-                    <TableCell>
-                      <IconButton onClick={() => handleEdit(achievement)} sx={{ mr: 1 }}>
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton onClick={() => handleDelete(achievement.id)} color="error">
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </>
-                )}
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Award className={`text-${achievement.rarity}-500`} size={20} />
+                    <Typography>{achievement.title}</Typography>
+                  </Box>
+                </TableCell>
+                <TableCell>{getCategoryLabel(achievement.category)}</TableCell>
+                <TableCell>{achievement.points}</TableCell>
+                <TableCell>
+                  <Typography
+                    sx={{
+                      color: achievement.rarity === 'legendary' ? 'warning.main' :
+                             achievement.rarity === 'epic' ? 'secondary.main' :
+                             achievement.rarity === 'rare' ? 'info.main' :
+                             'text.secondary'
+                    }}
+                  >
+                    {achievement.rarity.charAt(0).toUpperCase() + achievement.rarity.slice(1)}
+                  </Typography>
+                </TableCell>
+                <TableCell>{achievement.order_num}</TableCell>
+                <TableCell align="right">
+                  <Tooltip title="Edit">
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setSelectedAchievement(achievement);
+                        setIsCreateDialogOpen(true);
+                      }}
+                    >
+                      <Edit size={18} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete">
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleDeleteAchievement(achievement.id)}
+                    >
+                      <Trash2 size={18} />
+                    </IconButton>
+                  </Tooltip>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
+
+      <CreateAchievementDialog
+        open={isCreateDialogOpen}
+        achievement={selectedAchievement}
+        onClose={() => {
+          setIsCreateDialogOpen(false);
+          setSelectedAchievement(null);
+        }}
+        onSubmit={selectedAchievement ? handleEditAchievement : handleCreateAchievement}
+      />
     </Box>
   );
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Scroll, Star } from 'lucide-react';
+import { Scroll, Star, Gift, X } from 'lucide-react';
 import { Quest } from '../../../types/quests';
 
 export interface QuestToastProps {
@@ -13,30 +13,20 @@ export function QuestToast({ visible, quest }: QuestToastProps) {
     <motion.div
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: visible ? 1 : 0, y: visible ? 0 : -20 }}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 min-w-[300px] border-l-4 border-indigo-500"
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 min-w-[300px] border-l-4 border-indigo-500 flex items-center space-x-3"
     >
-      <div className="flex items-center space-x-3">
-        <Scroll className="text-indigo-500" size={24} />
-        <div className="flex-1">
-          <p className="font-medium text-gray-900 dark:text-white">
-            {quest.title}
-          </p>
-          <div className="flex items-center space-x-4 mt-1">
-            <div className="flex items-center">
-              <Star className="text-yellow-500" size={16} />
-              <span className="text-sm text-gray-600 dark:text-gray-400 ml-1">
-                +{quest.xp_reward} XP
-              </span>
-            </div>
-            <div className="flex items-center">
-              <Star className="text-yellow-500" size={16} />
-              <span className="text-sm text-gray-600 dark:text-gray-400 ml-1">
-                +{quest.coin_reward} Coins
-              </span>
-            </div>
-          </div>
-        </div>
+      <Gift className="text-indigo-500" size={24} />
+      <div className="flex-1">
+        <p className="font-medium text-gray-900 dark:text-white">
+          Quest Completed: {quest.title}
+        </p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Rewards: +{quest.xp_reward} XP, +{quest.coin_reward} Coins
+        </p>
       </div>
+      <button onClick={() => {/* Close toast logic */}} className="text-gray-400 hover:text-gray-600">
+        <X size={16} />
+      </button>
     </motion.div>
   );
 } 

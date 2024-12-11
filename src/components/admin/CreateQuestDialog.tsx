@@ -16,11 +16,12 @@ import {
 } from '@mui/material';
 import { supabase } from '../../lib/supabase';
 import { useNotification } from '../../contexts/NotificationContext';
+import { Quest, QuestStatus } from '../../types/quests';
 
 interface CreateQuestDialogProps {
   open: boolean;
   onClose: () => void;
-  onQuestCreated: () => void;
+  onQuestCreated: (quest: Partial<Quest>) => Promise<void>;
 }
 
 interface QuestFormData {
@@ -71,21 +72,33 @@ export const CreateQuestDialog: React.FC<CreateQuestDialogProps> = ({
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('quests')
         .insert({
           ...formData,
           is_active: true,
-          status: 'active',
+          status: QuestStatus.AVAILABLE,
           progress: 0,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
       showSuccess('Quest created successfully');
-      onQuestCreated();
+      if (data) {
+        await onQuestCreated({
+          ...formData,
+          id: data.id,
+          is_active: true,
+          status: QuestStatus.AVAILABLE,
+          progress: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
       onClose();
       setFormData(initialFormData);
     } catch (error) {

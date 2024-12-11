@@ -2,13 +2,26 @@
  * Navigation view types for the application
  * Used by AppContent and Navigation components
  */
+import { Home, Swords, Trophy, Package, Store, Settings, LucideIcon } from 'lucide-react';
+import { ReactElement } from 'react';
+
 export type View = 
   | '/' 
   | '/battle' 
   | '/shop' 
   | '/inventory' 
   | '/profile' 
-  | '/settings';
+  | '/settings'
+  | '/tournament'
+  | '/study'
+  | '/achievements';
+
+export interface NavigationItem {
+  id: string;
+  label: string;
+  path: View;
+  icon: LucideIcon;
+}
 
 /**
  * Dependencies:
@@ -30,42 +43,42 @@ export type View =
  * - All view components
  */
 
-export const navigation_items = [
+export const navigation_items: NavigationItem[] = [
   {
     id: 'home',
     label: 'Home',
-    path: '/home',
-    icon: 'home'
+    path: '/',
+    icon: Home
   },
   {
     id: 'battle',
     label: 'Battle',
     path: '/battle',
-    icon: 'swords'
+    icon: Swords
   },
   {
     id: 'tournament',
     label: 'Tournament',
     path: '/tournament',
-    icon: 'trophy'
+    icon: Trophy
   },
   {
     id: 'inventory',
     label: 'Inventory',
     path: '/inventory',
-    icon: 'backpack'
+    icon: Package
   },
   {
     id: 'shop',
     label: 'Shop',
     path: '/shop',
-    icon: 'store'
+    icon: Store
   },
   {
     id: 'settings',
     label: 'Settings',
     path: '/settings',
-    icon: 'settings'
+    icon: Settings
   }
 ];
 
