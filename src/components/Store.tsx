@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Zap, Book, Users, Crown, Star } from 'lucide-react';
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import { use_language } from '../contexts/LanguageContext';
 
 interface StoreItem {
@@ -16,7 +16,7 @@ interface StoreItem {
 }
 
 export default function Store() {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
   const { t } = use_language();
   const [selectedCategory, setSelectedCategory] = useState<'all' | StoreItem['type']>('all');
   const [purchaseStatus, setPurchaseStatus] = useState<{

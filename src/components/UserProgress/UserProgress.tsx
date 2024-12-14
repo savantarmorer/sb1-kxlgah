@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 import { QuestService } from '../../services/questService';
 import { Quest, QuestStatus } from '../../types/quests';
 
 export default function UserProgress() {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
 
   useEffect(() => {
     loadQuests();

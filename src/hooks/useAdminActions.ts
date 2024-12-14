@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.ts';
 import { Quest, QuestStatus } from '../types/quests';
 import { NotificationSystem } from '../utils/notifications';
 
@@ -124,7 +124,7 @@ export function useAdminActions() {
 
 /**
  * Hook Dependencies:
- * - use_game: For dispatching state updates
+ * - useGame: For dispatching state updates
  * - useAdmin: For permission checks
  * - supabase: For database operations
  * - supabaseUtils: For data conversion

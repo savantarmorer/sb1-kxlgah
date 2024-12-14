@@ -6,7 +6,7 @@ import {
   Timer, Medal, TrendingUp, BookOpen, Scale, Gavel, FileText 
 } from 'lucide-react';
 import { Button } from '../Button';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 import { BATTLE_CONFIG } from '../../config/battleConfig';
 
 interface BattleLobbyProps {
@@ -36,7 +36,7 @@ function getRankTier(rating: number): string {
 }
 
 export function BattleLobby({ onStartBattle, onClose, stats }: BattleLobbyProps) {
-  const { state } = use_game();
+  const { state } = useGame();
   const [selectedDifficulty, setSelectedDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedCategory, setSelectedCategory] = useState<BattleCategory>('general');
   const [selectedMode, setSelectedMode] = useState<BattleMode>('casual');

@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Star, Target, TrendingUp, Medal, Swords, Award, Crown } from 'lucide-react';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 
 export default function battle_stats() {
-  const { state } = use_game();
+  const { state } = useGame();
   const stats = state.battle_stats;
 
   if (!stats) {

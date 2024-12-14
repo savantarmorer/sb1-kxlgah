@@ -1,5 +1,5 @@
 import { LEVEL_CONFIG } from './gameConfig';
-import { User } from '../types';
+import type { User } from '../types/user';
 
 interface LevelUpReward {
   type: string;
@@ -113,7 +113,7 @@ export class LevelSystem {
   }
 
   static handleLevelUp(user: User, oldLevel: number, newLevel: number) {
-    const rewards = [];
+    const rewards: { coins: number; items: LevelUpReward[]; }[] = [];
     
     for (let level = oldLevel + 1; level <= newLevel; level++) {
       rewards.push(this.getLevelUpRewards(level));

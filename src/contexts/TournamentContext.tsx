@@ -10,8 +10,8 @@ interface TournamentState {
   matchState: {
     time_remaining: number;
     current_question: number;
-    player_score: number;
-    opponent_score: number;
+    score_player: number;
+    score_opponent: number;
   } | null;
   loading: boolean;
   error: string | null;

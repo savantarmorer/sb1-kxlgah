@@ -64,33 +64,15 @@ export const handleQuestAction = async (state: GameState, action: GameAction): P
     }
 
     case 'COMPLETE_QUEST': {
-      const { quest, rewards } = action.payload;
-      try {
-        await QuestService.updateQuestProgress(state.user.id, quest.id, 100);
-
-        const completedQuest: Quest = {
-          ...quest,
-          status: QuestStatus.COMPLETED,
-          progress: 100
-        };
-
-        return {
-          ...state,
-          quests: {
-            active: state.quests.active.filter(q => q.id !== quest.id),
-            completed: [...state.quests.completed, completedQuest]
-          },
-          user: {
-            ...state.user,
-            xp: state.user.xp + rewards.xp,
-            coins: state.user.coins + rewards.coins
-          }
-        };
-      } catch (error) {
-        console.error('Failed to complete quest:', error);
-        NotificationSystem.showError('Failed to complete quest');
-        return state;
-      }
+      const quest = action.payload;
+      return {
+        ...state,
+        quests: {
+          ...state.quests,
+          active: state.quests.active.filter(q => q.id !== quest.id),
+          completed: [...state.quests.completed, quest]
+        }
+      };
     }
 
     case 'SYNC_QUESTS': {

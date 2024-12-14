@@ -14,7 +14,7 @@ import {
   Grid,
   SelectChangeEvent,
 } from '@mui/material';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase.ts';
 import { useNotification } from '../../contexts/NotificationContext';
 import { ItemIconSelector } from './ItemIconSelector';
 import { ItemEffect, ItemType } from '../../types/items';

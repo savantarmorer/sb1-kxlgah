@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Camera, X } from 'lucide-react';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 import { AvatarSelector } from '../AvatarSelector';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase.ts';
 import { useNotification } from '../../contexts/NotificationContext';
 
 interface EditProfileMenuProps {
@@ -12,7 +12,7 @@ interface EditProfileMenuProps {
 }
 
 export function EditProfileMenu({ isOpen, onClose }: EditProfileMenuProps) {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
   const { showSuccess, showError } = useNotification();
   const [loading, setLoading] = useState(false);
 

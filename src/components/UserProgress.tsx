@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Settings, TrendingUp, Star } from 'lucide-react';
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import { Card } from './ui/Card';
 import { theme } from '../styles/design-system';
 import type { User } from '../types/user';
@@ -10,16 +10,18 @@ interface UserProgressProps {
   showSettings?: boolean;
   showRecentGains?: boolean;
   showMultipliers?: boolean;
+  showTournaments?: boolean;
 }
 
 export default function UserProgress({ 
   showSettings = false, 
   showRecentGains = false, 
-  showMultipliers = false 
+  showMultipliers = false,
+  showTournaments = false
 }: UserProgressProps) {
-  const { state } = use_game();
-  const { level, xp, coins } = state.user;
-  const xpMultiplier = state.user.rewardMultipliers?.xp ?? 1;
+  const { state } = useGame();
+  const { level = 1, xp = 0, coins = 0 } = state.user || {};
+  const xpMultiplier = state.user?.rewardMultipliers?.xp ?? 1;
   
   const current_level_total_xp = LevelSystem.calculate_total_xp_for_level(level);
   const xp_in_current_level = xp - current_level_total_xp;
@@ -68,7 +70,7 @@ export default function UserProgress({
               </span>
             </div>
             <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
-              {state.user.battle_rating || 0}
+              {state.user?.battle_rating || 0}
             </p>
           </div>
         </div>

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Grid, Typography, Card, CardContent, CardActions, Chip, IconButton, Tooltip } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase.ts';
 import { useNotification } from '../../contexts/NotificationContext';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 import { ShopItemResponse } from '../../types/shop';
 import { Coins, Star, Package, Sparkles, Crown, Shield, Zap, Info } from 'lucide-react';
 import Navigation from '../Navigation';
@@ -35,7 +35,7 @@ export default function ShopSystem() {
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const { showSuccess, showError } = useNotification();
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
 
   useEffect(() => {
     loadShopItems();

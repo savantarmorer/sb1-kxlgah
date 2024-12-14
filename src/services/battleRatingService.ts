@@ -1,5 +1,5 @@
 import { BATTLE_CONFIG } from '../config/battleConfig';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.ts';
 
 interface RatingData {
   userId: string;

@@ -1,13 +1,14 @@
 import React, { useEffect } from 'react';
 import { Star, Gift, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 import { use_language } from '../../contexts/LanguageContext';
 import { LevelSystem } from '../../lib/levelSystem';
 import LootBox from '../LootBox';
+import { XPGain } from '../../types/user';
 
 export function XPSystem() {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
   const { t } = use_language();
 
   const current_levelProgress = LevelSystem.calculate_progress(state.user.xp);
@@ -48,7 +49,7 @@ export function XPSystem() {
       </div>
 
       <AnimatePresence>
-        {state.recentXPGains && state.recentXPGains.map((gain, index) => {
+        {state.recentXPGains && state.recentXPGains.map((gain: XPGain, index: number) => {
           const gainTime = new Date(gain.timestamp);
           return (
             <motion.div

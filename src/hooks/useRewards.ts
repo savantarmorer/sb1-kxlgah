@@ -1,4 +1,4 @@
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import { Achievement, AchievementTrigger } from '../types/achievements';
 import { Reward, RewardRarity, RewardType } from '../types/rewards';
 
@@ -44,7 +44,7 @@ interface AchievementUnlockPayload {
  * Hook for managing rewards and achievements
  */
 export function useRewards() {
-  const { dispatch } = use_game();
+  const { dispatch } = useGame();
 
   /**
    * Claims a reward and updates game state
@@ -91,13 +91,14 @@ export function useRewards() {
         trigger_conditions: achievementPayload.trigger_conditions.map(condition => ({
           type: condition.type,
           value: condition.value,
-          comparison: condition.comparison
+          comparison: condition.comparison,
+          current: condition.value
         })) as AchievementTrigger[]
       };
 
       dispatch({
-        type: 'UNLOCK_ACHIEVEMENT',
-        payload: achievement
+        type: 'UNLOCK_ACHIEVEMENTS',
+        payload: [achievement]
       });
     }
   };
@@ -133,7 +134,7 @@ export function useRewards() {
 
 /**
  * Hook Dependencies:
- * - use_game: For dispatching state updates
+ * - useGame: For dispatching state updates
  * - Achievement types: For achievement payloads
  * - Reward types: For reward handling
  * 

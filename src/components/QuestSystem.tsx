@@ -1,10 +1,10 @@
 import React from 'react';
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import { use_language } from '../contexts/LanguageContext';
 import { QuestType } from '../types/quests';
 
 export default function QuestSystem() {
-  const { state } = use_game();
+  const { state } = useGame();
   const { t } = use_language();
 
   const activeQuests = state.quests?.active || [];

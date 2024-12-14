@@ -71,14 +71,7 @@
       }
 
       #root {
-        opacity: 0;
-        animation: fadeIn 0.3s ease-in forwards;
-      }
-
-      @keyframes fadeIn {
-        to {
-          opacity: 1;
-        }
+        opacity: 1;
       }
 
       .loading {
@@ -89,6 +82,7 @@
         justify-content: center;
         background: #f9fafb;
         transition: opacity 0.3s ease-in-out;
+        z-index: 9999;
       }
 
       @media (prefers-color-scheme: dark) {
@@ -99,6 +93,7 @@
 
       .loading.fade-out {
         opacity: 0;
+        pointer-events: none;
       }
     </style>
   </head>
@@ -183,16 +178,39 @@
         });
       }
 
-      // Remove loading indicator
-      window.addEventListener('load', () => {
+      // Function to remove loading indicator
+      function removeLoading() {
         const loading = document.getElementById('loading');
-        if (loading) {
+        if (loading && !loading.classList.contains('fade-out')) {
           loading.classList.add('fade-out');
           setTimeout(() => {
             loading.remove();
           }, 300);
         }
+      }
+
+      // Remove loading on DOMContentLoaded
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(removeLoading, 500); // Small delay to ensure smooth transition
+      });
+
+      // Fallback timeout
+      setTimeout(removeLoading, 2000);
+
+      // Additional check when React mounts
+      const root = document.getElementById('root');
+      const observer = new MutationObserver((mutations) => {
+        if (mutations.some(m => m.addedNodes.length > 0)) {
+          removeLoading();
+          observer.disconnect();
+        }
+      });
+
+      observer.observe(root, {
+        childList: true,
+        subtree: true
       });
     </script>
+    
   </body>
 </html>

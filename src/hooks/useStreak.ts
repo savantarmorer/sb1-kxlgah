@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import { format } from 'date-fns';
 import { Achievement, AchievementTrigger } from '../types/achievements';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.ts';
 
 /**
  * Type for streak-specific trigger conditions
@@ -55,7 +55,7 @@ function createStreakAchievement(
  * Hook for managing user streaks and related achievements
  */
 export function useStreak() {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
 
   const handleStreakUpdate = async (isVictory: boolean) => {
     const newStreak = isVictory ? state.user.streak + 1 : 0;
@@ -100,7 +100,7 @@ export function useStreak() {
 
 /**
  * Hook Dependencies:
- * - use_game: For accessing and modifying game state
+ * - useGame: For accessing and modifying game state
  * - date-fns: For date formatting and calculations
  * - Achievement types: For achievement structure
  * 

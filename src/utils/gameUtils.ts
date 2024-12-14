@@ -8,6 +8,7 @@ import { Achievement } from '../types/achievements';
 import { BattleRewards } from '../types/battle';
 import { GameItem, InventoryItem, UserInventoryItem } from '../types/items';
 import { XPGain, LevelData, AchievementReward } from '../types/progress';
+import { LevelSystem } from '../lib/levelSystem';
 
 /**
  * Game Progress and Level System
@@ -36,11 +37,7 @@ import { XPGain, LevelData, AchievementReward } from '../types/progress';
  * @param level - Target level
  * @returns XP required for this level
  */
-export const calculate_level_xp = (level: number): number => {
-  const { base_xp, growth_factor, max_level } = BATTLE_CONFIG.progress;
-  if (level > max_level) return 0;
-  return Math.floor(base_xp * Math.pow(growth_factor, level - 1));
-};
+export const calculate_level_xp = LevelSystem.calculate_xp_for_level.bind(LevelSystem);
 
 /**
  * Calculates the user's current level based on total XP
@@ -51,20 +48,7 @@ export const calculate_level_xp = (level: number): number => {
  * @param total_xp - Total experience points
  * @returns Current level number
  */
-export const calculate_level = (total_xp: number): number => {
-  const { max_level } = BATTLE_CONFIG.progress;
-  let level = 1;
-  let total_xp_required = 0;
-  
-  while (level < max_level) {
-    const next_level_xp = calculate_level_xp(level);
-    if (total_xp_required + next_level_xp > total_xp) break;
-    total_xp_required += next_level_xp;
-    level++;
-  }
-  
-  return level;
-};
+export const calculate_level = LevelSystem.calculate_level.bind(LevelSystem);
 
 /**
  * Calculate XP needed for next level
@@ -80,11 +64,7 @@ export const calculate_level = (total_xp: number): number => {
  * - XP gain calculations
  * - Achievement tracking
  */
-export const calculate_xp_for_next_level = (current_level: number): number => {
-  const { max_level } = BATTLE_CONFIG.progress;
-  if (current_level >= max_level) return 0;
-  return calculate_level_xp(current_level + 1);
-};
+export const calculate_xp_for_next_level = LevelSystem.calculate_xp_to_next_level.bind(LevelSystem);
 
 /**
  * Calculate total XP required to reach a specific level
@@ -92,13 +72,7 @@ export const calculate_xp_for_next_level = (current_level: number): number => {
  * @param level - Target level
  * @returns Total XP required
  */
-export const calculate_total_xp_for_level = (level: number): number => {
-  let total = 0;
-  for (let i = 1; i < level; i++) {
-    total += calculate_level_xp(i);
-  }
-  return total;
-};
+export const calculate_total_xp_for_level = LevelSystem.calculate_total_xp_for_level.bind(LevelSystem);
 
 /**
  * Calculate XP progress percentage towards next level
@@ -115,18 +89,7 @@ export const calculate_total_xp_for_level = (level: number): number => {
  * - Level up animations
  * - UI components
  */
-export const calculate_xp_progress = (total_xp: number, current_level: number): number => {
-  const { max_level } = BATTLE_CONFIG.progress;
-  
-  if (current_level >= max_level) return 100;
-  
-  const current_level_total_xp = calculate_total_xp_for_level(current_level);
-  const next_level_total_xp = calculate_total_xp_for_level(current_level + 1);
-  const xp_in_current_level = total_xp - current_level_total_xp;
-  const xp_needed_for_next_level = next_level_total_xp - current_level_total_xp;
-  
-  return Math.min(100, Math.floor((xp_in_current_level / xp_needed_for_next_level) * 100));
-};
+export const calculate_xp_progress = LevelSystem.calculate_progress.bind(LevelSystem);
 
 /**
  * Comprehensive level data calculation
@@ -145,10 +108,10 @@ export const calculate_xp_progress = (total_xp: number, current_level: number): 
  * - Achievement system
  */
 export const calculate_level_data = (xp: number): LevelData => {
-  const level = calculate_level(xp);
-  const next_level_xp = level < BATTLE_CONFIG.progress.max_level ? calculate_xp_for_next_level(level) : 0;
-  const total_xp_for_level = calculate_total_xp_for_level(level);
-  const percentToNextLevel = calculate_xp_progress(xp, level);
+  const level = LevelSystem.calculate_level(xp);
+  const next_level_xp = LevelSystem.calculate_xp_to_next_level(xp);
+  const total_xp_for_level = LevelSystem.calculate_total_xp_for_level(level);
+  const percentToNextLevel = LevelSystem.calculate_progress(xp);
 
   return {
     level,
@@ -157,52 +120,6 @@ export const calculate_level_data = (xp: number): LevelData => {
     next_level_xp,
     percentToNextLevel
   };
-};
-
-/**
- * Calculate coin rewards based on level and streak
- * @param base_amount Base coin amount
- * @param level User level
- * @param streak Current streak (optional)
- * @returns Final coin amount
- */
-export const calculate_coin_reward = (
-  base_amount: number,
-  level: number,
-  streak: number = 0
-): number => {
-  const level_multiplier = 1 + (level - 1) * 0.1; // 10% increase per level
-  const streak_multiplier = 1 + Math.min(streak, 5) * 0.2; // Up to 100% bonus for 5 streak
-  
-  return Math.floor(base_amount * level_multiplier * streak_multiplier);
-};
-
-/**
- * Calculate XP rewards based on difficulty and streak
- * @param base_amount Base XP amount
- * @param difficulty Difficulty level (1-5)
- * @param streak Current streak (optional)
- * @returns Final XP amount
- */
-export const calculate_xp_reward = (
-  base_amount: number,
-  difficulty: number,
-  streak: number = 0
-): number => {
-  const difficulty_multiplier = Math.pow(1.2, difficulty - 1); // Exponential scaling with difficulty
-  const streak_bonus = update_streak_multiplier(streak);
-  const { time_bonus } = BATTLE_CONFIG.rewards;
-  const time_bonus_multiplier = time_bonus.multiplier || 0.5; // Default to 0.5 if not set
-
-  // Calculate final XP with proper rounding
-  const final_xp = Math.floor(
-    base_amount * 
-    difficulty_multiplier * 
-    streak_bonus * 
-    (1 + time_bonus_multiplier)  // Convert multiplier to total factor
-  );
-
-  return Math.max(0, final_xp);
 };
 
 /**
@@ -450,44 +367,4 @@ export const validate_game_item = (item: unknown): item is GameItem => {
       typeof effect.value === 'number'
     )
   );
-};
-
-/**
- * Calculate battle rewards based on score, time taken, and streak
- * @param score - Score achieved in the battle
- * @param time_taken - Time taken to complete the battle
- * @param streak - Current streak count
- * @returns BattleRewards object with calculated rewards
- */
-export const calculate_battle_rewards = (
-  score: number,
-  time_taken: number,
-  streak: number
-): BattleRewards => {
-  const { base_xp, base_coins } = BATTLE_CONFIG.progress;
-  const { time_bonus, streak_bonus, victory_bonus } = BATTLE_CONFIG.rewards;
-  
-  // Calculate base rewards
-  let xp_earned = score * base_xp;
-  let coins_earned = score * base_coins;
-  
-  // Apply time bonus
-  const time_bonus_multiplier = Math.max(0, 1 - (time_taken / BATTLE_CONFIG.question_time));
-  const time_bonus_amount = Math.min(time_bonus.max_bonus, xp_earned * time_bonus.multiplier * time_bonus_multiplier);
-  
-  // Apply streak bonus
-  const streak_bonus_amount = Math.min(streak_bonus.max_bonus, xp_earned * streak_bonus.multiplier * streak);
-  
-  // Apply victory bonus if score is above threshold
-  if (score >= BATTLE_CONFIG.matchmaking.victory_threshold) {
-    xp_earned *= victory_bonus.xp_multiplier;
-    coins_earned *= victory_bonus.coins_multiplier;
-  }
-  
-  return {
-    xp_earned: Math.floor(xp_earned + time_bonus_amount),
-    coins_earned: Math.floor(coins_earned),
-    streak_bonus: Math.floor(streak_bonus_amount),
-    time_bonus: Math.floor(time_bonus_amount)
-  };
 };

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Camera, X, Check, Image as ImageIcon } from 'lucide-react';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 
 const AVATAR_FRAMES = [
   { id: 'default', name: 'Default', borderColor: 'border-gray-200' },
@@ -11,7 +11,7 @@ const AVATAR_FRAMES = [
 ];
 
 export default function AvatarCustomizer() {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
   const [isEditing, setIsEditing] = useState(false);
   const [selectedFrame, setSelectedFrame] = useState(state.user.avatarFrame || 'default');
   const [previewImage, setPreviewImage] = useState(state.user.avatar || '/default-avatar.png');

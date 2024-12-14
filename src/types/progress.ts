@@ -182,14 +182,7 @@ export interface Achievement {
   icon_name?: string;
 }
 
-export interface BattleResults {
-  user_id: string;
-  // Add other battle result fields you're using
-}
-
-import { supabase } from '../lib/supabase';
-import { InventoryItem } from './items';
-import { BattleHistory } from './battle';
+import { BattleResults } from './battle/results';
 
 export class AchievementService {
   static async getAchievementsToUnlock(user_progress: UserProgressQueryResult) {

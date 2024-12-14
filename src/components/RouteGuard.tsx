@@ -1,18 +1,21 @@
-import { Navigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingScreen from './LoadingScreen';
 
-export function RouteGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading, initialized } = useAuth();
-  const location = useLocation();
+export const RouteGuard: React.FC = ({ children }) => {
+  const { user, loading } = useAuth();
 
-  if (loading || !initialized) {
+  console.log('RouteGuard:', { user, loading });
+
+  if (loading) {
     return <LoadingScreen />;
   }
 
   if (!user) {
-    return <Navigate to="/" state={{ from: location }} replace />;
+    // Redirect to login or show authentication form
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
-} 
+};

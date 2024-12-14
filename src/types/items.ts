@@ -145,6 +145,11 @@ export interface InventoryItem {
   stats?: Record<string, any>;
   effects?: ItemEffect[];
   acquired_at?: string;
+  last_used?: string;
+  is_equipped?: boolean;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 /**

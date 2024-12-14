@@ -24,7 +24,7 @@ import { CreateQuestDialog } from './CreateQuestDialog';
 import { AssignQuestDialog } from './AssignQuestDialog';
 import { Quest } from '../../types/quests';
 import { useNotification } from '../../contexts/NotificationContext';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 import { QuestService } from '../../services/questService';
 
 interface QuestManagerState {
@@ -41,7 +41,7 @@ interface CreateQuestDialogProps {
 }
 
 export default function QuestManager() {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
   const { syncQuests } = useQuests();
   const { showSuccess, showError } = useNotification();
   

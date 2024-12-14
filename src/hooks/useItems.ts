@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { use_game } from '../contexts/GameContext';
-import { supabase } from '../lib/supabase';
+import { useGame } from '../contexts/GameContext';
+import { supabase } from '../lib/supabase.ts';
 import { GameItem } from '../types/items';
 import { convertItemFromDB, convertItemToDB } from '../utils/supabaseUtils';
 
@@ -22,7 +22,7 @@ interface ItemTimestamps {
  * - supabaseUtils for data conversion
  */
 export function useItems() {
-  const { dispatch } = use_game();
+  const { dispatch } = useGame();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -168,7 +168,7 @@ export function useItems() {
 
 /**
  * Hook Dependencies:
- * - use_game: For accessing and modifying game state
+ * - useGame: For accessing and modifying game state
  * - supabase: For database operations
  * - convertItemFromDB/convertItemToDB: For data transformation
  * 

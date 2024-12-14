@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../Button';
 import { StyledBox } from '../Layout/StyledBox';
 import { PageContainer } from '../Layout/PageContainer';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 
 interface ProfileDashboardProps {
   onClose?: () => void;
@@ -60,7 +60,7 @@ function StatCard({ title, value, icon, trend, trendLabel, color = 'text-app-pri
 
 export default function ProfileDashboard({ onClose }: ProfileDashboardProps) {
   const navigate = useNavigate();
-  const { state } = use_game();
+  const { state } = useGame();
 
   // Valores padrão para user e stats
   const user = {

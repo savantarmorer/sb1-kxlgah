@@ -135,7 +135,7 @@ The application uses a comprehensive relational database schema designed to supp
 1. **`battles`**
    - Records individual battle instances
    - Tracks player performance and outcomes
-   - Columns capture: `player_score`, `opponent_score`, `is_victory`, `xp_earned`, `coins_earned`
+   - Columns capture: `score_player`, `score_opponent`, `is_victory`, `xp_earned`, `coins_earned`
 
 2. **`battle_history`**
    - Detailed battle engagement records
@@ -348,10 +348,10 @@ Utilize `system_logs` and `performance_metrics` tables for:
 ## Usage Example
 
 ```typescript
-import { use_game } from './GameContext';
+import { useGame } from './GameContext';
 
 function GameComponent() {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
   
   const handleQuestionAnswer = (answer) => {
     dispatch({

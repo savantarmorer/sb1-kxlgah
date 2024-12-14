@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.ts';
 import { User } from '../types/user';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  isLoading: boolean;
   initialized: boolean;
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -22,12 +23,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAdminStatus = async (userId: string) => {
     try {
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('is_super_admin')
         .eq('id', userId)
         .single();
 
+      if (error) throw error;
       setIsAdmin(profile?.is_super_admin || false);
     } catch (error) {
       console.error('Error checking admin status:', error);
@@ -36,15 +38,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Check active session and subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setIsAdmin(false);
-          window.location.href = '/';
-          return;
-        }
+    let mounted = true;
+
+    // Initialize auth state
+    const initializeAuth = async () => {
+      try {
+        setLoading(true);
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!mounted) return;
 
         if (session?.user) {
           const { data: profile } = await supabase
@@ -54,101 +56,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .single();
 
           if (profile) {
-            setIsAdmin(profile.is_super_admin || false);
-            setUser({
-              ...profile,
-              id: session.user.id,
-              email: session.user.email!,
-              roles: profile.roles || ['user']
-            });
+            setUser(profile);
+            await checkAdminStatus(profile.id);
           }
         }
-        setLoading(false);
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+          setInitialized(true);
+        }
       }
-    );
+    };
 
-    // Initialize auth state
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        checkAdminStatus(session.user.id);
-        supabase
+    initializeAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        setLoading(true);
+        const { data: profile } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
-          .single()
-          .then(({ data: profile }) => {
-            if (profile) {
-              setUser({
-                ...profile,
-                id: session.user.id,
-                email: session.user.email!,
-                roles: profile.roles || ['user']
-              });
-            }
-          });
+          .single();
+
+        if (profile) {
+          setUser(profile);
+          await checkAdminStatus(profile.id);
+        }
+        setLoading(false);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setIsAdmin(false);
       }
-      setLoading(false);
-      setInitialized(true);
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        await checkAdminStatus(data.user.id);
-      }
-
-      return { error: null };
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return { error };
     } catch (error) {
-      console.error('Sign in error:', error);
       return { error: error as Error };
     }
   };
 
   const signUp = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.user) {
-        const userId = data.user.id;
-        const now = new Date().toISOString();
-
-        // Create initial profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([{
-            id: userId,
-            name: email.split('@')[0],
-            is_super_admin: false,
-            created_at: now,
-            updated_at: now
-          }]);
-
-        if (profileError) throw profileError;
-      }
-
-      return { error: null };
+      const { error } = await supabase.auth.signUp({ email, password });
+      return { error };
     } catch (error) {
-      console.error('Sign up error:', error);
       return { error: error as Error };
     }
   };
@@ -156,35 +122,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      setUser(null);
-      setIsAdmin(false);
-      
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      window.location.href = '/';
-      
-      return { error: null };
+      return { error };
     } catch (error) {
-      console.error('Sign out error:', error);
       return { error: error as Error };
     }
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        initialized,
-        isAdmin,
-        signIn,
-        signUp,
-        signOut
-      }}
-    >
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      isLoading: loading,
+      initialized,
+      isAdmin,
+      signIn,
+      signUp,
+      signOut
+    }}>
       {children}
     </AuthContext.Provider>
   );

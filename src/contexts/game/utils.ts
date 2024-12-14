@@ -1,4 +1,5 @@
 import type { GameState, Achievement, Quest, QuestRequirement } from './types';
+import { LevelSystem } from '../../lib/levelSystem';
 
 /**
  * Evaluates if a condition is met based on the comparison type and value
@@ -25,7 +26,7 @@ export const checkAchievementConditions = (
   state: GameState
 ): boolean => {
   return achievement.trigger_conditions.every(condition => {
-    const currentValue = (state.user.battle_stats || {})[condition.type as keyof typeof state.user.battle_stats] || 0;
+    const currentValue = (state.user?.battle_stats || {})[condition.type as keyof typeof state.user?.battle_stats] || 0;
     return evaluateCondition(Number(currentValue), condition);
   });
 };
@@ -33,26 +34,12 @@ export const checkAchievementConditions = (
 /**
  * Calculates the current level based on XP
  */
-export const calculateLevel = (xp: number): number => {
-  // Example level calculation: each level requires previous level * 1000 XP
-  let level = 1;
-  let xpRequired = 1000;
-  
-  while (xp >= xpRequired) {
-    level++;
-    xp -= xpRequired;
-    xpRequired = level * 1000;
-  }
-  
-  return level;
-};
+export const calculateLevel = LevelSystem.calculate_level.bind(LevelSystem);
 
 /**
  * Calculates XP required for next level
  */
-export const calculateXPForNextLevel = (current_level: number): number => {
-  return current_level * 1000;
-};
+export const calculateXPForNextLevel = LevelSystem.calculate_xp_to_next_level.bind(LevelSystem);
 
 /**
  * Updates streak and calculates streak multiplier

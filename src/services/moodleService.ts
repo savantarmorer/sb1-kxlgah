@@ -1,6 +1,6 @@
 import { MOODLE_CONFIG } from '../config/moodleConfig';
 import { MoodleEvent } from '../types/moodle';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.ts';
 
 export class MoodleService {
     static async processEvent(event: MoodleEvent) {

@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabaseClient.ts.old';
 import type { GameDispatch } from '../contexts/GameContext';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
@@ -177,13 +177,20 @@ export class StatsService {
       this.dispatch({
         type: 'UPDATE_BATTLE_STATS',
         payload: {
+          user_id: record.user_id,
           total_battles: record.total_battles,
           wins: record.wins,
           losses: record.losses,
           win_streak: record.win_streak,
           highest_streak: record.highest_streak,
           total_xp_earned: record.total_xp_earned,
-          total_coins_earned: record.total_coins_earned
+          total_coins_earned: record.total_coins_earned,
+          tournaments_played: record.tournaments_played || 0,
+          tournaments_won: record.tournaments_won || 0,
+          tournament_matches_played: record.tournament_matches_played || 0,
+          tournament_matches_won: record.tournament_matches_won || 0,
+          rating: record.rating || 1000,
+          rank: record.rank || 'novice'
         }
       });
     }

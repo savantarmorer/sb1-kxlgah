@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { use_game } from './GameContext';
+import { useGame } from './GameContext';
 import { QuestService } from '../services/questService';
 import { NotificationSystem } from '../utils/notifications';
 
@@ -16,8 +16,8 @@ interface AdminContextType {
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
 export function AdminProvider({ children }: { children: React.ReactNode }) {
-  const { state, dispatch } = use_game();
-  const isAdmin = state.user.roles?.includes('admin') || false;
+  const { state, dispatch } = useGame();
+  const isAdmin = state.user?.roles?.includes('admin') || false;
 
   const debugActions = {
     resetStreak: () => {

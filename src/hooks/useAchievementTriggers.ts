@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import { useAchievements } from './useAchievements';
 
 export function useAchievementTriggers() {
-  const { state } = use_game();
+  const { state } = useGame();
   const { checkTrigger } = useAchievements();
 
   // Track XP gains

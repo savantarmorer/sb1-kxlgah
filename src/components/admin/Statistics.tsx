@@ -6,7 +6,7 @@ import {
   Paper,
   Typography,
 } from '@mui/material';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase.ts';
 import { useNotification } from '../../contexts/NotificationContext';
 
 interface SystemStats {

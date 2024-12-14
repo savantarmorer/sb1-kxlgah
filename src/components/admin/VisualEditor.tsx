@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Code, Plus, Save, Play, X, Settings } from 'lucide-react';
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import Button from '../Button';
 
 interface BlockType {
@@ -19,7 +19,7 @@ interface VisualBlock {
 }
 
 export default function VisualEditor() {
-  const { dispatch } = use_game();
+  const { dispatch } = useGame();
   const [blocks, setBlocks] = useState<VisualBlock[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
   const [showBlockMenu, setShowBlockMenu] = useState(false);
@@ -43,7 +43,7 @@ export default function VisualEditor() {
       }
     },
     {
-      id: 'UNLOCK_ACHIEVEMENT',
+      id: 'UNLOCK_ACHIEVEMENTS',
       type: 'action',
       name: 'Unlock Achievement',
       config: {

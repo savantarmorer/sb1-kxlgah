@@ -8,6 +8,7 @@ interface battle_stats {
   longestStreak: number;
   totalXPEarned: number;
   totalCoinsEarned: number;
+  difficulty: number;
 }
 
 /**
@@ -41,7 +42,8 @@ export class battle_statsService {
       averageScore: 0,
       longestStreak: 0,
       totalXPEarned: 0,
-      totalCoinsEarned: 0
+      totalCoinsEarned: 0,
+      difficulty: 1
     };
   }
 

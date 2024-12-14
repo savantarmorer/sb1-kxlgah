@@ -1,4 +1,4 @@
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
  * Provides admin-only actions and state management
  */
 export function useAdmin() {
-  const { state } = use_game();
+  const { state } = useGame();
   const { user: authUser } = useAuth();
 
   // Check both game state and auth state for admin status
@@ -54,7 +54,7 @@ export function useAdmin() {
 
 /**
  * Hook Dependencies:
- * - use_game: For accessing and modifying game state
+ * - useGame: For accessing and modifying game state
  * - useNotificationSystem: For user feedback
  * 
  * State Management:

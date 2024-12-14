@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { use_game } from '../contexts/GameContext';
-import { supabase } from '../lib/supabase';
+import { useGame } from '../contexts/GameContext';
+import { supabase } from '../lib/supabase.ts';
 import { Quest } from '../types/quests';
 import { formatQuestFromDB, formatQuestForDB } from '../utils/formatters';
 
@@ -24,7 +24,7 @@ interface QuestProgressUpdate {
  * Provides CRUD operations and progress tracking with auto-sync
  */
 export function useQuests() {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
   const [loading, setLoading] = useState(false);
 
   const syncQuests = useCallback(async () => {
@@ -75,7 +75,7 @@ export function useQuests() {
 
 /**
  * Hook Dependencies:
- * - use_game: For accessing and modifying game state
+ * - useGame: For accessing and modifying game state
  * - supabase: For database operations
  * - formatters: For data transformation
  * 

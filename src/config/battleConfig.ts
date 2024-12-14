@@ -24,6 +24,8 @@ export const BATTLE_CONFIG = {
 
   // Battle rewards (battle_history table)
   rewards: {
+    base_xp: 100,
+    base_coins: 50,
     time_bonus: {
       multiplier: 0.5,
       max_bonus: 100

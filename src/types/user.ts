@@ -58,77 +58,29 @@ export interface User {
   xp: number;
   coins: number;
   streak: number;
-  avatar: string;
-  avatarFrame: string;
-  battle_rating: number;
-  achievements: Achievement[];
-  constitutionalScore: number;
-  civilScore: number;
-  criminalScore: number;
-  administrativeScore: number;
-  login_streak?: {
-    count: number;
-    last_login: string;
-  };
-  // Core properties from profiles table
-  title?: string;
-  is_super_admin?: boolean;
-  study_time: number;
-  constitutional_score: number;
-  civil_score: number;
-  criminal_score: number;
-  administrative_score: number;
-  created_at?: string;
-  updated_at?: string;
-  is_bot?: boolean;
-
-  // Game-related properties
-  battle_stats?: DBbattle_stats;
-  quiz_stats?: QuizStats;
   streakMultiplier?: number;
-  rewardMultipliers: {
+  rewardMultipliers?: {
     xp: number;
     coins: number;
   };
-  roles?: string[];
-  is_online?: boolean;
-
-  // Inventory
-  inventory: InventoryItem[];
-  backpack: InventoryItem[];
-
-  // Computed properties
-  isAdmin?: boolean;
-
-  gems?: number;
-  premium_currency?: {
-    gems: number;
-    shards: number;
-  };
-
-  // Add missing properties
-  username?: string;
   avatar_url?: string;
-  stats?: UserStats;
-  daily_rewards?: {
-    claimed_today: boolean;
-    streak: number;
-    streak_multiplier: number;
-    next_reward: {
-      day: number;
-      rarity: string;
-      reward_value: number;
-      reward_type: string;
-    };
-  };
-  last_login_date?: string;
-  rating?: number;
-  avatar_id?: number;
+  battle_rating: number;
+  battle_stats?: DBbattle_stats;
+  created_at?: string;
+  updated_at?: string;
+  is_bot?: boolean;
+  is_online?: boolean;
+  study_time?: number;
+  xp_progress?: number;
+  constitutional_score?: number;
+  civil_score?: number;
+  criminal_score?: number;
+  administrative_score?: number;
+  gems?: number;
 }
 
 export interface UserUpdateData extends Partial<User> {
   id: string;
-  roles?: string[];
 }
 
 /**

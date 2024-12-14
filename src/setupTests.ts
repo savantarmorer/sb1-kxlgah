@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/extend-expect';
 import 'jest-environment-jsdom';
 
 // Mock matchMedia
@@ -15,3 +16,19 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: jest.fn(),
   })),
 }); 
+
+// Mock notifications
+jest.mock('./utils/notifications', () => ({
+  NotificationSystem: {
+    showSuccess: jest.fn(),
+    showError: jest.fn(),
+    notifyAchievementUnlock: jest.fn(),
+  },
+}));
+
+// Mock sounds
+jest.mock('./contexts/SoundContext', () => ({
+  useSoundContext: () => ({
+    play_sound: jest.fn(),
+  }),
+})); 

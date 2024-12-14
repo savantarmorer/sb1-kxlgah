@@ -17,7 +17,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase.ts';
 import { useNotification } from '../../contexts/NotificationContext';
 import { CreateItemDialog } from './CreateItemDialog';
 import { ITEM_ICONS } from './itemIconDefinitions';

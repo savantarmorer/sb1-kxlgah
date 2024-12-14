@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '../lib/supabase';
-import { use_game } from '../contexts/GameContext';
+import { supabase } from '../lib/supabase.ts';
+import { useGame } from '../contexts/GameContext';
 import { Lock } from 'lucide-react';
 
 interface Avatar {
@@ -17,7 +17,7 @@ const DEFAULT_AVATAR = '/avatars/default1.jpg';
 export function AvatarSelector({ onSelect }: { onSelect: (avatarId: number) => void }) {
   const [avatars, setAvatars] = useState<Avatar[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const { state } = use_game();
+  const { state } = useGame();
 
   useEffect(() => {
     loadAvatars();

@@ -13,12 +13,12 @@
 import React, { useState } from 'react';
 import { Crown, Book, Users, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 import { use_language } from '../../contexts/LanguageContext';
 import LootBox from '../LootBox';
 import Button from '../Button';
 import type { Reward } from '../../types';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from '../../lib/supabaseClient.ts.old';
 
 interface PremiumReward {
   id: string;
@@ -32,7 +32,7 @@ interface PremiumReward {
 }
 
 export function PremiumRewards() {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
   const { t } = use_language();
   const [showLootBox, setShowLootBox] = useState(false);
   const [selectedReward, setSelectedReward] = useState<PremiumReward | null>(null);

@@ -18,8 +18,13 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Swords, Play, Trophy, AlertCircle, User, Star } from 'lucide-react';
-import { BattleStatus, BattleState } from '../../types/battle/state';
-import { use_game } from '../../contexts/GameContext';
+import { 
+  BattleStatus, 
+  BotOpponent, 
+  BattleState,
+  BattleProgressState
+} from '../../types/battle';
+import { useGame } from '../../contexts/GameContext';
 import { useBattleStreak } from '../../hooks/useBattleStreak';
 import './BattleStateTransition.css';
 
@@ -100,20 +105,17 @@ interface PlayerPreview {
   avatar_url?: string;
   level: number;
   rating: number;
-  win_streak: number;
+  win_streak?: number;
+  is_bot: boolean;
 }
 
-interface BattleStateTransitionProps {
-  status: BattleStatus;
-  message?: string;
-  onComplete?: () => void;
-}
-
-const PlayerCard = ({ player, side, isWinner }: { 
-  player: PlayerPreview; 
+interface PlayerCardProps {
+  player: PlayerPreview;
   side: 'left' | 'right';
   isWinner?: boolean;
-}) => (
+}
+
+const PlayerCard = ({ player, side, isWinner }: PlayerCardProps) => (
   <motion.div
     custom={side}
     variants={cardVariants}
@@ -160,7 +162,7 @@ const PlayerCard = ({ player, side, isWinner }: {
           <Trophy size={16} />
           <span>{player.rating}</span>
         </motion.div>
-        {player.win_streak > 2 && (
+        {(player.win_streak ?? 0) > 2 && (
           <motion.div 
             className="streak"
             initial={{ opacity: 0, x: 10 }}
@@ -180,189 +182,181 @@ export function BattleStateTransition({
   status,
   message,
   onComplete
-}: BattleStateTransitionProps) {
-  const { state } = use_game();
+}: {
+  status: BattleStatus;
+  message?: string;
+  onComplete?: () => void;
+}) {
+  const { state } = useGame();
   const { current_streak } = useBattleStreak();
   const battle = state.battle;
 
-  const getStateContent = () => {
-    switch (status) {
-      case 'idle':
-        return {
-          icon: <Play className="text-brand-teal-500" size={48} />,
-          text: 'Ready to Battle',
-          subtext: 'Start when you are ready',
-          animation: 'pulse'
-        };
-      case 'waiting':
-      case 'searching':
-        return {
-          icon: <Swords className="text-brand-teal-500" size={48} />,
-          text: 'Finding Opponent...',
-          subtext: 'Please wait',
-          animation: 'pulse'
-        };
-      case 'preparing':
-        return {
-          icon: <Swords className="text-brand-teal-500" size={48} />,
-          text: 'Preparing Battle',
-          subtext: 'Getting everything ready...',
-          animation: 'pulse'
-        };
-      case 'ready':
-        return {
-          icon: <Swords className="text-brand-teal-500" size={48} />,
-          text: 'Opponent Found!',
-          subtext: 'Preparing battle...',
-          animation: 'pulse'
-        };
-      case 'active':
-        return {
-          icon: <Swords className="text-brand-teal-500" size={48} />,
-          text: 'Battle in Progress',
-          subtext: `Score: ${battle?.score.player || 0} - ${battle?.score.opponent || 0}`
-        };
-      case 'paused':
-        return {
-          icon: <Swords className="text-brand-teal-500 opacity-50" size={48} />,
-          text: 'Battle Paused',
-          subtext: 'Resume when ready'
-        };
-      case 'victory':
-        return {
-          icon: <Trophy className="text-yellow-500" size={48} />,
-          text: 'Victory!',
-          subtext: battle?.rewards ? 
-            `XP: +${battle.rewards.xp_earned} | Coins: +${battle.rewards.coins_earned}${
-              battle.rewards.streak_bonus ? ` | Streak: ${current_streak}` : ''
-            }` : 'Congratulations!'
-        };
-      case 'defeat':
-        return {
-          icon: <Trophy className="text-gray-400" size={48} />,
-          text: 'Defeat',
-          subtext: 'Better luck next time!'
-        };
-      case 'draw':
-        return {
-          icon: <Trophy className="text-brand-teal-500" size={48} />,
-          text: 'Draw!',
-          subtext: 'A close battle!'
-        };
-      case 'completed':
-        return {
-          icon: <Trophy className="text-brand-teal-500" size={48} />,
-          text: 'Battle Complete',
-          subtext: battle?.rewards ? 
-            `XP: +${battle.rewards.xp_earned} | Coins: +${battle.rewards.coins_earned}${
-              battle.rewards.streak_bonus ? ` | Streak: ${current_streak}` : ''
-            }` : 'Battle Complete'
-        };
-      case 'error':
-        return {
-          icon: <AlertCircle className="text-red-500" size={48} />,
-          text: 'Error Occurred',
-          subtext: message || 'Please try again'
-        };
-      default:
-        return {
-          icon: <Swords className="text-brand-teal-500" size={48} />,
-          text: 'Battle',
-          subtext: 'Loading...'
-        };
-    }
+  // Format player data
+  const player: PlayerPreview = {
+    id: state.user?.id || '',
+    name: state.user?.name || 'Player',
+    avatar_url: state.user?.avatar_url,
+    level: Number(state.user?.level || 1),
+    rating: Number(state.battle_stats?.rating || 1000),
+    win_streak: Number(state.battle_stats?.win_streak || 0),
+    is_bot: false
   };
 
-  const content = getStateContent();
-  const playerScore = battle?.score.player ?? 0;
-  const opponentScore = battle?.score.opponent ?? 0;
+  // Format opponent data
+  const opponent: PlayerPreview | undefined = battle?.opponent ? {
+    id: battle.opponent.id || 'bot',
+    name: battle.opponent.name || 'Bot',
+    avatar_url: battle.opponent.avatar_url,
+    level: Number(battle.opponent.level || 1),
+    rating: Number(battle.opponent.rating || 1000),
+    win_streak: 0,
+    is_bot: Boolean(battle.opponent.is_bot)
+  } : undefined;
+
+  // Format battle progress data
+  const battleProgress = battle ? {
+    correctAnswers: battle.player_answers.filter(Boolean).length,
+    totalQuestions: battle.questions.length,
+    timeLeft: Number(battle.time_left || 0),
+    score: {
+      player: Number(battle.score?.player || 0),
+      opponent: Number(battle.score?.opponent || 0)
+    }
+  } : undefined;
 
   return (
-    <AnimatePresence mode="wait" onExitComplete={onComplete}>
+    <div className="battle-transition">
       <motion.div
-        key={status}
-        variants={containerVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        transition={{ duration: 0.3 }}
-        className="battle-transition"
-        data-status={status}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.5 }}
+        onAnimationComplete={onComplete}
       >
-        <div className="battle-transition-content">
-          {status === 'ready' && battle?.opponent ? (
-            <motion.div 
-              className="battle-preview"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              <PlayerCard
-                player={{
-                  id: state.user.id,
-                  name: state.user.name,
-                  avatar_url: state.user.avatar_url,
-                  level: state.user.level,
-                  rating: state.battle_stats?.tournament_rating || 1000,
-                  win_streak: current_streak
-                }}
-                side="left"
-                isWinner={status === 'completed' && playerScore > opponentScore}
-              />
-              <motion.div 
-                className="versus-container"
+        {/* Battle Preview */}
+        {status === 'preparing' && (
+          <div className="battle-preview">
+            <PlayerCard player={player} side="left" />
+            <div className="versus-container">
+              <motion.div
                 variants={iconVariants}
-                initial="initial"
-                animate={content.animation === 'pulse' ? 'pulse' : 'animate'}
+                animate="pulse"
+                className="versus-icon"
               >
-                <Swords className="versus-icon" />
-                <motion.span 
-                  className="versus-text"
-                  variants={textVariants}
-                  custom={2}
-                >
-                  VS
-                </motion.span>
+                <Swords size={48} />
               </motion.div>
-              <PlayerCard
-                player={{
-                  id: battle.opponent.id,
-                  name: battle.opponent.name,
-                  avatar_url: battle.opponent.avatar_url,
-                  level: battle.opponent.level,
-                  rating: battle.opponent.rating,
-                  win_streak: battle.opponent.win_streak || 0
-                }}
-                side="right"
-                isWinner={status === 'completed' && opponentScore > playerScore}
-              />
+              <motion.span
+                variants={textVariants}
+                custom={2}
+                className="versus-text"
+              >
+                VS
+              </motion.span>
+            </div>
+            {opponent && <PlayerCard player={opponent} side="right" />}
+          </div>
+        )}
+
+        {/* Battle Status */}
+        {status === 'active' && battleProgress && (
+          <div className="battle-status">
+            <motion.div variants={textVariants} custom={0} className="status-text">
+              Question {battleProgress.correctAnswers + 1} of {battleProgress.totalQuestions}
             </motion.div>
-          ) : (
+            <motion.div variants={textVariants} custom={1} className="score-text">
+              Score: {battleProgress.score.player} - {battleProgress.score.opponent}
+            </motion.div>
+          </div>
+        )}
+
+        {/* Victory State */}
+        {status === 'victory' && (
+          <div className="battle-result victory">
             <motion.div
               variants={iconVariants}
-              initial="initial"
-              animate={content.animation === 'pulse' ? 'pulse' : 'animate'}
+              animate="pulse"
+              className="result-icon"
             >
-              {content.icon}
+              <Trophy size={64} className="text-yellow-500" />
             </motion.div>
-          )}
-          <motion.h2 
-            className="transition-text"
-            variants={textVariants}
-            custom={1}
-          >
-            {content.text}
-          </motion.h2>
-          <motion.p 
-            className="transition-subtext"
+            <motion.div variants={textVariants} custom={0} className="result-text">
+              Victory!
+            </motion.div>
+            {battle?.rewards && (
+              <motion.div variants={textVariants} custom={1} className="rewards-text">
+                +{battle.rewards.xp_earned} XP • +{battle.rewards.coins_earned} Coins
+                {battle.rewards.streak_bonus > 0 && ` • x${battle.rewards.streak_bonus} Streak`}
+              </motion.div>
+            )}
+          </div>
+        )}
+
+        {/* Defeat State */}
+        {status === 'defeat' && (
+          <div className="battle-result defeat">
+            <motion.div
+              variants={iconVariants}
+              className="result-icon"
+            >
+              <Trophy size={64} className="text-gray-400" />
+            </motion.div>
+            <motion.div variants={textVariants} custom={0} className="result-text">
+              Defeat
+            </motion.div>
+            <motion.div variants={textVariants} custom={1} className="subtext">
+              Better luck next time!
+            </motion.div>
+          </div>
+        )}
+
+        {/* Draw State */}
+        {status === 'draw' && (
+          <div className="battle-result draw">
+            <motion.div
+              variants={iconVariants}
+              className="result-icon"
+            >
+              <Trophy size={64} className="text-brand-teal-500" />
+            </motion.div>
+            <motion.div variants={textVariants} custom={0} className="result-text">
+              Draw!
+            </motion.div>
+            <motion.div variants={textVariants} custom={1} className="subtext">
+              A close battle!
+            </motion.div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {status === 'error' && (
+          <div className="battle-result error">
+            <motion.div
+              variants={iconVariants}
+              className="result-icon"
+            >
+              <AlertCircle size={64} className="text-red-500" />
+            </motion.div>
+            <motion.div variants={textVariants} custom={0} className="result-text">
+              Error Occurred
+            </motion.div>
+            <motion.div variants={textVariants} custom={1} className="subtext">
+              {message || 'Please try again'}
+            </motion.div>
+          </div>
+        )}
+
+        {/* Generic Message */}
+        {message && !['victory', 'defeat', 'draw', 'error'].includes(status) && (
+          <motion.div
             variants={textVariants}
             custom={2}
+            className="battle-message"
           >
-            {content.subtext}
-          </motion.p>
-        </div>
+            {message}
+          </motion.div>
+        )}
       </motion.div>
-    </AnimatePresence>
+    </div>
   );
 }
 

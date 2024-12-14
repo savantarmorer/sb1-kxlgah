@@ -4,12 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import InventorySystem from '../components/inventory/InventorySystem';
 import Navigation from '../components/Navigation';
 import type { View } from '../types/navigation';
-import { use_game } from '../contexts/GameContext';
-import { supabase } from '../lib/supabase';
+import { useGame } from '../contexts/GameContext';
+import { supabase } from '../lib/supabase.ts';
 
 export function InventoryPage() {
   const navigate = useNavigate();
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
 
   useEffect(() => {
     // Load inventory data on mount

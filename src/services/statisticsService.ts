@@ -1,4 +1,4 @@
-import { supabase, getData } from '../lib/supabase';
+import { supabase, getData } from '../lib/supabase.ts';
 import { GameStatistics } from '../types/game';
 
 export class StatisticsService {

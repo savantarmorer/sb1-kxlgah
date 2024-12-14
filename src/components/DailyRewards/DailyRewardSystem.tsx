@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Gift, Flame, Settings } from 'lucide-react';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 import LoginCalendar from './LoginCalendar';
 import RewardNotification from './RewardNotification';
 import StreakDisplay from './StreakDisplay';
@@ -19,7 +19,7 @@ interface DailyReward {
 }
 
 export default function DailyRewardSystem() {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
   const [show_notification, setShowNotification] = useState(false);
   const [show_admin_panel, setShowAdminPanel] = useState(false);
   const [last_login_date, setLastLoginDate] = useLocalStorage('last_login_date', '');

@@ -1,66 +1,152 @@
-import { GameState } from '../types/game';
-import { BattleResults, BattleState } from '../types/battle';
+import { LevelSystem } from '../lib/levelSystem';
 import { BATTLE_CONFIG } from '../config/battleConfig';
-import { calculate_xp_reward, calculate_coin_reward } from './gameUtils';
+import type { BattleResults, BattleRewards, BattleScore } from '../types/battle';
+import type { GameState } from '../types/game';
+import { supabase } from '../lib/supabaseClient.ts.old';
 
 /**
- * Calculates the results of a battle based on the current state and answer
+ * Simulates opponent answer with 60% chance of being correct
  */
-export const calculate_battle_results = async (
-  state: GameState & { battle_stats: GameState['battle_stats'] },
-  selected_answer: string
-): Promise<BattleResults> => {
-  if (!state.battle || state.battle.status !== 'active') {
-    throw new Error('Cannot calculate results: Battle not active');
-  }
+export const simulateOpponentAnswer = (): boolean => {
+  return Math.random() > 0.4;
+};
 
-  const current_question = state.battle.questions[state.battle.current_question];
-  const is_correct = selected_answer === current_question.correct_answer;
-  const next_question_index = state.battle.current_question + 1;
-  const total_questions = BATTLE_CONFIG.questions_per_battle;
-  const final_score = state.battle.score.player + (is_correct ? 1 : 0);
-  const is_victory = final_score > state.battle.score.opponent;
-
-  // Base XP calculation
-  const xp_earned = calculate_xp_reward(
-    BATTLE_CONFIG.progress.base_xp * (final_score / total_questions),
-    state.battle_stats.difficulty || 1,
-    state.user.streak || 0
-  );
-
-  // Base coins calculation
-  const coins_earned = calculate_coin_reward(
-    BATTLE_CONFIG.progress.base_coins * (final_score / total_questions),
-    state.user.level,
-    state.user.streak || 0
-  );
-
+/**
+ * Calculates battle score based on correct answers
+ */
+export const calculateBattleScore = (
+  currentScore: BattleScore,
+  isPlayerCorrect: boolean,
+  simulateOpponent: boolean = true
+): BattleScore => {
   return {
-    user_id: state.user.id,
-    opponent_id: state.battle.opponent?.id || 'unknown',
-    winner_id: is_victory ? state.user.id : (state.battle.opponent?.id || 'unknown'),
-    score_player: final_score,
-    score_opponent: state.battle.score.opponent,
-    isVictory: is_victory,
-    is_bot_opponent: state.battle.metadata?.is_bot ?? true,
-    current_question: state.battle.current_question,
-    total_questions: state.battle.questions.length,
-    time_left: state.battle.time_left,
-    score: {
-      player: final_score,
-      opponent: state.battle.score.opponent
-    },
-    coins_earned,
-    streak_bonus: state.user.streak || 0,
-    difficulty: state.battle_stats.difficulty || 1,
-    player_score: final_score,
-    opponent_score: state.battle.score.opponent,
-    is_victory: is_victory,
-    xp_earned,
-    xp_gained: xp_earned,
-    victory: is_victory,
-    questions_answered: total_questions,
-    correct_answers: final_score,
-    time_spent: BATTLE_CONFIG.time_per_question - state.battle.time_left
+    player: currentScore.player + (isPlayerCorrect ? 1 : 0),
+    opponent: currentScore.opponent + (simulateOpponent ? (simulateOpponentAnswer() ? 1 : 0) : 0)
   };
 };
+
+/**
+ * Determines battle victory status
+ */
+export const determineBattleStatus = (score: BattleScore): {
+  isVictory: boolean;
+  isDraw: boolean;
+} => {
+  return {
+    isVictory: score.player > score.opponent,
+    isDraw: score.player === score.opponent
+  };
+};
+
+/**
+ * Calculates complete battle rewards including XP, coins, streak and time bonuses
+ */
+export function calculateBattleRewards(
+  score: number,
+  totalQuestions: number,
+  difficulty: number = 1,
+  streak: number = 0,
+  timeLeft: number = 0
+): BattleRewards {
+  const scoreRatio = score / totalQuestions;
+  const baseXP = score * BATTLE_CONFIG.rewards.base_xp * difficulty * scoreRatio;
+  const baseCoins = score * BATTLE_CONFIG.rewards.base_coins * difficulty * scoreRatio;
+  
+  const streakBonus = Math.floor(streak * BATTLE_CONFIG.rewards.streak_bonus.multiplier * baseXP);
+  const timeBonus = Math.floor(timeLeft * BATTLE_CONFIG.rewards.time_bonus.multiplier);
+
+  return {
+    xp_earned: baseXP,
+    coins_earned: baseCoins,
+    streak_bonus: streakBonus,
+    time_bonus: timeBonus
+  };
+}
+
+/**
+ * Role: Calculate battle rewards
+ * Dependencies:
+ * - BATTLE_CONFIG
+ * - BattleRewards type
+ * 
+ * Used by:
+ * - BattleService
+ * - Battle state management
+ * 
+ * Features:
+ * - XP calculation
+ * - Coin rewards
+ * - Streak bonuses
+ * - Time bonuses
+ * 
+ * Database impact:
+ * - Results stored in battle_history
+ * - Affects user_progress
+ */
+
+/**
+ * Calculates final battle results including score, rewards and stats
+ */
+export const calculateBattleResults = (
+  state: GameState,
+  answer: string
+): BattleResults => {
+  if (!state.battle) {
+    throw new Error('No active battle found');
+  }
+
+  const battle = state.battle;
+  const currentQuestion = battle.questions[battle.current_question];
+  
+  if (!currentQuestion) {
+    throw new Error('Current question not found');
+  }
+
+  const isCorrect = answer.toUpperCase() === currentQuestion.correct_answer;
+  
+  // Debug answer checking
+  console.debug('[Battle Debug] Answer Check:', {
+    userAnswer: answer.toUpperCase(),
+    correctAnswer: currentQuestion.correct_answer,
+    isCorrect,
+    question: currentQuestion.question
+  });
+
+  const newScore = calculateBattleScore(battle.score, isCorrect);
+  const { isVictory, isDraw } = determineBattleStatus(newScore);
+
+  // Calculate rewards using LevelSystem
+  const rewards = calculateBattleRewards(
+    newScore.player,
+    battle.questions.length,
+    state.battle_stats?.difficulty || 1,
+    state.user.streak,
+    battle.time_left
+  );
+
+  // Debug battle state
+  console.debug('[Battle Debug] Battle Results:', {
+    score: newScore,
+    isVictory,
+    isDraw,
+    rewards,
+    questionProgress: {
+      current: battle.current_question + 1,
+      total: battle.questions.length
+    }
+  });
+
+  return {
+    victory: isVictory,
+    draw: isDraw,
+    score: newScore,
+    rewards,
+    stats: {
+      correct_answers: battle.player_answers.filter(a => a).length + (isCorrect ? 1 : 0),
+      total_questions: battle.questions.length,
+      time_taken: BATTLE_CONFIG.time_per_question - battle.time_left,
+      average_time: (BATTLE_CONFIG.time_per_question - battle.time_left) / (battle.current_question + 1)
+    }
+  };
+};
+

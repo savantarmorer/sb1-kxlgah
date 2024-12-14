@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trophy, Star, Lock, Gift } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 import { use_language } from '../../contexts/LanguageContext';
 import { LevelSystem as LevelCalculator } from '../../lib/levelSystem';
 
@@ -53,7 +53,7 @@ const LEVEL_REWARDS = [
 ];
 
 export function LevelSystem() {
-  const { state } = use_game();
+  const { state } = useGame();
   const { t } = use_language();
   const current_level = state.user.level;
 

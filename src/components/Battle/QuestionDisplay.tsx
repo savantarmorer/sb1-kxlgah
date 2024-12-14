@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BattleQuestion } from '../../types/battle';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 
 interface QuestionDisplayProps {
   question: BattleQuestion | null;
@@ -14,7 +14,7 @@ function QuestionDisplay({
   on_answer,
   disabled 
 }: QuestionDisplayProps) {
-  const { state } = use_game();
+  const { state } = useGame();
   const battle = state.battle;
 
   // Memoized answer handler to prevent re-renders

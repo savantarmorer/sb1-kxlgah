@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Grid, Typography, Card, CardContent, CardActions, Chip, Tooltip } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase.ts';
 import { useNotification } from '../../contexts/NotificationContext';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 import { Package, Shield, Zap, Crown, Star, Sparkles } from 'lucide-react';
 import Navigation from '../Navigation';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -33,7 +33,7 @@ export default function InventorySystem() {
   const location = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const { showSuccess, showError } = useNotification();
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
   const [loading, setLoading] = useState(true);
   const [userItems, setUserItems] = useState<InventoryItem[]>([]);
 
@@ -76,7 +76,8 @@ export default function InventorySystem() {
         metadata: record.item.metadata,
         icon: record.item.icon,
         icon_color: record.item.icon_color,
-        acquired_at: record.acquired_at
+        acquired_at: record.acquired_at,
+        imageUrl: record.item.icon || `/items/${record.item.type.toLowerCase()}.png`
       })) || [];
 
       setUserItems(transformedItems);

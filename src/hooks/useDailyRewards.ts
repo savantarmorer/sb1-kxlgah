@@ -1,7 +1,7 @@
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 
 export function useDailyRewards() {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
 
   const checkDailyReward = () => {
     const lastLogin = new Date(state.user.last_login_date || 0);

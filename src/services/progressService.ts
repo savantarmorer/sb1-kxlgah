@@ -1,6 +1,6 @@
-import { supabase } from '../lib/supabaseClient';
-import { UserProgressDB, battle_statsDB, BattleRatingsDB } from '../types/battle';
-import { calculate_level, calculate_xp_progress, update_streak_multiplier } from '../utils/gameUtils';
+import { supabase } from '../lib/supabaseClient.ts.old';
+import { UserProgressDB, battle_statsDB } from '../types/battle';
+import { LevelSystem } from '../lib/levelSystem';
 
 /**
  * Type for progress update operations
@@ -9,12 +9,9 @@ import { calculate_level, calculate_xp_progress, update_streak_multiplier } from
 export type ProgressUpdatePayload = {
   [K in keyof Partial<UserProgressDB>]: K extends 'battle_stats' 
     ? Partial<battle_statsDB> 
-    : K extends 'battle_ratings' 
-      ? Partial<BattleRatingsDB>
-      : Partial<UserProgressDB>[K]
+    : Partial<UserProgressDB>[K]
 } & {
   battle_stats?: Partial<battle_statsDB>;
-  battle_ratings?: Partial<BattleRatingsDB>;
 }
 
 /**
@@ -22,13 +19,15 @@ export type ProgressUpdatePayload = {
  * Combines data from multiple tables and adds calculated fields
  */
 export interface UserProgress {
+  id: string;
   user_id: string;
   xp: number;
   level: number;
   coins: number;
   streak: number;
+  achievements: any[];
+  inventory: any[];
   battle_stats: battle_statsDB;
-  battle_ratings: BattleRatingsDB;
   reward_multipliers: {
     xp: number;
     coins: number;
@@ -39,6 +38,9 @@ export interface UserProgress {
     source: string;
     timestamp: string;
   }>;
+  last_battle_time: string;
+  daily_battles: number;
+  last_daily_reset: string;
   battle_history: Array<{
     battle_id: string;
     result: 'victory' | 'defeat';
@@ -46,9 +48,9 @@ export interface UserProgress {
     coins_earned: number;
     timestamp: string;
   }>;
+  avatar_id: string | null;
   created_at: string;
   updated_at: string;
-  xp_progress: number;
 }
 
 /**
@@ -57,7 +59,7 @@ export interface UserProgress {
  * 
  * Dependencies:
  * - Supabase client for database operations
- * - gameUtils for level and streak calculations
+ * - LevelSystem for level and streak calculations
  * - battle types for database schemas
  * 
  * Used by:
@@ -68,7 +70,7 @@ export interface UserProgress {
 export class ProgressService {
   /**
    * Retrieves user progress data from database
-   * Includes battle stats and ratings
+   * Includes battle stats
    * 
    * @param user_id - User ID to fetch progress for
    * @returns Promise resolving to user progress data
@@ -77,7 +79,7 @@ export class ProgressService {
     try {
       const { data, error } = await supabase
         .from('user_progress')
-        .select('*, battle_stats(*), battle_ratings(*)')
+        .select('*, battle_stats(*)')
         .eq('user_id', user_id)
         .single();
 
@@ -95,7 +97,7 @@ export class ProgressService {
 
   /**
    * Updates user progress in database
-   * Handles updates to multiple tables (progress, stats, ratings)
+   * Handles updates to multiple tables (progress, stats)
    * 
    * @param user_id - User ID to update progress for
    * @param progress - Progress data to update
@@ -107,28 +109,26 @@ export class ProgressService {
       // Start a Supabase transaction
       const { data: existing_progress } = await supabase
         .from('user_progress')
-        .select('*, battle_stats(*), battle_ratings(*)')
+        .select('*, battle_stats(*)')
         .eq('user_id', user_id)
         .single();
 
       // Calculate new level and streak multiplier if XP is being updated
       if (progress.xp !== undefined && existing_progress) {
-        const new_level = calculate_level(progress.xp);
-        const xp_progress = calculate_xp_progress(progress.xp, new_level);
+        const new_level = LevelSystem.calculate_level(progress.xp);
         
-        // Update level and xp progress if changed
-        if (new_level !== existing_progress.level || xp_progress !== existing_progress.xp_progress) {
+        // Update level if changed
+        if (new_level !== existing_progress.level) {
           progress = {
             ...progress,
-            level: new_level,
-            xp_progress
+            level: new_level
           };
         }
       }
 
       // Update streak multiplier if streak is being modified
       if (progress.streak !== undefined) {
-        const new_streak_multiplier = update_streak_multiplier(progress.streak);
+        const new_streak_multiplier = LevelSystem.update_streak_multiplier(progress.streak);
         progress = {
           ...progress,
           streak_multiplier: new_streak_multiplier
@@ -156,29 +156,8 @@ export class ProgressService {
         }
       }
 
-      // Update battle ratings separately if needed
-      if (progress.battle_ratings) {
-        const battle_ratings_update = {
-          user_id,
-          ...progress.battle_ratings,
-          updated_at: new Date().toISOString()
-        };
-
-        const { error: rating_error } = await supabase
-          .from('battle_ratings')
-          .upsert(battle_ratings_update, {
-            onConflict: 'user_id'
-          })
-          .select();
-
-        if (rating_error) {
-          console.error('Error updating battle ratings:', rating_error);
-          throw rating_error;
-        }
-      }
-
-      // Remove battle_ratings and battle_stats from the progress object before updating user_progress
-      const { battle_ratings, battle_stats, ...progress_without_related } = progress;
+      // Remove battle_stats from the progress object before updating user_progress
+      const { battle_stats, ...progress_without_related } = progress;
 
       // Update main progress record
       const { data: updated_progress, error: progress_error } = await supabase
@@ -191,14 +170,16 @@ export class ProgressService {
         }, {
           onConflict: 'user_id'
         })
-        .select('*, battle_stats(*), battle_ratings(*)');
+        .select('*, battle_stats(*)')
+        .single();
 
       if (progress_error) {
         console.error('Error updating user progress:', progress_error);
         throw progress_error;
       }
 
-      return updated_progress?.[0] as UserProgress;
+      // Ensure we return the latest data
+      return updated_progress as UserProgress;
     } catch (err) {
       console.error('Error in update_progress:', err);
       throw err;
@@ -234,17 +215,15 @@ export class ProgressService {
       }
 
       const new_xp = (current_progress.xp || 0) + battle_result.xp_earned;
-      const new_level = calculate_level(new_xp);
-      const new_xp_progress = calculate_xp_progress(new_xp, new_level);
+      const new_level = LevelSystem.calculate_level(new_xp);
       const new_streak = battle_result.is_victory 
         ? (current_progress.streak || 0) + 1 
         : 0;
-      const new_streak_multiplier = update_streak_multiplier(new_streak);
+      const new_streak_multiplier = LevelSystem.update_streak_multiplier(new_streak);
 
       const progress_update: ProgressUpdatePayload = {
         xp: new_xp,
         level: new_level,
-        xp_progress: new_xp_progress,
         coins: (current_progress.coins || 0) + battle_result.coins_earned,
         streak: new_streak,
         streak_multiplier: new_streak_multiplier,
@@ -273,33 +252,6 @@ export class ProgressService {
       return this.update_progress(user_id, progress_update);
     } catch (err) {
       console.error('Error updating battle progress:', err);
-      throw err;
-    }
-  }
-
-  /**
-   * Updates battle rating for a user
-   * Separate method for atomic rating updates
-   * 
-   * @param user_id - User ID to update rating for
-   * @param new_rating - New rating value
-   * @throws Error if update fails
-   */
-  static async update_battle_rating(user_id: string, new_rating: number) {
-    try {
-      const { error } = await supabase
-        .from('battle_ratings')
-        .upsert({
-          user_id: user_id,
-          rating: new_rating,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        });
-
-      if (error) throw error;
-    } catch (err) {
-      console.error('Error updating battle rating:', err);
       throw err;
     }
   }

@@ -1,10 +1,10 @@
 import React from 'react';
 import { Trophy, Medal, Award } from 'lucide-react';
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import { motion } from 'framer-motion';
 
 export default function Leaderboard() {
-  const { state } = use_game();
+  const { state } = useGame();
   const { leaderboard = [] } = state;
 
   const getRankIcon = (rank: number) => {

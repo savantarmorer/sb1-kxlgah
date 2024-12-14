@@ -4,7 +4,7 @@ import { QuestEditor } from './QuestEditor';
 import { Quest } from '../../types/quests';
 import { useAdminActions } from '../../hooks/useAdminActions';
 import { useNotification } from '../../contexts/NotificationContext';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase.ts';
 
 interface QuestAdminDashboardProps {
   quests: Quest[];

@@ -1,56 +1,88 @@
-import { Achievement } from './achievements';
-import { BattleState, DBbattle_stats } from './battle';
-import { Quest } from './quests';
-import { InventoryItem } from './items';
-import { Reward } from './rewards';
-import { User } from './user';
+import type { User } from './user';
+import type { BattleState } from './battle';
+import type { Quest } from './quests';
+import type { Achievement } from './achievements';
+import type { InventoryItem } from './items';
+import type { XPGain } from './user';
 
 export interface GameStatistics {
-  items: any[];
-  login_history: any[];
-  recentXPGains: any[];
-  leaderboard: any[];
-  statistics: any;
-  syncing: boolean;
-  debugMode: boolean;
-  lastLevelUpRewards: any[];
-  activeUsers: number;
-  completedQuests: number;
-  purchasedItems: number;
-  battlesPlayed: number;
-  battlesWon: number;
-  averageScore: number;
-  lastUpdated: string;
-  recentActivity: any[];
-}
-
-export interface GameState {
-  loading: boolean;
-  user: User;
-  battle?: BattleState;
-  battle_stats: DBbattle_stats;
-  achievements: Achievement[];
-  quests: {
-    active: Quest[];
-    completed: Quest[];
-  };
-  completedQuests: string[];
-  items: InventoryItem[];
-  statistics: GameStatistics;
-  syncing: boolean;
-  debugMode: boolean;
-  lastLevelUpRewards: Reward[];
-  login_history: any[];
-  recentXPGains: any[];
-  leaderboard: any[];
-  study_time: number;
+  total_xp: number;
+  total_coins: number;
+  battles_won: number;
+  battles_lost: number;
+  current_streak: number;
+  highest_streak: number;
+  quests_completed: number;
+  achievements_unlocked: number;
 }
 
 export interface LeaderboardEntry {
   user_id: string;
   username: string;
+  avatar_url?: string;
   score: number;
   rank: number;
-  avatar?: string;
-  level: number;
 }
+
+export interface GameState {
+  user: User | null;
+  battle: BattleState;
+  battle_stats: {
+    total_battles: number;
+    wins: number;
+    losses: number;
+    win_streak: number;
+    highest_streak: number;
+    total_xp_earned: number;
+    total_coins_earned: number;
+    difficulty?: number;
+    tournaments_played?: number;
+    tournaments_won?: number;
+    tournament_matches_played?: number;
+    tournament_matches_won?: number;
+    tournament_rating?: number;
+    updated_at?: string;
+  };
+  recentXPGains: XPGain[];
+  achievements: Achievement[];
+  quests: {
+    active: Quest[];
+    completed: Quest[];
+  };
+  inventory: {
+    items: InventoryItem[];
+    equipped: string[];
+  };
+  statistics: GameStatistics;
+  error: string | null;
+  loading: boolean;
+}
+
+/**
+ * Role: Core game state definition
+ * Dependencies:
+ * - User type
+ * - BattleState type
+ * - Achievement type
+ * - Quest type
+ * - InventoryItem type
+ * 
+ * Used by:
+ * - GameContext
+ * - Game reducer
+ * - Battle system
+ * - Quest system
+ * 
+ * Features:
+ * - Complete game state tracking
+ * - Battle statistics
+ * - Achievement tracking
+ * - Inventory management
+ * 
+ * Database mapping:
+ * - Maps to multiple tables including:
+ *   - profiles
+ *   - battle_stats
+ *   - user_progress
+ *   - user_inventory
+ */

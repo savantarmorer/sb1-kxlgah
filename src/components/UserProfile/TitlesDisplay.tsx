@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Crown, Star, Shield, Award } from 'lucide-react';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 
 const TITLE_ICONS = {
   legendary: Crown,
@@ -17,7 +17,7 @@ const TITLE_ICONS = {
  * @returns {JSX.Element} The component element.
  */
 export default function TitlesDisplay() {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
   const { user } = state;
 
   const titles = [

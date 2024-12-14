@@ -21,7 +21,7 @@ import { UserManager } from './UserManager';
 import { Statistics } from './Statistics';
 import Button from '../Button';
 import { StatisticsService } from '../../services/statisticsService';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 import type { GameStatistics } from '../../types/game';
 import { TournamentManager } from './TournamentManager';
 import { 

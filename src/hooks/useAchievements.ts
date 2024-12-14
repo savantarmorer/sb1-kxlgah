@@ -1,11 +1,11 @@
 import { useCallback } from 'react';
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import { AchievementService } from '../services/achievementService';
 import { Achievement } from '../types/achievements';
 import { toast } from 'react-hot-toast';
 
 export function useAchievements() {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
 
   const initializeAchievements = async () => {
     const achievements = await AchievementService.getUserAchievements(state.user.id);

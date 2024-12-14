@@ -1,5 +1,3 @@
-import { BATTLE_CONFIG } from '../config/battleConfig';
-
 /**
  * Enum for Battle Phases
  * Represents different states of a battle
@@ -21,9 +19,9 @@ export enum BattlePhase {
  */
 export type BattleStatus = 
   | 'idle' 
-  | 'waiting'
-  | 'preparing'
-  | 'active'
+  | 'preparing' 
+  | 'ready'
+  | 'active' 
   | 'paused'
   | 'completed'
   | 'victory'
@@ -38,12 +36,6 @@ export type BattleStatus =
 export interface BattleScore {
   player: number;
   opponent: number;
-  timestamp?: string;
-  metadata?: {
-    time_taken?: number;
-    streak?: number;
-    difficulty?: number;
-  };
 }
 
 /**
@@ -53,14 +45,13 @@ export interface BattleScore {
 export interface BattleQuestion {
   id: string;
   question: string;
-  correct_answer: string;
   alternative_a: string;
   alternative_b: string;
   alternative_c: string;
   alternative_d: string;
-  category?: string;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  created_at?: string;
+  correct_answer: string;
+  category: string;
+  difficulty: string;
 }
 
 export interface BattleHistory {
@@ -113,30 +104,16 @@ export interface battle_stats {
  * Database battle statistics interface
  * Extends base stats with database-specific fields
  */
-export interface DBbattle_stats {
-  user_id: string;
-  total_battles: number;
-  wins: number;
-  losses: number;
-  win_streak: number;
-  highest_streak: number;
-  total_xp_earned: number;
-  total_coins_earned: number;
-  tournaments_played: number;
-  tournaments_won: number;
-  tournament_matches_played: number;
-  tournament_matches_won: number;
-  tournament_rating: number;
-  updated_at: string;
-  difficulty: number;
+export interface DBbattle_stats extends battle_stats {
+  rank?: string;
 }
 
 export interface Battle {
   id: string;
   player_id: string;
   opponent_id: string;
-  player_score: number;
-  opponent_score: number;
+  score_player: number;
+  score_opponent: number;
   is_victory: boolean;
   xp_earned: number;
   coins_earned: number;
@@ -189,11 +166,7 @@ export interface BattleRewards {
   bonus_multiplier?: number;
   items_earned?: string[];
   achievements_unlocked?: string[];
-  metadata?: {
-    battle_id?: string;
-    opponent_rating?: number;
-    difficulty_bonus?: number;
-  };
+  metadata?: Record<string, any>;
 }
 
 /**
@@ -201,32 +174,25 @@ export interface BattleRewards {
  */
 export const initialBattleState: BattleState = {
   status: 'idle',
-  questions: [],
   current_question: 0,
   total_questions: 0,
-  score: {
-    player: 0,
-    opponent: 0
-  },
-  time_left: 0,
-  time_per_question: 30,
+  questions: [],
+  score: { player: 0, opponent: 0 },
   player_answers: [],
-  opponent: {
-    id: '',
-    name: '',
-    is_bot: true,
-    rating: 0,
-    level: 1
-  },
-  in_progress: false,
-  metadata: {
-    is_bot: true
-  },
+  time_left: 30,
+  opponent: null,
   rewards: {
     xp_earned: 0,
     coins_earned: 0,
     streak_bonus: 0,
     time_bonus: 0
+  },
+  time_per_question: 30,
+  in_progress: false,
+  metadata: {
+    is_bot: false,
+    difficulty: 'easy',
+    mode: 'practice'
   },
   error: {
     message: '',
@@ -253,30 +219,26 @@ export const initialBattleState: BattleState = {
  */
 export interface BattleState {
   status: BattleStatus;
-  questions: BattleQuestion[];
   current_question: number;
-  total_questions?: number;
-  score: { player: number; opponent: number };
+  total_questions: number;
+  questions: BattleQuestion[];
+  score: BattleScore;
   player_answers: boolean[];
-  time_per_question: number;
   time_left: number;
-  in_progress: boolean;
   opponent: BotOpponent | null;
-  rewards: {
-    xp_earned: number;
-    coins_earned: number;
-    streak_bonus: number;
-    time_bonus: number;
-  };
+  rewards: BattleRewards;
+  time_per_question: number;
+  in_progress: boolean;
+  selectedAnswer?: string;
   metadata: {
     is_bot: boolean;
-    difficulty?: 'easy' | 'medium' | 'hard';
+    difficulty: number | 'easy' | 'medium' | 'hard';
     mode?: 'practice' | 'ranked' | 'tournament';
   };
   error: {
     message: string;
     timestamp: number;
-  };
+  } | null;
 }
 
 /**
@@ -286,14 +248,15 @@ export interface EnhancedBattleState {
   // Core Battle State
   phase: BattlePhase;
   status: BattleStatus;
+  time_left: number;
   
   // Battle Progression
   current_question: number;
   total_questions: number;
   
   // Scoring
-  player_score: number;
-  opponent_score: number;
+  score_player: number;
+  score_opponent: number;
   
   // Metadata
   metadata: {
@@ -302,6 +265,7 @@ export interface EnhancedBattleState {
     is_bot: boolean;
     start_time?: number;
     end_time?: number;
+    time_taken?: number;
   };
   
   // Rewards and Outcomes
@@ -341,8 +305,8 @@ export type BattleAction =
     } }
   | { type: 'COMPLETE_BATTLE'; payload: { 
       is_victory: boolean; 
-      player_score: number; 
-      opponent_score: number; 
+      score_player: number; 
+      score_opponent: number; 
       rewards: {
         xp: number;
         coins: number;
@@ -356,29 +320,48 @@ export type BattleAction =
   | { type: 'RESET_BATTLE' };
 
 /**
- * Battle Results Interface
- * Represents the outcome of a completed battle
+ * Core battle results interface used throughout the application
  */
 export interface BattleResults {
+  victory: boolean;
+  draw: boolean;
+  opponent_id?: string | null;
+  score: {
+    player: number;
+    opponent: number;
+  };
+  rewards: {
+    xp_earned: number;
+    coins_earned: number;
+    streak_bonus: number;
+  };
+  stats: {
+    time_taken: number;
+    total_questions: number;
+  };
+}
+
+/**
+ * Extended battle results interface for database operations
+ * Includes additional fields needed for persistence
+ */
+export interface DBBattleResults {
+  id?: string;
   user_id: string;
-  opponent_id: string;
-  winner_id: string;
-  player_score: number;
-  opponent_score: number;
-  is_victory: boolean;
-  is_bot_opponent: boolean;
-  current_question: number;
-  total_questions: number;
-  time_left: number;
+  opponent_id: string | null;
+  winner_id: string | null;
+  score_player: number;
+  score_opponent: number;
   xp_earned: number;
   coins_earned: number;
   streak_bonus: number;
-  questions_answered: number;
-  correct_answers: number;
-  time_spent: number;
-  time_bonus?: number;
-  streak?: number;
+  created_at: string;
+  is_bot_opponent: boolean;
   difficulty: number;
+  draw: boolean;
+  time_left: number;
+  total_questions: number;
+  victory: boolean;
 }
 
 /**
@@ -401,9 +384,9 @@ export interface BattleTransaction {
 export interface BotOpponent {
   id: string;
   name: string;
+  rating: number;
   is_bot: boolean;
-  rating?: number;
-  level?: number;
+  level: number;
 }
 
 /**
@@ -415,7 +398,6 @@ export interface UserProgressDB {
   user_id: string;
   xp: number;
   level: number;
-  xp_progress: number;
   coins: number;
   streak: number;
   achievements: any[];
@@ -483,8 +465,6 @@ export interface BattleInitPayload {
   questions: BattleQuestion[];
   time_per_question?: number;
   opponent?: BotOpponent;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  is_bot?: boolean;
 }
 
 export interface XPGain {

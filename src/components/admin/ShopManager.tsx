@@ -26,13 +26,13 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { Edit, Delete, Star, ShoppingBag } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase.ts';
 import { useNotification } from '../../contexts/NotificationContext';
 import { GameItem } from '../../types/items';
 import { DateTimePicker } from '@mui/x-date-pickers';
 import { DateTime } from 'luxon';
 import { PostgrestError, PostgrestResponse } from '@supabase/supabase-js';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 
 interface ShopItemResponse {
   id: string;
@@ -60,7 +60,7 @@ export function ShopManager() {
   const [showDialog, setShowDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const { showSuccess, showError } = useNotification();
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
 
   const [formData, setFormData] = useState({
     item_id: '',
@@ -505,7 +505,7 @@ export function ShopManager() {
  * - Handles item pricing and availability
  * 
  * Dependencies:
- * - use_game: For accessing item state
+ * - useGame: For accessing item state
  * - useAdminActions: For item CRUD operations
  * 
  * Used by:

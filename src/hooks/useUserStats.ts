@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import { DBbattle_stats } from '../types/battle';
 import { Achievement } from '../types/achievements';
 import { DailyReward } from '../types/rewards';
@@ -56,7 +56,7 @@ interface UserStats {
 }
 
 export function useUserStats() {
-  const { state } = use_game();
+  const { state } = useGame();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);

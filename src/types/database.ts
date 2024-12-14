@@ -103,8 +103,8 @@ export interface Battle {
   id: UUID;
   player_id: UUID;
   opponent_id: UUID;
-  player_score: number;
-  opponent_score: number;
+  score_player: number;
+  score_opponent: number;
   is_victory: boolean;
   xp_earned: number;
   coins_earned: number;

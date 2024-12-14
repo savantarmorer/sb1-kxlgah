@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Circle, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 import { Quest, QuestType } from '../../types/quests';
 import LootBox from '../LootBox';
 import { RewardService } from '../../services/rewardService';
@@ -16,7 +16,7 @@ interface MissionListProps {
 }
 
 export default function MissionList({ missions, onMissionComplete }: MissionListProps) {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
   const [showLootBox, setShowLootBox] = useState(false);
   const [currentRewards, setCurrentRewards] = useState<Reward[]>([]);
   const { showNotification } = useNotification();

@@ -1,10 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import { supabase } from '../lib/supabase';
 import { Quest, QuestStatus } from '../types/quests';
 
 export function useQuests() {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
   const [loading, setLoading] = useState(false);
 
   const syncQuests = useCallback(async () => {

@@ -176,7 +176,7 @@ function BattleComponent() {
 
 // Achievement triggers hook
 function useAchievementTriggers() {
-  const { state } = use_game();
+  const { state } = useGame();
   const { checkTrigger } = useAchievements();
 
   // Track XP gains

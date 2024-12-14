@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.ts';
 import { QuestType, QuestStatus } from '../types/quests';
 import type { 
   Quest,

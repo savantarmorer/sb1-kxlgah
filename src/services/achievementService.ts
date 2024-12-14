@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabaseClient.ts.old';
 import { Achievement, AchievementProgress, TriggerCondition, AchievementRarity } from '../types/achievements';
 
 interface UserAchievementRow {
@@ -83,7 +83,7 @@ export class AchievementService {
     const { data: achievements, error } = await supabase
       .from('achievements')
       .select('*')
-      .contains('trigger_conditions', [{ type: triggerType }]);
+      .contains('trigger_conditions', { type: triggerType });
 
     if (error) {
       console.error('Error checking achievement triggers:', error);

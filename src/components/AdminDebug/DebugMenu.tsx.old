@@ -7,7 +7,7 @@ import {
   Play, 
   Save
 } from 'lucide-react';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 import { useAdmin } from '../../hooks/useAdmin';
 import Button from '../Button';
 
@@ -61,7 +61,7 @@ interface DebugMenuState {
  * Provides admin tools for testing and debugging game features
  */
 export default function DebugMenu({ on_close }: DebugMenuProps) {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
   const { debugActions } = useAdmin();
   const [localState, setLocalState] = useState<DebugMenuState>({
     activeTab: 'quests',
@@ -356,7 +356,7 @@ export default function DebugMenu({ on_close }: DebugMenuProps) {
 
 /**
  * Component Dependencies:
- * - use_game: For accessing and modifying game state
+ * - useGame: For accessing and modifying game state
  * - useAdmin: For admin-specific actions
  * - Button: For UI interactions
  * - Framer Motion: For animations

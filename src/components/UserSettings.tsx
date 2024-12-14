@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Volume2, Bell, Globe, Camera, User, Save } from 'lucide-react';
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import { use_language } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import ThemeToggle from './ThemeToggle';
@@ -18,7 +18,7 @@ interface UserProfile {
 }
 
 export default function UserSettings({ on_close }: UserSettingsProps) {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
   const { language, setLanguage } = use_language();
   const { theme } = useTheme();
 

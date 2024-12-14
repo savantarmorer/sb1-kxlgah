@@ -13,7 +13,7 @@ import {
   Typography,
   Alert
 } from '@mui/material';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase.ts';
 import { useNotification } from '../../contexts/NotificationContext';
 
 interface AssignQuestDialogProps {

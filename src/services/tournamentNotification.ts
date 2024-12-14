@@ -1,6 +1,6 @@
 import { NotificationPayload } from '../types/notifications';
 import { Tournament, TournamentMatch } from '../types/tournament';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.ts';
 
 interface TournamentMatchWithPlayers extends TournamentMatch {
   player1: {

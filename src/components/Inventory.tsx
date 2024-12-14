@@ -1,6 +1,6 @@
 import React from 'react';
 import { useInventory } from '../hooks/useInventory';
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import { GameItem, ItemType, ItemRarity, ItemEffect } from '../types/items';
 import { Box, Grid, Typography, Button, Card, CardContent, CardActions, Chip, CircularProgress } from '@mui/material';
 import { styled } from '@mui/material/styles';
@@ -106,7 +106,7 @@ interface InventoryProps {
 }
 
 export const Inventory: React.FC<InventoryProps> = ({ className }) => {
-  const { state } = use_game();
+  const { state } = useGame();
   const {
     inventory,
     activeEffects,

@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion';
 import { TrendingUp, Star } from 'lucide-react';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 import { LevelSystem } from '../../lib/levelSystem';
 
 export default function UserProgress() {
-  const { state } = use_game();
+  const { state } = useGame();
   const { level, xp, coins } = state.user;
   
   const current_level_total_xp = LevelSystem.calculate_total_xp_for_level(level);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 import { User, XPGain } from '../../types/user';
 import { useLevelSystem } from '../../hooks/useLevelSystem';
 
@@ -17,18 +17,18 @@ export function LevelProgress({
   isStatic = true
 }: LevelProgressProps) {
   const { current_level, progress, xp_to_next_level } = useLevelSystem();
-  const { state } = use_game();
+  const { state } = useGame();
 
   // Get recent XP gains from game state
   const recentGains = state.recentXPGains || [];
-  const multipliers = state.user.rewardMultipliers || { xp: 1, coins: 1 };
+  const multipliers = state.user?.rewardMultipliers || { xp: 1, coins: 1 };
 
   // Get subject scores from profiles table
   const subjectScores: SubjectScore[] = [
-    { subject: 'Constitutional', score: state.user.constitutionalScore || 0 },
-    { subject: 'Civil', score: state.user.civilScore || 0 },
-    { subject: 'Criminal', score: state.user.criminalScore || 0 },
-    { subject: 'Administrative', score: state.user.administrativeScore || 0 }
+    { subject: 'Constitutional', score: state.user?.constitutionalScore || 0 },
+    { subject: 'Civil', score: state.user?.civilScore || 0 },
+    { subject: 'Criminal', score: state.user?.criminalScore || 0 },
+    { subject: 'Administrative', score: state.user?.administrativeScore || 0 }
   ].filter(score => score.score > 0);
 
   return (

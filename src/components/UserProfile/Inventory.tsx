@@ -1,11 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Package, Star } from 'lucide-react';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 import { InventoryItem } from '../../types';
 
 export default function Inventory() {
-  const { state } = use_game();
+  const { state } = useGame();
   const { inventory = [], backpack = [] } = state.user;
 
   return (

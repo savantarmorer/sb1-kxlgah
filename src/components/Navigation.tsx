@@ -6,7 +6,7 @@ import {
   Gem, Coins, ChevronDown
 } from 'lucide-react';
 import { View } from '../types/navigation';
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import ProfileDashboard from './profile/ProfileDashboard';
 
 interface NavigationProps {
@@ -18,7 +18,7 @@ interface NavigationProps {
 const DEFAULT_AVATAR = '/avatars/default1.jpg';
 
 export default function Navigation({ currentView, onViewChange, isAdmin = false }: NavigationProps) {
-  const { state } = use_game();
+  const { state } = useGame();
   const [showProfile, setShowProfile] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const profileContentRef = useRef<HTMLDivElement>(null);

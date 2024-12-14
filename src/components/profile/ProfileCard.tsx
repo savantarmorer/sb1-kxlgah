@@ -16,6 +16,7 @@ export const ProfileCard = ({ user }: ProfileCardProps) => {
   const current_level_total_xp = LevelSystem.calculate_total_xp_for_level(user.level);
   const xp_in_current_level = user.xp - current_level_total_xp;
   const xp_needed_for_next_level = LevelSystem.calculate_xp_for_level(user.level);
+  const progress = Math.min(100, Math.floor((xp_in_current_level / xp_needed_for_next_level) * 100));
 
   return (
     <Card className="p-6">

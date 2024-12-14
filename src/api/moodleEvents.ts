@@ -1,5 +1,5 @@
 import { MoodleEvent } from '../types/moodle';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.ts';
 
 async function validateMoodleToken(token: string) {
   // Implement token validation logic

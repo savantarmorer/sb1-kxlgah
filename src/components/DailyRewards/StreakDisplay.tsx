@@ -1,14 +1,15 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Flame, Award } from 'lucide-react';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
+import type { AchievementTriggerType } from '../../types/achievements';
 
 interface StreakDisplayProps {
   streak: number;
 }
 
 export default function StreakDisplay({ streak }: StreakDisplayProps) {
-  const { dispatch } = use_game();
+  const { dispatch } = useGame();
 
   useEffect(() => {
     // Check for streak-based achievements
@@ -16,8 +17,8 @@ export default function StreakDisplay({ streak }: StreakDisplayProps) {
     streakMilestones.forEach(milestone => {
       if (streak >= milestone) {
         dispatch({
-          type: 'UNLOCK_ACHIEVEMENT',
-          payload: {
+          type: 'UNLOCK_ACHIEVEMENTS',
+          payload: [{
             id: `streak_${milestone}`,
             title: `${milestone} Day Streak`,
             description: `Maintained a ${milestone} day login streak`,
@@ -25,22 +26,22 @@ export default function StreakDisplay({ streak }: StreakDisplayProps) {
             points: milestone,
             rarity: milestone >= 100 ? 'legendary' : milestone >= 30 ? 'epic' : 'rare',
             unlocked: true,
-            unlockedAt: new Date(),
+            unlocked_at: new Date().toISOString(),
             prerequisites: [],
             dependents: [],
             trigger_conditions: [{
-              type: 'streak',
+              type: 'login_days' as AchievementTriggerType,
               value: milestone,
               comparison: 'gte'
             }],
             order: milestone
-          }
+          }]
         });
       }
     });
-  }, [streak]);
+  }, [streak, dispatch]);
 
-  const getstreak_bonus = (streak: number) => {
+  const getStreak_bonus = (streak: number) => {
     if (streak >= 30) return 100;
     if (streak >= 14) return 80;
     if (streak >= 7) return 50;
@@ -48,7 +49,7 @@ export default function StreakDisplay({ streak }: StreakDisplayProps) {
     return 0;
   };
 
-  const bonus = getstreak_bonus(streak);
+  const bonus = getStreak_bonus(streak);
 
   return (
     <div className="card">

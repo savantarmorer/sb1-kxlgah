@@ -3,15 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Flame } from 'lucide-react';
 
 interface ScoreDisplayProps {
-  player_score: number;
-  opponent_score: number;
+  score_player: number;
+  score_opponent: number;
   streak: number;
   time_left: number;
 }
 
 export function ScoreDisplay({ 
-  player_score, 
-  opponent_score, 
+  score_player, 
+  score_opponent, 
   streak,
   time_left 
 }: ScoreDisplayProps) {
@@ -20,17 +20,17 @@ export function ScoreDisplay({
       <div className="flex items-center space-x-4">
         <motion.div
           className="text-2xl font-bold"
-          key={`${player_score}-${opponent_score}`}
+          key={`${score_player}-${score_opponent}`}
           initial={{ scale: 1 }}
           animate={{ scale: [1, 1.2, 1] }}
           transition={{ duration: 0.3 }}
         >
           <span className="text-brand-teal-600 dark:text-brand-teal-400">
-            {player_score}
+            {score_player}
           </span>
           <span className="text-gray-400 mx-2">-</span>
           <span className="text-gray-600 dark:text-gray-400">
-            {opponent_score}
+            {score_opponent}
           </span>
         </motion.div>
 
@@ -53,7 +53,7 @@ export function ScoreDisplay({
         )}
       </div>
 
-      {player_score > opponent_score && (
+      {score_player > score_opponent && (
         <motion.div
           animate={{
             rotate: [0, 10, -10, 0],

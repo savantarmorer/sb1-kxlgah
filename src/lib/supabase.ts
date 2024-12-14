@@ -50,10 +50,3 @@ async function testConnection() {
     return false;
   }
 }
-
-// Add error logging for auth state changes
-supabase.auth.onAuthStateChange((event, session) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Auth state changed:', event, session?.user?.email);
-  }
-});

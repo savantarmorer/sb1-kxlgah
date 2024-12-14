@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography, Card, CardContent, Grid, Avatar, Chip } from '@mui/material';
 import { motion } from 'framer-motion';
 import { Trophy, Star, Target, Award, Zap, Crown } from 'lucide-react';
-import { use_game } from '../../contexts/GameContext';
+import { useGame } from '../../contexts/GameContext';
 import Navigation from '../Navigation';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { View } from '../../types/navigation';
@@ -24,7 +24,7 @@ const achievements = [
 export default function ProfileDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { state } = use_game();
+  const { state } = useGame();
 
   const handleViewChange = (view: View) => {
     navigate(view);

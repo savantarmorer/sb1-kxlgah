@@ -1,9 +1,13 @@
 import type { Dispatch } from 'react';
-import type { GameState, GameAction, XPGain, GameItem, Quest, QuestRequirement } from './types';
-import { supabase } from '../../lib/supabase';
+import type { GameState, GameAction, XPGain, GameItem, Quest } from './types';
+import { supabase } from '../../lib/supabase.ts';
 import { calculate_level } from '../../utils/gameUtils';
 import { calculateQuestProgress } from '../../utils/questUtils';
-import type { QuestProgress } from '../../types/quests';
+import { NotificationSystem } from '../../utils/notifications';
+import { inventoryReducer, type InventoryAction } from '../../reducers/inventoryReducer';
+import type { Achievement } from '../../types/achievements';
+import type { Reward } from '../../types/rewards';
+import type { User } from '../../types/user';
 
 export const gameActions = {
   handleXPGain: async (
@@ -12,6 +16,11 @@ export const gameActions = {
     dispatch: Dispatch<GameAction>
   ): Promise<void> => {
     try {
+      if (!state.user) {
+        console.error('No user found in state');
+        return;
+      }
+
       dispatch({ type: 'SET_LOADING', payload: true });
 
       const multiplier = state.user.rewardMultipliers.xp * (state.user.streakMultiplier ?? 1);
@@ -28,7 +37,8 @@ export const gameActions = {
       });
 
       // Check for level up
-      const newLevel = calculate_level(state.user.xp + totalXP);
+      const currentXP = state.user.xp ?? 0;
+      const newLevel = calculate_level(currentXP + totalXP);
       if (newLevel > state.user.level) {
         dispatch({
           type: 'LEVEL_UP',
@@ -194,7 +204,7 @@ export const gameActions = {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
 
-      const questProgress: QuestProgress = calculateQuestProgress(quest, progress);
+      const questProgress = calculateQuestProgress(quest, progress);
       
       if (questProgress.completed) {
         dispatch({
@@ -238,5 +248,132 @@ export const gameActions = {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
+  },
+
+  handleInventoryAction: async (
+    state: GameState,
+    action: InventoryAction,
+    dispatch: Dispatch<GameAction>
+  ): Promise<void> => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+
+      // Use the inventory reducer to calculate the new state
+      const newInventoryState = inventoryReducer(
+        { items: state.user.inventory, activeEffects: [] }, 
+        action
+      );
+
+      // Update inventory in state
+      dispatch({
+        type: 'UPDATE_INVENTORY',
+        payload: { items: newInventoryState.items }
+      });
+
+      // Update inventory in database
+      const { error } = await supabase
+        .from('user_inventory')
+        .upsert(
+          newInventoryState.items.map(item => ({
+            user_id: state.user.id,
+            item_id: item.itemId,
+            quantity: item.quantity,
+            is_equipped: item.equipped,
+            last_used: item.last_used,
+            stats: item.stats,
+            effects: item.effects
+          }))
+        );
+
+      if (error) throw error;
+
+    } catch (error) {
+      console.error('Error handling inventory action:', error);
+      NotificationSystem.showError('Failed to update inventory');
+      throw error;
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  },
+
+  handleBattleAction: async (
+    state: GameState,
+    action: GameAction,
+    dispatch: Dispatch<GameAction>
+  ): Promise<void> => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+
+      switch (action.type) {
+        case 'INITIALIZE_BATTLE':
+        case 'ANSWER_QUESTION':
+        case 'END_BATTLE':
+          dispatch(action);
+          break;
+
+        default:
+          break;
+      }
+
+      // Update battle stats in database if needed
+      if (state.battle && state.battle.status === 'completed') {
+        const { error } = await supabase
+          .from('battle_stats')
+          .upsert({
+            user_id: state.user.id,
+            total_battles: state.battle_stats.total_battles,
+            wins: state.battle_stats.wins,
+            losses: state.battle_stats.losses,
+            win_streak: state.battle_stats.win_streak,
+            highest_streak: state.battle_stats.highest_streak,
+            total_xp_earned: state.battle_stats.total_xp_earned,
+            total_coins_earned: state.battle_stats.total_coins_earned,
+            updated_at: new Date().toISOString()
+          });
+
+        if (error) throw error;
+      }
+
+    } catch (error) {
+      console.error('Error handling battle action:', error);
+      NotificationSystem.showError('Failed to update battle state');
+      throw error;
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
   }
 };
+
+export type AchievementAction = 
+  | { type: 'SYNC_ACHIEVEMENTS'; payload: Achievement[] }
+  | { type: 'UNLOCK_ACHIEVEMENTS'; payload: Achievement[] }
+  | { type: 'UPDATE_ACHIEVEMENT'; payload: { id: string; progress: number } };
+
+export type UserStatsAction = {
+  type: 'UPDATE_USER_STATS';
+  payload: {
+    xp: number;
+    coins: number;
+    streak: number;
+  };
+};
+
+export type QuestAction = 
+  | { type: 'INITIALIZE_QUESTS'; payload: { active: Quest[]; completed: Quest[] } }
+  | { type: 'UPDATE_QUEST_PROGRESS'; payload: { questId: string; progress: number } }
+  | { type: 'COMPLETE_QUEST'; payload: Quest }
+  | { type: 'SYNC_QUESTS'; payload: Quest[] }
+  | { type: 'UPDATE_QUEST'; payload: Quest }
+  | { type: 'HANDLE_QUEST_COMPLETION'; payload: { quest: Quest } };
+
+export type UserAction = 
+  | { type: 'UPDATE_USER_PROFILE'; payload: Partial<User> }
+  | { type: 'UPDATE_USER_STATS'; payload: { xp: number; coins: number; streak: number } }
+  | { type: 'ADD_XP'; payload: { amount: number; source: string; reason?: string } }
+  | { type: 'ADD_COINS'; payload: { amount: number; source: string } }
+  | { type: 'UPDATE_COINS'; payload: number }
+  | { type: 'CLAIM_REWARD'; payload: Reward };
+
+export type SystemAction = 
+  | { type: 'SET_ERROR'; payload: string }
+  | { type: 'SET_LOADING'; payload: boolean };

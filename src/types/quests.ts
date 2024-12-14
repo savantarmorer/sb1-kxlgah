@@ -179,11 +179,7 @@ export function calculateQuestProgress(quest: Quest): number {
  */
 export interface QuestProgress {
   completed: boolean;
-  rewards: {
-    xp: number;
-    coins: number;
-    items?: InventoryItem[];
-  };
+  rewards: QuestRewards;
 }
 
 /**
@@ -193,6 +189,9 @@ export interface QuestRewards {
   xp: number;
   coins: number;
   items?: InventoryItem[];
+  metadata?: {
+    [key: string]: any;
+  };
 }
 
 export interface QuestAssignment {

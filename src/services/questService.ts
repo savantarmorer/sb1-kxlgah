@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.ts';
 import { Quest, QuestStatus } from '../types/quests';
 import { formatQuestFromDB, formatQuestForDB } from '../utils/formatters';
 import { NotificationSystem } from '../utils/notifications';

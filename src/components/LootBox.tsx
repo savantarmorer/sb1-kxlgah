@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gift, Star, Sparkles } from 'lucide-react';
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import { use_language } from '../contexts/LanguageContext';
 import { Reward, RewardRarity } from '../types/rewards';
 import { Achievement, AchievementCategory } from '../types/achievements';
@@ -31,7 +31,7 @@ interface LootBoxProps {
 export default function LootBox({ is_open, on_close, rewards, source }: LootBoxProps) {
   const [isOpening, setIsOpening] = useState(false);
   const [showRewards, setShowRewards] = useState(false);
-  const { dispatch } = use_game();
+  const { dispatch } = useGame();
   const { t } = use_language();
 
   const rarityOrder: Record<RewardRarity, number> = {
@@ -99,8 +99,8 @@ export default function LootBox({ is_open, on_close, rewards, source }: LootBoxP
       const legendaryReward = rewards.find(r => r.rarity === 'legendary');
       if (legendaryReward) {
         dispatch({
-          type: 'UNLOCK_ACHIEVEMENT',
-          payload: createLegendaryAchievement()
+          type: 'UNLOCK_ACHIEVEMENTS',
+          payload: [createLegendaryAchievement()]
         });
       }
     }

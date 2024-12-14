@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
+import { useAuth } from '../contexts/AuthContext';
 import { BattleService } from '../services/battleService';
 import { BATTLE_CONFIG } from '../config/battleConfig';
 import { 
   BattleQuestion, 
   BattleResults, 
   BattleStatus,
-  DBbattle_stats as BattleDBStats
+  battle_statsDB,
+  BattleState,
+  BattleRewards
 } from '../types/battle';
 import { NotificationType } from '../types/notifications';
 import { RewardService } from '../services/rewardService';
@@ -14,70 +17,145 @@ import { useAchievements } from './useAchievements';
 import { useBattleSound } from './useBattleSound';
 import { useNotification } from '../contexts/NotificationContext';
 import { useTranslation } from '../contexts/LanguageContext';
-import { calculate_battle_results } from '../utils/battleUtils';
-import { calculate_xp_reward, calculate_coin_reward } from '../utils/gameUtils';
+import { calculateBattleRewards, calculateBattleResults } from '../utils/battleUtils';
+import { calculate_level_xp } from '../utils/gameUtils';
 import type { Reward } from '../types/rewards';
+import { LevelSystem } from '../lib/levelSystem';
+
+interface BattleOptions {
+  opponent_id?: string;
+  is_bot?: boolean;
+  category?: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+}
 
 export function useBattle() {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
+  const { user: authUser, isLoading: isAuthLoading, initialized: authInitialized } = useAuth();
   const { check_achievements } = useAchievements();
   const { play_sound } = useBattleSound();
   const { showSuccess, showError, showInfo } = useNotification();
   const { t } = useTranslation();
   const user = state.user;
 
-  // Ensure we have an authenticated user
+  // Track if battle system is ready
+  const [isReady, setIsReady] = useState(false);
+
+  // Ensure we have an authenticated user and game state is synced
   useEffect(() => {
-    if (!user?.id) {
-      console.error('[useBattle] No authenticated user found');
-      showError(t('auth.error.not_authenticated'));
+    // Don't check until auth is initialized and not loading
+    if (!authInitialized || isAuthLoading) {
+      return;
     }
-  }, [user, showError, t]);
 
-  const calculate_xp_gained = (score: number, total_questions: number): number => {
-    if (!state.battle_stats) {
-      return BATTLE_CONFIG.progress.base_xp * (score / total_questions);
+    const checkReady = () => {
+      const ready = !!authUser?.id && !!user?.id && user.id === authUser.id;
+
+      console.debug('[useBattle] Checking ready state:', {
+        isAuthLoading,
+        authInitialized,
+        authUserId: authUser?.id,
+        gameUserId: user?.id,
+        ready
+      });
+
+      setIsReady(ready);
+
+      if (!ready) {
+        if (!authUser?.id) {
+          console.error('[useBattle] No authenticated user found');
+          showError(t('auth.error.not_authenticated'));
+        } else if (!user?.id || user.id !== authUser.id) {
+          console.error('[useBattle] Game state not synced with auth state', {
+            authUser: authUser?.id,
+            gameUser: user?.id
+          });
+          showError(t('game.error.state_sync'));
+        }
+      }
+    };
+
+    // Add a small delay to allow game state to sync
+    const timer = setTimeout(checkReady, 100);
+    return () => clearTimeout(timer);
+  }, [authUser, user, isAuthLoading, authInitialized, showError, t]);
+
+  const get_battle_rewards = useCallback((): BattleRewards => {
+    if (!state.battle?.rewards) {
+      return {
+        xp_earned: 0,
+        coins_earned: 0,
+        streak_bonus: 0,
+        time_bonus: 0
+      };
     }
-    const base_xp = BATTLE_CONFIG.progress.base_xp * (score / total_questions);
-    return calculate_xp_reward(base_xp, state.battle_stats.difficulty || 1, state.user.streak);
-  };
+    return state.battle.rewards;
+  }, [state.battle?.rewards]);
 
-  const calculate_coins_earned = (score: number, total_questions: number): number => {
-    if (!state.battle_stats) {
-      return BATTLE_CONFIG.progress.base_coins * (score / total_questions);
-    }
-    const base_coins = BATTLE_CONFIG.progress.base_coins * (score / total_questions);
-    return calculate_coin_reward(base_coins, state.battle_stats.difficulty || 1, state.user.streak);
-  };
+  const calculate_xp_gained = useCallback((score: number, total_questions: number): number => {
+    const difficulty_multiplier = state.battle_stats?.difficulty || 1;
+    const streak_multiplier = state.user?.streak || 0;
+    
+    const rewards = calculateBattleRewards(
+      score,
+      total_questions,
+      difficulty_multiplier,
+      streak_multiplier
+    );
+    
+    return rewards.xp_earned;
+  }, [state.battle_stats?.difficulty, state.user?.streak]);
 
-  const showBattleNotification = (message: string, isVictory?: boolean) => {
+  const calculate_coins_earned = useCallback((score: number, total_questions: number): number => {
+    const difficulty_multiplier = state.battle_stats?.difficulty || 1;
+    const streak_multiplier = state.user?.streak || 0;
+    
+    const rewards = calculateBattleRewards(
+      score,
+      total_questions,
+      difficulty_multiplier,
+      streak_multiplier
+    );
+    
+    return rewards.coins_earned;
+  }, [state.battle_stats?.difficulty, state.user?.streak]);
+
+  const showBattleNotification = useCallback((message: string, isVictory?: boolean) => {
     if (isVictory === undefined) {
       showInfo(message);
     } else {
       isVictory ? showSuccess(message) : showError(message);
     }
-  };
+  }, [showInfo, showSuccess, showError]);
 
-  const initialize_battle = useCallback(async (options?: {
-    opponent_id?: string;
-    is_bot?: boolean;
-    category?: string;
-    difficulty?: 'easy' | 'medium' | 'hard';
-  }) => {
+  const initialize_battle = useCallback(async (options?: BattleOptions) => {
+    if (!authInitialized || isAuthLoading) {
+      throw new Error('Auth state not ready');
+    }
+
+    if (!isReady) {
+      throw new Error('Battle system not ready');
+    }
+
     try {
       console.debug('[useBattle] Starting battle initialization', {
         options,
-        current_state: state.battle?.status
+        current_state: state.battle?.status,
+        user_id: user?.id,
+        auth_state: {
+          initialized: authInitialized,
+          loading: isAuthLoading,
+          user_id: authUser?.id
+        }
       });
 
       // Reset any existing battle first
       dispatch({ type: 'RESET_BATTLE' });
       
-      dispatch({ type: 'SET_BATTLE_STATUS', payload: 'waiting' });
+      dispatch({ type: 'SET_BATTLE_STATUS', payload: 'preparing' as BattleStatus });
       play_sound('battle_start');
 
       console.debug('[useBattle] Fetching battle questions...');
-      // Get questions from the battle service
       const questions = await BattleService.fetch_battle_questions(options?.difficulty);
       
       console.debug('[useBattle] Questions fetched successfully', {
@@ -95,7 +173,7 @@ export function useBattle() {
             rating: 1000,
             level: 1
           }
-        : (await BattleService.get_opponent(options?.opponent_id));
+        : await BattleService.get_opponent(options?.opponent_id);
 
       console.debug('[useBattle] Opponent retrieved', {
         is_bot: options?.is_bot,
@@ -113,56 +191,50 @@ export function useBattle() {
       });
 
       // Set battle to active state after initialization
-      dispatch({ type: 'SET_BATTLE_STATUS', payload: 'active' });
+      dispatch({ type: 'SET_BATTLE_STATUS', payload: 'active' as BattleStatus });
 
       console.debug('[useBattle] Battle activated successfully');
 
     } catch (error) {
       console.error('[useBattle] Battle initialization failed:', error);
-      dispatch({ type: 'SET_BATTLE_STATUS', payload: 'error' });
-      showBattleNotification(t('battle.error.initialization'));
+      dispatch({ type: 'SET_BATTLE_STATUS', payload: 'error' as BattleStatus });
+      showBattleNotification(
+        error instanceof Error ? error.message : t('battle.error.initialization')
+      );
+      throw error;
     }
-  }, [dispatch, play_sound, showBattleNotification, state.user.level, t, user]);
+  }, [dispatch, play_sound, showBattleNotification, state.battle?.status, t, user, authUser, isReady, authInitialized, isAuthLoading]);
 
   const handle_battle_completion = useCallback(async (results: BattleResults) => {
+    if (!user?.id) {
+      throw new Error('No authenticated user found');
+    }
+
     try {
-      // Calculate rewards using RewardService
-      const reward_results = RewardService.calculate_battle_rewards(results);
-      
-      // Sum up total XP including all bonuses
-      const total_xp_gain = reward_results.rewards.reduce((sum: number, r: Reward) => 
-        r.type === 'xp' ? sum + (typeof r.value === 'number' ? r.value : 0) : sum, 0
+      // Calculate complete battle rewards using LevelSystem
+      const battle_rewards = LevelSystem.calculate_complete_battle_rewards(
+        results.score.player,
+        results.stats.total_questions,
+        state.battle_stats?.difficulty || 1,
+        state.user?.streak || 0,
+        state.battle?.time_left || 0
       );
-
-      // Sum up total coins including all bonuses
-      const total_coins_gain = reward_results.rewards.reduce((sum: number, r: Reward) => 
-        r.type === 'coins' ? sum + (typeof r.value === 'number' ? r.value : 0) : sum, 0
-      );
-
-      if (!user?.id) {
-        throw new Error('No authenticated user found');
-      }
 
       // Update battle state with final results
       dispatch({ 
         type: 'END_BATTLE',
         payload: {
-          status: 'completed',
+          status: 'completed' as BattleStatus,
           score: {
-            player: results.player_score,
-            opponent: results.opponent_score
+            player: results.score.player,
+            opponent: results.score.opponent
           },
-          rewards: {
-            xp_earned: total_xp_gain,
-            coins_earned: total_coins_gain,
-            streak_bonus: results.streak_bonus,
-            time_bonus: (state.battle?.time_left ?? 0) * BATTLE_CONFIG.rewards.time_bonus.multiplier
-          }
+          rewards: battle_rewards
         }
       });
 
       // First update battle stats
-      await BattleService.update_stats(user.id, results, state.battle_stats);
+      await BattleService.update_battle_stats(user.id, results);
       
       // Then check achievements with a try-catch block
       try {
@@ -176,23 +248,27 @@ export function useBattle() {
       }
 
       // Show battle completion notification
-      const message = `${results.is_victory ? t('battle.victory') : t('battle.defeat')} - ${t('battle.completed')}`;
-      showBattleNotification(message, results.is_victory);
+      const message = `${results.victory ? t('battle.victory') : t('battle.defeat')} - ${t('battle.completed')}`;
+      showBattleNotification(message, results.victory);
 
       // Play appropriate sound
-      play_sound(results.is_victory ? 'victory' : 'defeat');
+      play_sound(results.victory ? 'victory' : 'defeat');
 
     } catch (error) {
       console.error('Failed to handle battle completion:', error);
       showBattleNotification(t('battle.error.completion'));
       throw error;
     }
-  }, [user, state.battle, state.battle_stats, check_achievements, showBattleNotification, t, play_sound, dispatch]);
+  }, [user, state.battle, state.battle_stats, state.user?.streak, check_achievements, showBattleNotification, t, play_sound, dispatch]);
 
   const answer_question = useCallback(async (selected_answer: string) => {
+    if (!state.user?.id) {
+      throw new Error('No authenticated user found');
+    }
+
     try {
       // Initialize battle stats if they don't exist
-      const current_battle_stats: BattleDBStats = {
+      const current_battle_stats: battle_statsDB = {
         user_id: state.user.id,
         total_battles: state.battle_stats?.total_battles || 0,
         wins: state.battle_stats?.wins || 0,
@@ -211,11 +287,12 @@ export function useBattle() {
       };
 
       const current_question = state.battle?.questions[state.battle.current_question];
-      if (!current_question) return;
+      if (!current_question) {
+        throw new Error('No current question found');
+      }
 
       // Check if the selected answer letter matches the correct answer letter
       const is_correct = selected_answer.toUpperCase() === current_question.correct_answer;
-
       console.debug('[useBattle] Answer result:', { is_correct });
 
       dispatch({
@@ -232,11 +309,14 @@ export function useBattle() {
         battle_stats: current_battle_stats
       };
 
-      const results = await calculate_battle_results(battle_state, selected_answer);
+      const results = await calculateBattleResults(battle_state, selected_answer);
+      if (!results) {
+        throw new Error('Failed to calculate battle results');
+      }
 
       // Check if this was the last question
       const isLastQuestion = state.battle?.current_question === (state.battle?.questions?.length || 0) - 1;
-      if (isLastQuestion && results) {
+      if (isLastQuestion) {
         await handle_battle_completion(results);
       }
 
@@ -244,8 +324,9 @@ export function useBattle() {
     } catch (error) {
       console.error('Error answering question:', error);
       showError(t('battle.error.answer_failed'));
+      throw error;
     }
-  }, [state, dispatch, showError, t, handle_battle_completion]);
+  }, [state, dispatch, handle_battle_completion, showError, t]);
 
   const reset_battle = useCallback(() => {
     dispatch({ type: 'RESET_BATTLE' });
@@ -259,33 +340,33 @@ export function useBattle() {
   }, [state.battle]);
 
   const get_battle_progress = useCallback(() => {
+    if (!state.battle) {
+      return {
+        current_question: 0,
+        total_questions: 0,
+        score: { player: 0, opponent: 0 },
+        time_left: 0
+      };
+    }
+
     return {
-      current_question: state.battle?.current_question || 0,
-      total_questions: state.battle?.questions?.length || 0,
-      time_left: state.battle?.time_left || 0,
-      score: state.battle?.score || { player: 0, opponent: 0 }
+      current_question: state.battle.current_question,
+      total_questions: state.battle.questions.length,
+      score: state.battle.score,
+      time_left: state.battle.time_left
     };
   }, [state.battle]);
 
-  const get_battle_rewards = useCallback(() => {
-    return {
-      xp_earned: state.battle?.rewards?.xp_earned || 0,
-      coins_earned: state.battle?.rewards?.coins_earned || 0,
-      streak_bonus: state.battle?.rewards?.streak_bonus || 0,
-      time_bonus: state.battle?.rewards?.time_bonus || 0
-    };
-  }, [state.battle?.rewards]);
-
   return {
-    battle_state: state.battle,
     initialize_battle,
     answer_question,
     reset_battle,
     get_current_question,
     get_battle_progress,
     get_battle_rewards,
-    calculate_xp_gained,
-    calculate_coins_earned,
-    handle_battle_completion
+    battle: state.battle,
+    loading: isAuthLoading || !authInitialized,
+    error: state.battle?.error,
+    isReady
   };
 }

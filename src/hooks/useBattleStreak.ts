@@ -1,12 +1,12 @@
-import { use_game } from '../contexts/GameContext';
+import { useGame } from '../contexts/GameContext';
 import { useAuth } from '../contexts/AuthContext';
 import { BattleService } from '../services/battleService';
 import { RewardService } from '../services/rewardService';
 import { Reward } from '../types/rewards';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.ts';
 
 export function useBattleStreak() {
-  const { state, dispatch } = use_game();
+  const { state, dispatch } = useGame();
   const { user: authUser } = useAuth();
 
   const handleBattleResult = async (isVictory: boolean): Promise<Reward[]> => {

@@ -1,8 +1,18 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Loader } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function LoadingScreen() {
+  useEffect(() => {
+    // Fallback timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      console.warn('Loading timeout reached');
+      // You might want to handle this case (e.g., show error message)
+    }, 5000);
+
+    return () => clearTimeout(timeout);
+  }, []);
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -29,7 +39,7 @@ export default function LoadingScreen() {
           transition={{ delay: 0.2 }}
           className="mt-4 text-gray-600 dark:text-gray-400 font-medium"
         >
-          Carregando...
+          Loading...
         </motion.p>
       </div>
     </motion.div>
