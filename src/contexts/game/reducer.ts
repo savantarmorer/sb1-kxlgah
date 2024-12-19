@@ -158,6 +158,25 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
         }
       };
 
+    case 'LEVEL_UP':
+      if (!state.user) return state;
+      return {
+        ...state,
+        user: {
+          ...state.user,
+          level: action.payload.level
+        },
+        showLevelUpReward: action.payload.showReward ?? false,
+        current_levelRewards: action.payload.rewards
+      };
+
+    case 'DISMISS_LEVEL_UP_REWARD':
+      return {
+        ...state,
+        showLevelUpReward: false,
+        current_levelRewards: []
+      };
+
     default:
       return state;
   }

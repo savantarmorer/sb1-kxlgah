@@ -1,134 +1,189 @@
 import React, { useState } from 'react';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useColorMode } from '../../contexts/ColorModeContext';
 import { useSound } from '../../hooks/useSound';
 import { use_language } from '../../contexts/LanguageContext';
 import { EditProfileMenu } from '../Profile/EditProfileMenu';
 import { User, Moon, Sun, Volume2, Languages } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { PageContainer } from '../Layout/PageContainer';
+import { Box, Typography, Select, MenuItem, IconButton } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 
 export default function Settings() {
-  const { theme, setTheme } = useTheme();
+  const theme = useTheme();
+  const { mode, toggleColorMode } = useColorMode();
   const { volume, setVolume, isMuted, toggleMute } = useSound();
   const { language, setLanguage } = use_language();
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   return (
     <PageContainer>
-      <div className="max-w-4xl mx-auto p-6 space-y-8">
-        <motion.h2 
+      <Box sx={{ maxWidth: '4xl', mx: 'auto', p: 6, '& > *': { mb: 4 } }}>
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"
         >
-          Settings
-        </motion.h2>
+          <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 4 }}>
+            Settings
+          </Typography>
+        </motion.div>
         
-        <div className="grid gap-8">
+        <Box sx={{ display: 'grid', gap: 4 }}>
           {/* Theme Section */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
           >
-            <div className="flex items-center gap-3 mb-4">
-              {theme === 'dark' ? (
-                <Moon className="w-5 h-5 text-indigo-500" />
-              ) : (
-                <Sun className="w-5 h-5 text-indigo-500" />
-              )}
-              <h3 className="text-lg font-semibold">Theme</h3>
-            </div>
-            <select 
-              value={theme}
-              onChange={(e) => setTheme(e.target.value as 'light' | 'dark' | 'system')}
-              className="w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-            >
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-              <option value="system">System</option>
-            </select>
+            <Box sx={{ 
+              p: 3, 
+              borderRadius: 2,
+              bgcolor: 'background.paper',
+              boxShadow: 1,
+              border: 1,
+              borderColor: 'divider'
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <IconButton color="primary">
+                  {mode === 'dark' ? <Moon /> : <Sun />}
+                </IconButton>
+                <Typography variant="h6">Theme</Typography>
+              </Box>
+              <Select
+                fullWidth
+                value={mode}
+                onChange={(e) => {
+                  if (e.target.value === 'dark' && mode === 'light') toggleColorMode();
+                  if (e.target.value === 'light' && mode === 'dark') toggleColorMode();
+                }}
+              >
+                <MenuItem value="light">Light</MenuItem>
+                <MenuItem value="dark">Dark</MenuItem>
+              </Select>
+            </Box>
           </motion.div>
 
           {/* Sound Section */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
           >
-            <div className="flex items-center gap-3 mb-4">
-              <Volume2 className="w-5 h-5 text-indigo-500" />
-              <h3 className="text-lg font-semibold">Sound</h3>
-            </div>
-            <div className="flex items-center gap-6">
-              <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={toggleMute}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  isMuted 
-                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                    : 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
-                }`}
-              >
-                {isMuted ? 'Unmute' : 'Mute'}
-              </motion.button>
-              <div className="flex-1">
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={volume}
-                  onChange={(e) => setVolume(Number(e.target.value))}
-                  className="w-full accent-indigo-500"
-                />
-              </div>
-            </div>
+            <Box sx={{ 
+              p: 3, 
+              borderRadius: 2,
+              bgcolor: 'background.paper',
+              boxShadow: 1,
+              border: 1,
+              borderColor: 'divider'
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <IconButton color="primary">
+                  <Volume2 />
+                </IconButton>
+                <Typography variant="h6">Sound</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={toggleMute}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: isMuted ? theme.palette.action.hover : theme.palette.primary.main,
+                    color: isMuted ? theme.palette.text.primary : theme.palette.primary.contrastText,
+                  }}
+                >
+                  {isMuted ? 'Unmute' : 'Mute'}
+                </motion.button>
+                <Box sx={{ flex: 1 }}>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={volume}
+                    onChange={(e) => setVolume(Number(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                </Box>
+              </Box>
+            </Box>
           </motion.div>
 
           {/* Language Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-3 mb-4">
-              <Languages className="w-5 h-5 text-indigo-500" />
-              <h3 className="text-lg font-semibold">Language</h3>
-            </div>
-            <select 
+          <Box sx={{ 
+            p: 3, 
+            borderRadius: 2,
+            bgcolor: 'background.paper',
+            boxShadow: 1,
+            border: 1,
+            borderColor: 'divider'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <IconButton color="primary">
+                <Languages />
+              </IconButton>
+              <Typography variant="h6">Language</Typography>
+            </Box>
+            <Select
+              fullWidth
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
             >
-              <option value="en">English</option>
-              <option value="pt">Português</option>
-              <option value="es">Español</option>
-            </select>
-          </div>
+              <MenuItem value="en">English</MenuItem>
+              <MenuItem value="pt">Português</MenuItem>
+              <MenuItem value="es">Español</MenuItem>
+            </Select>
+          </Box>
 
           {/* Profile Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <User className="w-5 h-5 text-indigo-500" />
-                <h3 className="text-lg font-semibold">Profile</h3>
-              </div>
-              <button
+          <Box sx={{ 
+            p: 3, 
+            borderRadius: 2,
+            bgcolor: 'background.paper',
+            boxShadow: 1,
+            border: 1,
+            borderColor: 'divider'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <IconButton color="primary">
+                  <User />
+                </IconButton>
+                <Typography variant="h6">Profile</Typography>
+              </Box>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setIsEditProfileOpen(true)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: theme.palette.primary.main,
+                  color: theme.palette.primary.contrastText,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
               >
-                <User className="w-4 h-4" />
+                <User size={16} />
                 Edit Profile
-              </button>
-            </div>
-          </div>
-        </div>
+              </motion.button>
+            </Box>
+          </Box>
+        </Box>
 
         <EditProfileMenu 
           isOpen={isEditProfileOpen}
           onClose={() => setIsEditProfileOpen(false)}
         />
-      </div>
+      </Box>
     </PageContainer>
   );
 } 

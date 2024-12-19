@@ -33,6 +33,7 @@ import { DateTimePicker } from '@mui/x-date-pickers';
 import { DateTime } from 'luxon';
 import { PostgrestError, PostgrestResponse } from '@supabase/supabase-js';
 import { useGame } from '../../contexts/GameContext';
+import { ShopManagerProps } from '../../types/admin';
 
 interface ShopItemResponse {
   id: string;
@@ -53,7 +54,7 @@ const formatDateTime = (dateTime: DateTime | null | undefined): string => {
   return dateTime.toLocaleString(DateTime.DATETIME_SHORT);
 };
 
-export function ShopManager() {
+export function ShopManager({ onItemsUpdate }: ShopManagerProps) {
   const [items, setItems] = useState<GameItem[]>([]);
   const [shopItems, setShopItems] = useState<ShopItemResponse[]>([]);
   const [selectedItem, setSelectedItem] = useState<ShopItemResponse | null>(null);
@@ -187,6 +188,9 @@ export function ShopManager() {
       });
       
       await loadShopItems();
+      if (onItemsUpdate) {
+        await onItemsUpdate();
+      }
       setShowDialog(false);
     } catch (error: PostgrestError | any) {
       console.error('Error saving shop item:', error);
@@ -221,7 +225,10 @@ export function ShopManager() {
       if (error) throw error;
 
       showSuccess('Shop item removed successfully');
-      loadShopItems();
+      await loadShopItems();
+      if (onItemsUpdate) {
+        await onItemsUpdate();
+      }
     } catch (error) {
       console.error('Error deleting shop item:', error);
       showError('Failed to delete shop item');
@@ -242,6 +249,9 @@ export function ShopManager() {
       
       showSuccess(`Item ${shopItem.is_available ? 'hidden from' : 'shown in'} shop`);
       await loadShopItems();
+      if (onItemsUpdate) {
+        await onItemsUpdate();
+      }
     } catch (error: any) {
       console.error('Error updating item availability:', error);
       showError(error.message || 'Failed to update item availability');
@@ -254,23 +264,27 @@ export function ShopManager() {
     try {
       setLoading(true);
       
+      if (!state.user) {
+        showError('User not logged in');
+        return;
+      }
+      
       const currentPrice = shopItem.discount_price && new Date(shopItem.discount_ends_at!) > new Date() 
         ? shopItem.discount_price 
         : shopItem.price;
         
       if (state.user.coins < currentPrice) {
-        showError('Not enough coins to purchase this item');
+        showError('Not enough coins');
         return;
       }
 
-      // Check stock - handle null case
+      // Check stock
       if (shopItem.stock !== null && shopItem.stock <= 0) {
         showError('Item is out of stock');
         return;
       }
 
-      // Start transaction
-      const { data: purchaseData, error: purchaseError } = await supabase.rpc('purchase_shop_item', {
+      const { error: purchaseError } = await supabase.rpc('purchase_shop_item', {
         p_shop_item_id: shopItem.id,
         p_user_id: state.user.id,
         p_quantity: 1
@@ -280,21 +294,37 @@ export function ShopManager() {
 
       // Update local state
       dispatch({
-        type: 'ADD_INVENTORY_ITEM',
+        type: 'UPDATE_USER_PROFILE',
         payload: {
-          item: shopItem.item,
-          quantity: 1
+          user_inventory: [
+            ...(state.user.user_inventory || []),
+            {
+              id: shopItem.item.id,
+              name: shopItem.item.name,
+              description: shopItem.item.description,
+              type: shopItem.item.type,
+              rarity: shopItem.item.rarity,
+              equipped: false,
+              quantity: 1,
+              icon: shopItem.item.icon || '',
+              effects: shopItem.item.effects,
+              is_active: true,
+              acquired_at: new Date().toISOString()
+            }
+          ]
         }
       });
 
       dispatch({
-        type: 'UPDATE_COINS',
-        payload: -currentPrice
+        type: 'ADD_COINS',
+        payload: { amount: -currentPrice, source: 'shop_purchase' }
       });
 
       showSuccess('Item purchased successfully!');
-      await loadShopItems(); // Refresh shop items
-      
+      await loadShopItems();
+      if (onItemsUpdate) {
+        await onItemsUpdate();
+      }
     } catch (error: any) {
       console.error('Error purchasing item:', error);
       showError(error.message || 'Failed to purchase item');
@@ -496,7 +526,6 @@ export function ShopManager() {
     </Box>
   );
 }
-
 /**
  * ShopManager Component
  * 

@@ -6,7 +6,7 @@ import { TournamentBracket } from './TournamentBracket';
 import { TournamentLeaderboard } from './TournamentLeaderboard';
 import { TournamentChat } from './TournamentChat';
 import { Button } from '@/components/ui/Button';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
 import { TournamentStatus } from '@/types/tournament';
 
 export function TournamentView() {

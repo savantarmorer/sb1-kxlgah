@@ -39,7 +39,20 @@ export const gameActions = {
       // Check for level up
       const currentXP = state.user.xp ?? 0;
       const newLevel = calculate_level(currentXP + totalXP);
+      console.debug('[XP System] Current state:', {
+        currentXP,
+        totalXP,
+        newLevel,
+        currentLevel: state.user.level
+      });
+
       if (newLevel > state.user.level) {
+        console.debug('[Level Up] Triggering level up rewards:', {
+          from: state.user.level,
+          to: newLevel,
+          xpGained: totalXP
+        });
+
         dispatch({
           type: 'LEVEL_UP',
           payload: {
@@ -61,9 +74,12 @@ export const gameActions = {
                 description: 'Level up coin reward',
                 value: newLevel * 100
               }
-            ]
+            ],
+            showReward: true
           }
         });
+
+        console.debug('[Level Up] Rewards dispatched');
       }
 
       // Log the values before updating the database

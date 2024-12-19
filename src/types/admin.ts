@@ -32,5 +32,6 @@ export interface QuestManagerProps extends BaseManagerProps {
 export interface ShopManagerProps extends BaseManagerProps {
   items: GameItem[];
   onUpdateShopItem: (item: GameItem) => Promise<void>;
+  onItemsUpdate?: () => Promise<void>;
 } 
 

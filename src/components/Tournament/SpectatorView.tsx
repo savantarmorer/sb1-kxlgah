@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
 import { TournamentMatch, MatchState } from '@/types/tournament';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';

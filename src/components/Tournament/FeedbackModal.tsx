@@ -3,7 +3,7 @@ import { Dialog } from '@headlessui/react';
 import { Button } from '@/components/ui/Button';
 import { FeedbackType, MatchFeedback, TournamentFeedback } from '@/types/tournament';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 
 interface FeedbackModalProps {

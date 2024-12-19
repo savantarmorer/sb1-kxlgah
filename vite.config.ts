@@ -9,10 +9,6 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  define: {
-    // This is needed for ioredis to work in the browser
-    'process.env': {}
-  },
   server: {
     // Add proxy configuration if needed
     proxy: {

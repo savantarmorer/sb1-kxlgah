@@ -1,13 +1,30 @@
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
-import { designTokens as dt } from '@/styles/design-system';
-import { GameItem } from '@/types/items';
+import { GameItem } from '../../types/items';
+import { Box, Typography } from '@mui/material';
 
 interface ItemCard3DProps {
   item: GameItem;
   onClick?: () => void;
+  isEquipped?: boolean;
 }
 
-export const ItemCard3D = ({ item, onClick }: ItemCard3DProps) => {
+const rarityGradients = {
+  common: 'from-neutral-400 to-neutral-600',
+  uncommon: 'from-green-400 to-green-600',
+  rare: 'from-blue-400 to-blue-600',
+  epic: 'from-purple-400 to-purple-600',
+  legendary: 'from-yellow-400 to-yellow-600'
+};
+
+const rarityColors = {
+  common: '#9e9e9e',
+  uncommon: '#4caf50',
+  rare: '#2196f3',
+  epic: '#9c27b0',
+  legendary: '#ff9800'
+};
+
+export const ItemCard3D = ({ item, onClick, isEquipped }: ItemCard3DProps) => {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
@@ -18,15 +35,6 @@ export const ItemCard3D = ({ item, onClick }: ItemCard3DProps) => {
   // Add spring physics
   const springConfig = { damping: 25, stiffness: 300 };
   const scaleSpring = useSpring(1, springConfig);
-
-  // Rarity colors
-  const rarityGradients = {
-    common: 'from-neutral-400 to-neutral-600',
-    uncommon: 'from-green-400 to-green-600',
-    rare: 'from-blue-400 to-blue-600',
-    epic: 'from-purple-400 to-purple-600',
-    legendary: 'from-yellow-400 to-yellow-600',
-  };
 
   return (
     <motion.div
@@ -44,50 +52,150 @@ export const ItemCard3D = ({ item, onClick }: ItemCard3DProps) => {
       onClick={onClick}
       className="relative perspective-1000 cursor-pointer"
     >
-      <div className="w-48 h-64 relative preserve-3d">
-        {/* Card Face */}
-        <motion.div 
-          className={`absolute inset-0 rounded-xl bg-gradient-to-br ${rarityGradients[item.rarity]} 
-            shadow-lg backdrop-blur-sm border border-white/20`}
+      <Box
+        sx={{
+          width: '12rem',
+          height: '16rem',
+          position: 'relative',
+          transformStyle: 'preserve-3d',
+          borderRadius: 2,
+          overflow: 'hidden',
+          background: `linear-gradient(135deg, ${rarityColors[item.rarity]}20, ${rarityColors[item.rarity]}40)`,
+          boxShadow: 3,
+          border: '1px solid',
+          borderColor: `${rarityColors[item.rarity]}30`,
+          backdropFilter: 'blur(8px)',
+        }}
+      >
+        {/* Item Image */}
+        <Box
+          sx={{
+            height: '8rem',
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+          }}
         >
-          {/* Item Image */}
-          <div className="relative h-32 w-full flex items-center justify-center">
-            <img 
-              src={item.imageUrl} 
+          {item.icon && (
+            <Box
+              component="img"
+              src={item.icon}
               alt={item.name}
-              className="h-24 w-24 object-contain drop-shadow-lg"
+              sx={{
+                height: '6rem',
+                width: '6rem',
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))',
+              }}
             />
-            {/* Glow Effect */}
-            <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/10" />
-          </div>
-
-          {/* Item Info */}
-          <div className="p-4 text-white">
-            <h3 className="font-bold text-lg">{item.name}</h3>
-            <p className="text-sm opacity-80">{item.description}</p>
-            
-            {/* Stats */}
-            <div className="mt-2 space-y-1">
-              {Object.entries(item.stats).map(([stat, value]) => (
-                <div key={stat} className="flex justify-between text-xs">
-                  <span className="capitalize">{stat}</span>
-                  <span className="font-mono">+{value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Equipment Status */}
-          {item.isEquipped && (
-            <div className="absolute top-2 right-2 bg-green-500 px-2 py-1 rounded text-xs font-bold">
-              Equipped
-            </div>
           )}
-        </motion.div>
+          {/* Glow Effect */}
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(to top, transparent, rgba(255,255,255,0.1))',
+            }}
+          />
+        </Box>
+
+        {/* Item Info */}
+        <Box sx={{ p: 2, color: 'white' }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+            {item.name}
+          </Typography>
+          <Typography variant="body2" sx={{ opacity: 0.8, mb: 2 }}>
+            {item.description}
+          </Typography>
+
+          {/* Effects */}
+          {Array.isArray(item.effects) && item.effects.length > 0 && (
+            <Box sx={{ mt: 1 }}>
+              {item.effects.map((effect, index) => (
+                <Box
+                  key={index}
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: '0.75rem',
+                    mb: 0.5,
+                  }}
+                >
+                  <Typography variant="caption" sx={{ textTransform: 'capitalize' }}>
+                    {effect.type}
+                  </Typography>
+                  <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
+                    +{effect.value}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          )}
+        </Box>
+
+        {/* Equipment Status */}
+        {isEquipped && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              bgcolor: 'success.main',
+              color: 'white',
+              px: 1,
+              py: 0.5,
+              borderRadius: 1,
+              fontSize: '0.75rem',
+              fontWeight: 'bold',
+            }}
+          >
+            Equipped
+          </Box>
+        )}
 
         {/* Reflection Effect */}
-        <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent rounded-xl" />
-      </div>
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(to top, transparent, rgba(255,255,255,0.05))',
+            borderRadius: 2,
+          }}
+        />
+      </Box>
     </motion.div>
   );
-}; 
+};
+
+/**
+ * ItemCard3D Component
+ * 
+ * Purpose:
+ * - Provides a 3D interactive card for special items
+ * - Used for legendary/special items display
+ * - Enhanced visual presentation
+ * 
+ * Props:
+ * - item: GameItem object
+ * - onClick: Optional click handler
+ * - isEquipped: Whether item is equipped
+ * 
+ * Features:
+ * - 3D rotation effects
+ * - Interactive animations
+ * - Drag functionality
+ * - Rarity-based styling
+ * - Equipment status
+ * 
+ * Used By:
+ * - Inventory system
+ * - Special shop displays
+ * - Achievement rewards
+ * 
+ * Dependencies:
+ * - Framer Motion
+ * - Material-UI
+ * - GameItem type
+ */ 

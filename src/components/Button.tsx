@@ -1,86 +1,110 @@
 import React from 'react';
-import { motion, HTMLMotionProps } from 'framer-motion';
+import { Button as MuiButton, ButtonProps as MuiButtonProps } from '@mui/material';
+import { styled } from '@mui/material/styles';
 
-interface ButtonProps extends HTMLMotionProps<"button"> {
-  children: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'outline';
+export interface ButtonProps extends Omit<MuiButtonProps, 'variant'> {
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
-  fullWidth?: boolean;
-  loading?: boolean;
   icon?: React.ReactNode;
+  className?: string;
 }
 
-export function Button({ 
-  children, 
+const StyledButton = styled(MuiButton, {
+  shouldForwardProp: (prop) => prop !== 'variant' && prop !== 'size',
+})<ButtonProps>(({ theme, variant = 'primary', size = 'md' }) => ({
+  textTransform: 'none',
+  fontWeight: 500,
+  borderRadius: theme.shape.borderRadius * 2,
+  ...(variant === 'primary' && {
+    backgroundColor: theme.palette.primary.main,
+    color: 'white',
+    '&:hover': {
+      backgroundColor: theme.palette.primary.dark,
+    },
+  }),
+  ...(variant === 'secondary' && {
+    backgroundColor: theme.palette.secondary.main,
+    color: 'white',
+    '&:hover': {
+      backgroundColor: theme.palette.secondary.dark,
+    },
+  }),
+  ...(variant === 'outline' && {
+    backgroundColor: 'transparent',
+    border: `1px solid ${theme.palette.divider}`,
+    color: theme.palette.text.primary,
+    '&:hover': {
+      backgroundColor: theme.palette.action.hover,
+    },
+  }),
+  ...(variant === 'ghost' && {
+    backgroundColor: 'transparent',
+    color: theme.palette.text.primary,
+    '&:hover': {
+      backgroundColor: theme.palette.action.hover,
+    },
+  }),
+  ...(size === 'sm' && {
+    padding: theme.spacing(0.5, 1.5),
+    fontSize: '0.875rem',
+  }),
+  ...(size === 'md' && {
+    padding: theme.spacing(1, 2),
+    fontSize: '1rem',
+  }),
+  ...(size === 'lg' && {
+    padding: theme.spacing(1.5, 3),
+    fontSize: '1.125rem',
+  }),
+}));
+
+export function Button({
+  children,
   variant = 'primary',
   size = 'md',
-  fullWidth = false,
-  loading = false,
   icon,
-  className = '',
-  disabled,
-  ...motionProps
+  className,
+  ...props
 }: ButtonProps) {
-  const baseClasses = 'btn';
-  
-  const variantClasses = {
-    primary: 'btn-primary',
-    secondary: 'btn-secondary',
-    outline: 'btn-outline'
-  };
-  
-  const sizeClasses = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2',
-    lg: 'px-6 py-3 text-lg'
-  };
-  
-  const widthClass = fullWidth ? 'w-full' : '';
-  const loadingClass = loading ? 'opacity-80 cursor-wait' : '';
-  const disabledClass = disabled ? 'opacity-50 cursor-not-allowed' : '';
-  
   return (
-    <motion.button
-      whileHover={!disabled && !loading ? { scale: 1.02 } : {}}
-      whileTap={!disabled && !loading ? { scale: 0.98 } : {}}
-      disabled={disabled || loading}
-      {...motionProps}
-      className={`
-        ${baseClasses}
-        ${variantClasses[variant]}
-        ${sizeClasses[size]}
-        ${widthClass}
-        ${loadingClass}
-        ${disabledClass}
-        ${className}
-        inline-flex items-center justify-center gap-2
-      `}
+    <StyledButton
+      variant={variant === 'outline' || variant === 'ghost' ? 'text' : 'contained'}
+      size={size}
+      className={className}
+      startIcon={icon}
+      {...props}
     >
-      {loading ? (
-        <svg 
-          className="animate-spin -ml-1 mr-2 h-4 w-4" 
-          xmlns="http://www.w3.org/2000/svg" 
-          fill="none" 
-          viewBox="0 0 24 24"
-        >
-          <circle 
-            className="opacity-25" 
-            cx="12" 
-            cy="12" 
-            r="10" 
-            stroke="currentColor" 
-            strokeWidth="4"
-          />
-          <path 
-            className="opacity-75" 
-            fill="currentColor" 
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-          />
-        </svg>
-      ) : icon}
       {children}
-    </motion.button>
+    </StyledButton>
   );
 }
 
 export default Button;
+
+/**
+ * Button Component
+ * 
+ * Purpose:
+ * - Provides consistent button styling across the application
+ * - Supports multiple variants and sizes
+ * - Integrates with Material-UI theme
+ * 
+ * Props:
+ * - variant: 'primary' | 'secondary' | 'outline' | 'ghost'
+ * - size: 'sm' | 'md' | 'lg'
+ * - icon: Optional icon component
+ * - className: Additional CSS classes
+ * 
+ * Features:
+ * - Custom styling based on variant
+ * - Responsive sizing
+ * - Icon support
+ * - Theme integration
+ * 
+ * Used By:
+ * - Multiple components across the application
+ * 
+ * Dependencies:
+ * - Material-UI components
+ * - Material-UI styling
+ */

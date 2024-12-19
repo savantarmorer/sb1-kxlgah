@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTournament } from '@/contexts/TournamentContext';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
 import { useSound } from '@/hooks/useSound';
 import { Avatar } from '@/components/ui/Avatar';
 import { Timer } from '@/components/ui/Timer';

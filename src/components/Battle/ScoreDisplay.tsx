@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Flame } from 'lucide-react';
+import { Trophy, Flame, Swords } from 'lucide-react';
+import { use_language } from '../../contexts/LanguageContext';
 
 interface ScoreDisplayProps {
   score_player: number;
@@ -15,54 +16,69 @@ export function ScoreDisplay({
   streak,
   time_left 
 }: ScoreDisplayProps) {
-  return (
-    <div className="flex justify-between items-center mb-6">
-      <div className="flex items-center space-x-4">
-        <motion.div
-          className="text-2xl font-bold"
-          key={`${score_player}-${score_opponent}`}
-          initial={{ scale: 1 }}
-          animate={{ scale: [1, 1.2, 1] }}
-          transition={{ duration: 0.3 }}
-        >
-          <span className="text-brand-teal-600 dark:text-brand-teal-400">
-            {score_player}
-          </span>
-          <span className="text-gray-400 mx-2">-</span>
-          <span className="text-gray-600 dark:text-gray-400">
-            {score_opponent}
-          </span>
-        </motion.div>
+  const { t } = use_language();
 
-        {streak > 0 && (
-          <motion.div
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 mb-4"
+    >
+      <div className="flex justify-between items-center">
+        {/* Player Score */}
+        <div className="text-center">
+          <motion.div 
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="flex items-center space-x-1"
+            className="text-3xl font-bold text-cyan-400"
           >
-            <Flame className="text-orange-500" size={20} />
-            <motion.span
-              key={streak}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="font-medium text-orange-500"
-            >
-              {streak}
-            </motion.span>
+            {score_player}
           </motion.div>
-        )}
+          <p className="text-sm text-gray-400">{t('battle.you')}</p>
+        </div>
+
+        {/* VS and Timer */}
+        <div className="text-center">
+          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-white/10 mb-2">
+            <Swords className="w-6 h-6 text-indigo-400" />
+          </div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-sm font-medium text-gray-400"
+          >
+            {time_left}s
+          </motion.div>
+        </div>
+
+        {/* Opponent Score */}
+        <div className="text-center">
+          <motion.div 
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="text-3xl font-bold text-red-400"
+          >
+            {score_opponent}
+          </motion.div>
+          <p className="text-sm text-gray-400">{t('battle.opponent')}</p>
+        </div>
       </div>
 
-      {score_player > score_opponent && (
-        <motion.div
-          animate={{
-            rotate: [0, 10, -10, 0],
-            transition: { duration: 2, repeat: Infinity }
-          }}
+      {/* Streak Display */}
+      {streak > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-4 pt-4 border-t border-white/10"
         >
-          <Trophy className="text-yellow-500" size={24} />
+          <div className="flex items-center justify-center gap-2">
+            <Flame className="w-5 h-5 text-orange-400" />
+            <span className="text-sm font-medium text-orange-400">
+              {streak} {t('battle.streak')}
+            </span>
+          </div>
         </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }

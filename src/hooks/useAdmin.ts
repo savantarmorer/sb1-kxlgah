@@ -10,7 +10,7 @@ export function useAdmin() {
   const { user: authUser } = useAuth();
 
   // Check both game state and auth state for admin status
-  const isAdmin = (state.user?.email === 'admin@admin' || authUser?.email === 'admin@admin') || 
+  const isAdmin = (state.user?.is_super_admin || authUser?.is_super_admin) || 
                  (state.user?.roles?.includes('admin') || authUser?.roles?.includes('admin'));
 
   // Debug logging for admin status
@@ -19,6 +19,7 @@ export function useAdmin() {
       userEmail: state.user?.email || authUser?.email,
       isAdmin,
       userRoles: state.user?.roles || authUser?.roles,
+      isSuperAdmin: state.user?.is_super_admin || authUser?.is_super_admin,
       timestamp: new Date().toISOString(),
       fullUser: state.user || authUser,
       authState: !!authUser,
@@ -30,6 +31,7 @@ export function useAdmin() {
     checkPermissions: () => {
       console.log('[Admin Debug]', {
         isAdmin,
+        isSuperAdmin: state.user?.is_super_admin || authUser?.is_super_admin,
         user: state.user || authUser,
         authStatus: !!(state.user?.email || authUser?.email),
         timestamp: new Date().toISOString()
@@ -40,6 +42,7 @@ export function useAdmin() {
         gameState: state,
         authState: authUser,
         adminStatus: isAdmin,
+        superAdminStatus: state.user?.is_super_admin || authUser?.is_super_admin,
         userEmail: state.user?.email || authUser?.email,
         timestamp: new Date().toISOString()
       });
@@ -48,6 +51,7 @@ export function useAdmin() {
 
   return {
     isAdmin,
+    isSuperAdmin: state.user?.is_super_admin || authUser?.is_super_admin,
     debugAdmin
   };
 }

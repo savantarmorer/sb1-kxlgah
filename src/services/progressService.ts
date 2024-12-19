@@ -1,6 +1,8 @@
-import { supabase } from '../lib/supabaseClient.ts.old';
+import { supabase } from '../lib/supabaseClient.ts';
 import { UserProgressDB, battle_statsDB } from '../types/battle';
 import { LevelSystem } from '../lib/levelSystem';
+import { Reward } from '../types/rewards';
+import { NotificationSystem } from '../utils/notificationSystem';
 
 /**
  * Type for progress update operations
@@ -54,20 +56,94 @@ export interface UserProgress {
 }
 
 /**
+ * Generates rewards for level up
+ * Higher levels give better rewards
+ */
+const generateLevelUpRewards = (level: number): Reward[] => {
+  const baseCoins = 100 * level;
+  const rewards: Reward[] = [];
+
+  // Base coin reward
+  rewards.push({
+    id: `level_${level}_coins`,
+    type: 'coins',
+    value: baseCoins,
+    name: 'Level Up Coins',
+    description: 'Coins earned from reaching a new level',
+    amount: 1,
+    rarity: level >= 50 ? 'legendary' : level >= 30 ? 'epic' : level >= 10 ? 'rare' : 'common'
+  });
+
+  // Special rewards for milestone levels
+  if (level % 10 === 0) {
+    rewards.push({
+      id: `level_${level}_special`,
+      type: 'item',
+      value: 1,
+      name: 'Special Level Achievement',
+      description: 'A special reward for reaching a milestone level',
+      amount: 1,
+      rarity: level >= 50 ? 'legendary' : level >= 30 ? 'epic' : 'rare'
+    });
+  }
+
+  return rewards;
+};
+
+/**
  * Service class for managing user progress
  * Handles database operations and progress calculations
- * 
- * Dependencies:
- * - Supabase client for database operations
- * - LevelSystem for level and streak calculations
- * - battle types for database schemas
- * 
- * Used by:
- * - GameContext for state management
- * - Battle system for updating progress
- * - Achievement system for tracking progress
  */
 export class ProgressService {
+  /**
+   * Creates a new pending lootbox in the database
+   * 
+   * @param user_id - User ID to create lootbox for
+   * @param type - Type of lootbox
+   * @param rewards - Array of rewards in the lootbox
+   * @param rarity - Rarity of the lootbox
+   * @returns Promise resolving to the created lootbox
+   */
+  static async createPendingLootbox(
+    user_id: string,
+    type: 'level_up' | 'achievement' | 'daily',
+    rewards: Reward[],
+    rarity: 'common' | 'rare' | 'epic' | 'legendary'
+  ) {
+    console.debug('[DB] Creating pending lootbox:', {
+      user_id,
+      type,
+      rewardsCount: rewards.length,
+      rarity
+    });
+
+    try {
+      const { data, error } = await supabase
+        .from('pending_lootboxes')
+        .insert({
+          user_id,
+          type,
+          rewards,
+          rarity,
+          is_claimed: false,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('[DB] Error creating lootbox:', error);
+        throw error;
+      }
+
+      console.debug('[DB] Lootbox created successfully:', data.id);
+      return data;
+    } catch (err) {
+      console.error('[DB] Error in createPendingLootbox:', err);
+      throw err;
+    }
+  }
+
   /**
    * Retrieves user progress data from database
    * Includes battle stats
@@ -117,8 +193,41 @@ export class ProgressService {
       if (progress.xp !== undefined && existing_progress) {
         const new_level = LevelSystem.calculate_level(progress.xp);
         
-        // Update level if changed
+        // Update level if changed and generate rewards
         if (new_level !== existing_progress.level) {
+          const level_up_rewards = generateLevelUpRewards(new_level);
+          const rarity = new_level >= 50 ? 'legendary' : new_level >= 30 ? 'epic' : new_level >= 10 ? 'rare' : 'common';
+          
+          // Create a pending lootbox for the level up rewards
+          const lootbox = await this.createPendingLootbox(
+            user_id,
+            'level_up',
+            level_up_rewards,
+            rarity
+          );
+
+          // Show level up notification with lootbox option
+          NotificationSystem.showLevelUp({
+            level: new_level,
+            rewards: level_up_rewards,
+            lootbox_id: lootbox.id,
+            onOpen: () => {
+              // This will be handled by the UI component
+              window.dispatchEvent(new CustomEvent('SHOW_LOOTBOX', {
+                detail: {
+                  lootbox_id: lootbox.id,
+                  rewards: level_up_rewards,
+                  type: 'level_up',
+                  rarity,
+                  level: new_level
+                }
+              }));
+            },
+            onSave: () => {
+              NotificationSystem.showSuccess('Lootbox saved to inventory!');
+            }
+          });
+
           progress = {
             ...progress,
             level: new_level
@@ -178,10 +287,86 @@ export class ProgressService {
         throw progress_error;
       }
 
-      // Ensure we return the latest data
       return updated_progress as UserProgress;
     } catch (err) {
       console.error('Error in update_progress:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Get all pending lootboxes for a user
+   * 
+   * @param user_id - User ID to get lootboxes for
+   * @returns Promise resolving to array of pending lootboxes
+   */
+  static async getPendingLootboxes(user_id: string) {
+    try {
+      const { data, error } = await supabase
+        .from('pending_lootboxes')
+        .select('*')
+        .eq('user_id', user_id)
+        .eq('is_claimed', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error('Error fetching pending lootboxes:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * FUNÇÃO PARA CHAMAR UMA LOOTBOX PENDENTE
+   * 
+   * @param user_id - User ID claiming the lootbox
+   * @param lootbox_id - ID of the lootbox to claim
+   * @returns Promise resolving to the claimed lootbox
+   */
+  static async claimLootbox(user_id: string, lootbox_id: string) {
+    console.debug('[DB] Claiming lootbox:', { user_id, lootbox_id });
+
+    try {
+      const { data: lootbox, error: fetchError } = await supabase
+        .from('pending_lootboxes')
+        .select('*')
+        .eq('id', lootbox_id)
+        .eq('user_id', user_id)
+        .eq('is_claimed', false)
+        .single();
+
+      if (fetchError) {
+        console.error('[DB] Error fetching lootbox:', fetchError);
+        throw fetchError;
+      }
+      if (!lootbox) {
+        console.error('[DB] Lootbox not found or already claimed');
+        throw new Error('Lootbox not found or already claimed');
+      }
+
+      console.debug('[DB] Found lootbox:', lootbox);
+
+      // Mark lootbox as claimed
+      const { data: updatedLootbox, error: updateError } = await supabase
+        .from('pending_lootboxes')
+        .update({
+          is_claimed: true,
+          claimed_at: new Date().toISOString()
+        })
+        .eq('id', lootbox_id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('[DB] Error updating lootbox:', updateError);
+        throw updateError;
+      }
+
+      console.debug('[DB] Lootbox claimed successfully');
+      return updatedLootbox;
+    } catch (err) {
+      console.error('[DB] Error in claimLootbox:', err);
       throw err;
     }
   }

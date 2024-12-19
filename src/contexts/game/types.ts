@@ -117,7 +117,7 @@ export type GameAction =
   | { type: 'UPDATE_USER_PROGRESS'; payload: { xp: number; coins: number; level: number; streak: number } }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'LEVEL_UP'; payload: { level: number; rewards: Reward[] } }
+  | { type: 'LEVEL_UP'; payload: { level: number; rewards: Reward[]; showReward: boolean } }
   | { type: 'UPDATE_INVENTORY'; payload: { items: InventoryItem[] } }
   | { type: 'UPDATE_USER_STATS'; payload: { quest_progress: Record<string, any> } } 
   | { type: 'UPDATE_BATTLE_HISTORY'; payload: { battle_history: BattleHistory[] } } 
@@ -129,8 +129,8 @@ export type GameAction =
   | { type: 'UPDATE_BATTLE_QUESTION_INDEX'; payload: { index: number } } 
   | { type: 'UPDATE_BATTLE_TIME_LEFT'; payload: { time_left: number } } 
   | { type: 'UPDATE_BATTLE_QUESTION_ANSWERED'; payload: { answered: boolean } } 
-  | { type: 'UPDATE_BATTLE_QUESTION_CORRECT'; payload: { correct: boolean } };
-
+  | { type: 'UPDATE_BATTLE_QUESTION_CORRECT'; payload: { correct: boolean } }
+  | { type: 'DISMISS_LEVEL_UP_REWARD' };
 /**
  * Role: Define all possible game state actions
  * Dependencies:

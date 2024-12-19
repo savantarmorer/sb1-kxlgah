@@ -1,9 +1,10 @@
 import React from 'react';
 import { toast, ToastOptions } from 'react-hot-toast';
-import { Trophy, Scroll, Gift } from 'lucide-react';
+import { Trophy, Scroll, Gift, Star } from 'lucide-react';
 import { Achievement } from '../types/achievements';
 import { Quest } from '../types/quests';
-import { Reward } from '../types/rewards';
+import { Reward, RewardRarity } from '../types/rewards';
+import Button from '../components/Button';
 
 /**
  * Centralized notification system for the application
@@ -26,6 +27,105 @@ export const NotificationSystem = {
         </div>
       </div>
     ), { duration: 4000 });
+  },
+
+  /**
+   * Shows level up notification with lootbox option
+   * @param options - Level up notification options
+   */
+  showLevelUp: (options: {
+    level: number;
+    rewards: Reward[];
+    lootbox_id: string;
+    onOpen: () => void;
+    onSave: () => void;
+  }) => {
+    const highestRarity = options.rewards.reduce<RewardRarity>((highest, reward) => {
+      const rarityOrder = { common: 0, rare: 1, epic: 2, legendary: 3 } as const;
+      if (!reward.rarity) return highest;
+      return rarityOrder[reward.rarity] > rarityOrder[highest] ? reward.rarity : highest;
+    }, 'common');
+
+    const getRarityColor = (rarity: RewardRarity) => {
+      switch (rarity) {
+        case 'legendary': return 'text-yellow-500';
+        case 'epic': return 'text-purple-500';
+        case 'rare': return 'text-blue-500';
+        default: return 'text-gray-500';
+      }
+    };
+
+    toast.custom(
+      (t) => (
+        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} bg-white dark:bg-gray-800 shadow-xl rounded-lg p-6 max-w-md w-full mx-4`}>
+          <div className="text-center mb-6">
+            <div className="relative inline-block">
+              <Trophy className={`w-16 h-16 ${getRarityColor(highestRarity)}`} />
+              <div className="absolute -top-2 -right-2">
+                <Star className={`w-6 h-6 ${getRarityColor(highestRarity)}`} />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold mt-4 dark:text-white">Level Up!</h2>
+            <p className="text-lg text-gray-600 dark:text-gray-400 mt-2">
+              You've reached Level {options.level}
+            </p>
+          </div>
+
+          <div className="space-y-4 mb-6">
+            {options.rewards.map((reward, index) => (
+              <div
+                key={index}
+                className={`p-3 rounded-lg ${
+                  reward.rarity === 'legendary' ? 'bg-yellow-100 dark:bg-yellow-900/30' :
+                  reward.rarity === 'epic' ? 'bg-purple-100 dark:bg-purple-900/30' :
+                  reward.rarity === 'rare' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                  'bg-gray-100 dark:bg-gray-900/30'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Gift className={reward.rarity ? getRarityColor(reward.rarity) : 'text-gray-500'} />
+                    <span className="font-medium dark:text-white">
+                      {reward.type === 'xp' && `+${reward.value} XP`}
+                      {reward.type === 'coins' && `+${reward.value} Coins`}
+                      {reward.type === 'item' && reward.value}
+                    </span>
+                  </div>
+                  <Star className={reward.rarity ? getRarityColor(reward.rarity) : 'text-gray-500'} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-4">
+            <Button
+              variant="primary"
+              onClick={() => {
+                options.onOpen();
+                toast.dismiss(t.id);
+              }}
+              className="flex-1"
+            >
+              Open Now
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                options.onSave();
+                toast.dismiss(t.id);
+              }}
+              className="flex-1"
+            >
+              Save for Later
+            </Button>
+          </div>
+        </div>
+      ),
+      {
+        duration: Infinity,
+        position: 'top-center',
+      }
+    );
   },
 
   /**

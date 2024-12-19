@@ -36,49 +36,69 @@ export function useBattle() {
   const { play_sound } = useBattleSound();
   const { showSuccess, showError, showInfo } = useNotification();
   const { t } = useTranslation();
-  const user = state.user;
-
+  
   // Track if battle system is ready
   const [isReady, setIsReady] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
-  // Ensure we have an authenticated user and game state is synced
+  // Initialize game state if needed
   useEffect(() => {
-    // Don't check until auth is initialized and not loading
-    if (!authInitialized || isAuthLoading) {
+    const initializeGameState = async () => {
+      if (!authUser?.id || !authInitialized || isAuthLoading) return;
+      
+      try {
+        // Attempt to initialize game state if not already present
+        if (!state.user) {
+          await dispatch({ type: 'INITIALIZE_USER', payload: { id: authUser.id } });
+        }
+        setIsInitializing(false);
+      } catch (error) {
+        console.error('[useBattle] Failed to initialize game state:', error);
+        showError(t('game.error.initialization_failed'));
+        setIsInitializing(false);
+      }
+    };
+
+    initializeGameState();
+  }, [authUser?.id, authInitialized, isAuthLoading]);
+
+  // Check battle system readiness
+  useEffect(() => {
+    if (!authInitialized || isAuthLoading || isInitializing) {
       return;
     }
 
     const checkReady = () => {
-      const ready = !!authUser?.id && !!user?.id && user.id === authUser.id;
-
-      console.debug('[useBattle] Checking ready state:', {
-        isAuthLoading,
-        authInitialized,
-        authUserId: authUser?.id,
-        gameUserId: user?.id,
-        ready
-      });
-
-      setIsReady(ready);
-
-      if (!ready) {
-        if (!authUser?.id) {
-          console.error('[useBattle] No authenticated user found');
-          showError(t('auth.error.not_authenticated'));
-        } else if (!user?.id || user.id !== authUser.id) {
-          console.error('[useBattle] Game state not synced with auth state', {
-            authUser: authUser?.id,
-            gameUser: user?.id
-          });
-          showError(t('game.error.state_sync'));
-        }
+      if (!authUser?.id) {
+        console.error('[useBattle] No authenticated user found');
+        showError(t('auth.error.not_authenticated'));
+        setIsReady(false);
+        return;
       }
+
+      if (!state.user?.id) {
+        console.error('[useBattle] No game user found');
+        showError(t('game.error.no_user'));
+        setIsReady(false);
+        return;
+      }
+
+      if (state.user.id !== authUser.id) {
+        console.error('[useBattle] Game state not synced with auth state', {
+          authUser: authUser.id,
+          gameUser: state.user.id
+        });
+        showError(t('game.error.state_sync'));
+        setIsReady(false);
+        return;
+      }
+
+      setIsReady(true);
     };
 
-    // Add a small delay to allow game state to sync
     const timer = setTimeout(checkReady, 100);
     return () => clearTimeout(timer);
-  }, [authUser, user, isAuthLoading, authInitialized, showError, t]);
+  }, [authUser, state.user, isAuthLoading, authInitialized, isInitializing, showError, t]);
 
   const get_battle_rewards = useCallback((): BattleRewards => {
     if (!state.battle?.rewards) {
@@ -92,33 +112,27 @@ export function useBattle() {
     return state.battle.rewards;
   }, [state.battle?.rewards]);
 
-  const calculate_xp_gained = useCallback((score: number, total_questions: number): number => {
-    const difficulty_multiplier = state.battle_stats?.difficulty || 1;
-    const streak_multiplier = state.user?.streak || 0;
-    
-    const rewards = calculateBattleRewards(
-      score,
-      total_questions,
-      difficulty_multiplier,
-      streak_multiplier
-    );
-    
-    return rewards.xp_earned;
-  }, [state.battle_stats?.difficulty, state.user?.streak]);
-
-  const calculate_coins_earned = useCallback((score: number, total_questions: number): number => {
-    const difficulty_multiplier = state.battle_stats?.difficulty || 1;
-    const streak_multiplier = state.user?.streak || 0;
-    
-    const rewards = calculateBattleRewards(
-      score,
-      total_questions,
-      difficulty_multiplier,
-      streak_multiplier
-    );
-    
-    return rewards.coins_earned;
-  }, [state.battle_stats?.difficulty, state.user?.streak]);
+  /**
+   * Role: Battle rewards and progress management
+   * 
+   * This module handles:
+   * - Battle rewards calculation
+   * - Progress tracking
+   * - XP and coin rewards
+   * 
+   * Dependencies:
+   * - LevelSystem for XP/reward calculations
+   * - BattleService for battle operations
+   * - GameContext for state management
+   * 
+   * Database Impact:
+   * - Updates battle_stats
+   * - Modifies user progress
+   * - Records battle history
+   * 
+   * Note: XP and coin calculations are centralized in LevelSystem.calculate_complete_battle_rewards
+   * for consistency and maintainability
+   */
 
   const showBattleNotification = useCallback((message: string, isVictory?: boolean) => {
     if (isVictory === undefined) {
@@ -130,18 +144,22 @@ export function useBattle() {
 
   const initialize_battle = useCallback(async (options?: BattleOptions) => {
     if (!authInitialized || isAuthLoading) {
-      throw new Error('Auth state not ready');
+      throw new Error(t('auth.error.not_ready'));
+    }
+
+    if (!state.user?.id) {
+      throw new Error(t('game.error.no_user'));
     }
 
     if (!isReady) {
-      throw new Error('Battle system not ready');
+      throw new Error(t('battle.error.system_not_ready'));
     }
 
     try {
       console.debug('[useBattle] Starting battle initialization', {
         options,
         current_state: state.battle?.status,
-        user_id: user?.id,
+        user_id: state.user.id,
         auth_state: {
           initialized: authInitialized,
           loading: isAuthLoading,
@@ -203,11 +221,11 @@ export function useBattle() {
       );
       throw error;
     }
-  }, [dispatch, play_sound, showBattleNotification, state.battle?.status, t, user, authUser, isReady, authInitialized, isAuthLoading]);
+  }, [dispatch, play_sound, showBattleNotification, state.battle?.status, state.user, t, authUser, isReady, authInitialized, isAuthLoading]);
 
   const handle_battle_completion = useCallback(async (results: BattleResults) => {
-    if (!user?.id) {
-      throw new Error('No authenticated user found');
+    if (!state.user?.id) {
+      throw new Error(t('game.error.no_user'));
     }
 
     try {
@@ -216,7 +234,7 @@ export function useBattle() {
         results.score.player,
         results.stats.total_questions,
         state.battle_stats?.difficulty || 1,
-        state.user?.streak || 0,
+        state.user.streak || 0,
         state.battle?.time_left || 0
       );
 
@@ -234,7 +252,7 @@ export function useBattle() {
       });
 
       // First update battle stats
-      await BattleService.update_battle_stats(user.id, results);
+      await BattleService.update_battle_stats(state.user.id, results);
       
       // Then check achievements with a try-catch block
       try {
@@ -259,7 +277,7 @@ export function useBattle() {
       showBattleNotification(t('battle.error.completion'));
       throw error;
     }
-  }, [user, state.battle, state.battle_stats, state.user?.streak, check_achievements, showBattleNotification, t, play_sound, dispatch]);
+  }, [state.user, state.battle, state.battle_stats, check_achievements, showBattleNotification, t, play_sound, dispatch]);
 
   const answer_question = useCallback(async (selected_answer: string) => {
     if (!state.user?.id) {
@@ -328,8 +346,15 @@ export function useBattle() {
     }
   }, [state, dispatch, handle_battle_completion, showError, t]);
 
-  const reset_battle = useCallback(() => {
+  const reset_battle = useCallback(async () => {
+    // First dispatch the reset action
     dispatch({ type: 'RESET_BATTLE' });
+    
+    // Wait for state to update
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    // Ensure we're ready for a new battle
+    setIsReady(true);
   }, [dispatch]);
 
   const get_current_question = useCallback((): BattleQuestion | null => {
@@ -367,6 +392,7 @@ export function useBattle() {
     battle: state.battle,
     loading: isAuthLoading || !authInitialized,
     error: state.battle?.error,
-    isReady
+    isReady,
+    isInitializing
   };
 }

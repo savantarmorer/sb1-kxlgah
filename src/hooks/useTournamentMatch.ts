@@ -5,7 +5,7 @@ import { MatchState, Question, MATCH_TIME_LIMIT, QUESTIONS_PER_MATCH, Tournament
 import { verifyAnswer, calculateScore } from '@/lib/scoring/tournamentScoring';
 import { useRealtime } from '@/hooks/useRealtime';
 import { useTournament } from '@/contexts/TournamentContext';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/useToast';
 
 interface MatchData {

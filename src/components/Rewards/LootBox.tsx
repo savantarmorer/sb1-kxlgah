@@ -26,8 +26,16 @@ export const LootBox: React.FC<LootBoxProps> = ({
 
   const handleClaim = async () => {
     setShowConfetti(true);
+    console.debug('[Lootbox] Claiming rewards:', rewards);
+
     if (rewards.length > 0) {
       for (const reward of rewards) {
+        console.debug('[Lootbox] Processing reward:', {
+          id: reward.id,
+          type: reward.type,
+          value: reward.value
+        });
+
         const gameItem = {
           id: reward.id,
           name: reward.name,
@@ -44,13 +52,21 @@ export const LootBox: React.FC<LootBoxProps> = ({
           imageUrl: '',
           is_active: true
         };
-        await addItem(gameItem, 1, 0);
+
+        try {
+          await addItem(gameItem, 1, 0);
+          console.debug('[Lootbox] Item added successfully:', gameItem.id);
+        } catch (error) {
+          console.error('[Lootbox] Failed to add item:', error);
+        }
       }
       on_claim(rewards);
+      console.debug('[Lootbox] All rewards processed');
     }
     
     // Auto close after confetti
     setTimeout(() => {
+      console.debug('[Lootbox] Closing lootbox interface');
       on_close();
     }, 3000);
   };

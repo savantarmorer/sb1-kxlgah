@@ -13,12 +13,11 @@ export interface Item {
 }
 
 export enum ItemType {
+  BOOSTER = 'booster',
   CONSUMABLE = 'consumable',
   EQUIPMENT = 'equipment',
   COSMETIC = 'cosmetic',
-  MATERIAL = 'material',
-  QUEST = 'quest',
-  LOOTBOX = 'lootbox'
+  SPECIAL = 'special'
 }
 
 export enum ItemRarity {
@@ -44,15 +43,13 @@ export type ItemEffectType =
   | 'unlock_content';
 
 export interface ItemEffect {
-  type: ItemEffectType;
+  type: string;
   value: number;
-  duration?: number; // in seconds, undefined means permanent
+  duration?: number;  // in seconds
   metadata?: {
     boost_percentage?: number;
-    max_uses?: number;
-    content_id?: string;
-    requirements?: string[];
-    [key: string]: any;
+    combination_bonus?: number;
+    [key: string]: unknown;
   };
 }
 
@@ -61,9 +58,9 @@ export interface ItemEffect {
  * Controls when items can be used or equipped
  */
 export interface ItemRequirement {
-  type: 'level' | 'achievement' | 'quest' | 'item';
-  value: string | number;
-  comparison?: 'eq' | 'gte' | 'lte';
+  type: string;
+  value: number | string;
+  description?: string;
 }
 
 /**
@@ -118,6 +115,8 @@ export interface BaseItem {
  * Game item interface for shop display and management
  */
 export interface GameItem extends BaseItem {
+  icon?: string;
+  icon_color?: string;
   shopData?: {
     featured: boolean;
     discount?: number;
@@ -136,7 +135,9 @@ export interface InventoryItem {
   rarity: ItemRarity;
   equipped: boolean;
   quantity: number;
-  imageUrl: string;
+  imageUrl?: string;
+  icon?: string;
+  icon_color?: string;
   metadata?: {
     uses?: number;
     [key: string]: any;
@@ -186,11 +187,4 @@ export enum TransactionType {
   UNEQUIP = 'unequip'
 }
 
-export const ItemTypes = {
-  CONSUMABLE: ItemType.CONSUMABLE,
-  EQUIPMENT: ItemType.EQUIPMENT,
-  COSMETIC: ItemType.COSMETIC,
-  MATERIAL: ItemType.MATERIAL,
-  QUEST: ItemType.QUEST,
-  LOOTBOX: ItemType.LOOTBOX
-} as const;
+export const ItemTypes = ItemType;

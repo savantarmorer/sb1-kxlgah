@@ -4,6 +4,8 @@ import type { Quest } from './quests';
 import type { Achievement } from './achievements';
 import type { InventoryItem } from './items';
 import type { XPGain } from './user';
+import type { Reward } from './rewards';
+import type { ItemEffect } from './items';
 
 export interface GameStatistics {
   total_xp: number;
@@ -56,6 +58,9 @@ export interface GameState {
   statistics: GameStatistics;
   error: string | null;
   loading: boolean;
+  showLevelUpReward: boolean;
+  current_levelRewards: Reward[];
+  activeEffects: ItemEffect[];
 }
 
 /**

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import TournamentService from '@/services/tournamentService';
 import { Tournament, TournamentFormat, MatchFormat } from '@/types/tournament';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
 import { TournamentAdmin } from '@/components/TournamentAdmin';
 
 export default function TournamentMode() {

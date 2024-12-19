@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect, useReducer, useContext } from 'react';
-import { Box, Typography, Card, CardContent, Button, LinearProgress } from '@mui/material';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Box, Typography, Card, CardContent, Button } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import Confetti from 'react-confetti';
@@ -12,9 +12,8 @@ import type {
   BattleState,
   BattleStatus,
   BattleRewards,
-  BattleScore,
 } from '../../types/battle';
-import { BattlePhase } from '../../types/battle';
+
 // Components
 import { BattleResults as BattleResultsComponent } from './BattleResults';
 import { BattleStateTransition } from './BattleStateTransition';
@@ -29,10 +28,9 @@ import { useGame } from '../../contexts/GameContext';
 import { useNotification } from '../../contexts/NotificationContext';
 
 // Utils
-import { calculateBattleRewards, determineBattleStatus } from '../../utils/battleUtils';
+import { calculateBattleRewards } from '../../utils/battleUtils';
 import { handle_battle_results } from '../../services/battleService';
-import { supabase } from '../../lib/supabase.ts';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import { supabase } from '../../lib/supabase';
 import type { Profile } from '../../types/database';
 
 interface BattleModeProps {
@@ -62,9 +60,7 @@ export function BattleMode({ on_close }: BattleModeProps) {
     get_current_question,
     get_battle_progress,
     get_battle_rewards,
-    loading: battle_loading,
     isReady: is_battle_ready,
-    error: battle_error
   } = useBattle();
 
   // Component state
@@ -77,20 +73,17 @@ export function BattleMode({ on_close }: BattleModeProps) {
     rewards_claimed: false,
     is_transitioning: false,
     current_rewards: {
-    xp_earned: 0,
-    coins_earned: 0,
-    streak_bonus: 0,
-    time_bonus: 0
+      xp_earned: 0,
+      coins_earned: 0,
+      streak_bonus: 0,
+      time_bonus: 0
     }
   });
 
   // Destructure component state for convenience
   const {
-    error,
     show_confetti,
     show_stats,
-    show_admin_panel,
-    show_debug,
     rewards_claimed,
     is_transitioning,
     current_rewards
@@ -131,32 +124,48 @@ export function BattleMode({ on_close }: BattleModeProps) {
     mode: 'casual' | 'ranked';
   }) => {
     try {
+      // First reset the battle
+      reset_battle();
+      
+      // Wait for a small delay to ensure battle system resets
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       if (!is_battle_ready) {
         console.debug('[BattleMode] Waiting for battle system to be ready...');
-        return;
+        // Add a retry mechanism
+        let retries = 0;
+        const maxRetries = 5;
+        
+        while (!is_battle_ready && retries < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          retries++;
+        }
+        
+        if (!is_battle_ready) {
+          throw new Error('Battle system failed to initialize');
+        }
       }
-  
-      // Reset e atualiza estados antes de iniciar
-      reset_battle();
+
+      // Update states before starting
       updateState({
         rewards_claimed: false,
         is_transitioning: false,
         show_stats: false
       });
-  
-      // Esconde lobby e inicia batalha
+
+      // Hide lobby and start battle
       setShowLobby(false);
       
       await initialize_battle({
         ...options,
         is_bot: true
       });
-  
+
     } catch (err) {
       console.error('[BattleMode] Battle initialization error:', err);
       showError(t('battle.error.initialization'));
       
-      // Em caso de erro, volta pro lobby e atualiza estado
+      // In case of error, return to lobby and update state
       setShowLobby(true);
       updateState({
         error: err instanceof Error ? err : new Error('Failed to start battle')
@@ -277,7 +286,6 @@ export function BattleMode({ on_close }: BattleModeProps) {
     state.user,
     updateState,
     reset_battle,
-    setShowLobby
   ]);
   
   // Handle exit
@@ -342,13 +350,22 @@ export function BattleMode({ on_close }: BattleModeProps) {
   }, [state.user?.id, dispatch]);
 
   return (
-    <Box sx={{ 
-      display: 'flex', 
-      flexDirection: 'column',
-      minHeight: '100vh',
-      bgcolor: 'background.default'
-    }}>
-      <Box sx={{ flex: 1, p: 3 }}>
+    <Box 
+      component={motion.div}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      sx={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        minHeight: '100vh',
+        bgcolor: '#0f172a',
+        color: 'white',
+        position: 'relative',
+        overflow: 'hidden'
+      }}
+    >
+      <Box sx={{ flex: 1, p: 3, position: 'relative', zIndex: 1 }}>
         {/* Battle header */}
         <Box sx={{ 
           display: 'flex', 
@@ -356,15 +373,27 @@ export function BattleMode({ on_close }: BattleModeProps) {
           alignItems: 'center',
           mb: 4 
         }}>
-          <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+          <Typography variant="h4" sx={{ 
+            fontWeight: 'bold', 
+            color: 'white',
+            textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+          }}>
             {t('battle.title')}
           </Typography>
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
               variant="outlined"
               onClick={handle_exit}
-              startIcon={<ArrowLeft />}
+              startIcon={<ArrowLeft className="text-white" />}
               disabled={!rewards_claimed && isBattleCompleted}
+              sx={{
+                borderColor: 'rgba(255,255,255,0.2)',
+                color: 'white',
+                '&:hover': {
+                  borderColor: 'rgba(255,255,255,0.3)',
+                  bgcolor: 'rgba(255,255,255,0.1)'
+                }
+              }}
             >
               {t('battle.exit')}
             </Button>
@@ -389,7 +418,6 @@ export function BattleMode({ on_close }: BattleModeProps) {
             }}
           />
         ) : (
-          // Todo o conteúdo da batalha
           <Box sx={{ position: 'relative' }}>
             <AnimatePresence mode="wait">
               {battle_state && (
@@ -418,7 +446,11 @@ export function BattleMode({ on_close }: BattleModeProps) {
                   time_left={battle_progress.time_left}
                   total_time={BATTLE_CONFIG.time_per_question}
                 />
-                <Typography variant="body2" sx={{ textAlign: 'center', mt: 2 }}>
+                <Typography variant="body2" sx={{ 
+                  textAlign: 'center', 
+                  mt: 2, 
+                  color: 'rgba(255,255,255,0.6)'
+                }}>
                   {t('battle.question')} {battle_progress.current_question + 1} / {battle_progress.total_questions}
                 </Typography>
               </Box>
@@ -432,11 +464,13 @@ export function BattleMode({ on_close }: BattleModeProps) {
                 transition={{ type: "spring", duration: 0.5 }}
               >
                 <Card sx={{ 
-                  bgcolor: 'background.paper',
+                  bgcolor: 'rgba(255, 255, 255, 0.05)',
                   borderRadius: 2,
-                  boxShadow: 3,
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
                   overflow: 'visible',
-                  position: 'relative'
+                  position: 'relative',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  backdropFilter: 'blur(12px)'
                 }}>
                   <CardContent sx={{ p: 4 }}>
                     <QuestionDisplay
@@ -473,8 +507,14 @@ export function BattleMode({ on_close }: BattleModeProps) {
   
             {/* Battle error */}
             {isBattleError && battle_state?.error && (
-              <Box sx={{ p: 4, textAlign: 'center' }}>
-                <Typography color="error">
+              <Box sx={{ 
+                p: 4, 
+                textAlign: 'center',
+                bgcolor: 'rgba(239, 68, 68, 0.1)',
+                borderRadius: 2,
+                border: '1px solid rgba(239, 68, 68, 0.2)'
+              }}>
+                <Typography sx={{ color: 'rgb(239, 68, 68)' }}>
                   {t('battle.error.message', { error: battle_state.error.message })}
                 </Typography>
               </Box>
@@ -482,6 +522,20 @@ export function BattleMode({ on_close }: BattleModeProps) {
           </Box>
         )}
       </Box>
+
+      {/* Background gradient effect */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), transparent 70%)',
+          pointerEvents: 'none',
+          zIndex: 0
+        }}
+      />
     </Box>
   );
 }

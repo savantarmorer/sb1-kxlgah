@@ -28,6 +28,7 @@ const initialBattleState: BattleState = {
 export const initialGameState: GameState = {
   user: null,
   battle: initialBattleState,
+  recentXPGains: [],
   battle_stats: {
     total_battles: 0,
     wins: 0,
@@ -57,5 +58,8 @@ export const initialGameState: GameState = {
     achievements_unlocked: 0
   },
   error: null,
-  loading: false
+  loading: false,
+  showLevelUpReward: false,
+  current_levelRewards: [],
+  activeEffects: []
 }; 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider } from './contexts/ThemeContext';
+import { ThemeProvider } from '@mui/material/styles';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { GameProvider } from './contexts/GameContext';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -10,8 +10,9 @@ import { TournamentProvider } from './contexts/TournamentContext';
 import { AdminProvider } from './contexts/AdminContext';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterLuxon } from '@mui/x-date-pickers/AdapterLuxon';
-import { ThemeProvider as MUIThemeProvider } from '@mui/material/styles';
-import { muiTheme } from './theme/mui';
+import { CssBaseline } from '@mui/material';
+import { ColorModeProvider, useColorMode } from './contexts/ColorModeContext';
+import { lightTheme, darkTheme } from './theme/theme';
 import LoadingScreen from './components/LoadingScreen';
 import { RouteGuard } from './components/RouteGuard';
 import AppContent from './components/AppContent';
@@ -22,6 +23,35 @@ import NotificationHandler from './components/notifications/NotificationHandler'
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { TournamentLobby } from '@/components/Tournament/TournamentLobby';
 import { TournamentView } from '@/components/Tournament/TournamentView';
+
+function AppWithProviders({ children }: { children: React.ReactNode }) {
+  const { mode } = useColorMode();
+  const theme = mode === 'dark' ? darkTheme : lightTheme;
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <LocalizationProvider dateAdapter={AdapterLuxon}>
+        <AuthProvider>
+          <GameProvider>
+            <LanguageProvider>
+              <NotificationProvider>
+                <NotificationHandler />
+                <SoundProvider>
+                  <TournamentProvider>
+                    <AdminProvider>
+                      {children}
+                    </AdminProvider>
+                  </TournamentProvider>
+                </SoundProvider>
+              </NotificationProvider>
+            </LanguageProvider>
+          </GameProvider>
+        </AuthProvider>
+      </LocalizationProvider>
+    </ThemeProvider>
+  );
+}
 
 function AppRoutes() {
   const { user, loading, initialized } = useAuth();
@@ -46,7 +76,6 @@ function AppRoutes() {
               <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/tournament" element={<TournamentLobby />} />
               <Route path="/tournament/:id" element={<TournamentView />} />
-              {/* other routes */}
             </Routes>
           </RouteGuard>
         } 
@@ -57,30 +86,13 @@ function AppRoutes() {
 
 function App() {
   return (
-    <LocalizationProvider dateAdapter={AdapterLuxon}>
-      <ErrorBoundary>
-        <AuthProvider>
-          <GameProvider>
-            <ThemeProvider>
-              <MUIThemeProvider theme={muiTheme}>
-                <LanguageProvider>
-                  <NotificationProvider>
-                    <NotificationHandler />
-                    <SoundProvider>
-                      <TournamentProvider>
-                        <AdminProvider>
-                          <AppRoutes />
-                        </AdminProvider>
-                      </TournamentProvider>
-                    </SoundProvider>
-                  </NotificationProvider>
-                </LanguageProvider>
-              </MUIThemeProvider>
-            </ThemeProvider>
-          </GameProvider>
-        </AuthProvider>
-      </ErrorBoundary>
-    </LocalizationProvider>
+    <ErrorBoundary>
+      <ColorModeProvider>
+        <AppWithProviders>
+          <AppRoutes />
+        </AppWithProviders>
+      </ColorModeProvider>
+    </ErrorBoundary>
   );
 }
 

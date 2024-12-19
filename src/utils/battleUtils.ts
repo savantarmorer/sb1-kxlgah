@@ -2,7 +2,8 @@ import { LevelSystem } from '../lib/levelSystem';
 import { BATTLE_CONFIG } from '../config/battleConfig';
 import type { BattleResults, BattleRewards, BattleScore } from '../types/battle';
 import type { GameState } from '../types/game';
-import { supabase } from '../lib/supabaseClient.ts.old';
+import { supabase } from '../lib/supabaseClient.ts';
+import { ProgressService } from '../services/progressService';
 
 /**
  * Simulates opponent answer with 60% chance of being correct
@@ -87,10 +88,10 @@ export function calculateBattleRewards(
 /**
  * Calculates final battle results including score, rewards and stats
  */
-export const calculateBattleResults = (
+export const calculateBattleResults = async (
   state: GameState,
   answer: string
-): BattleResults => {
+): Promise<BattleResults> => {
   if (!state.battle) {
     throw new Error('No active battle found');
   }
@@ -104,7 +105,6 @@ export const calculateBattleResults = (
 
   const isCorrect = answer.toUpperCase() === currentQuestion.correct_answer;
   
-  // Debug answer checking
   console.debug('[Battle Debug] Answer Check:', {
     userAnswer: answer.toUpperCase(),
     correctAnswer: currentQuestion.correct_answer,
@@ -124,7 +124,42 @@ export const calculateBattleResults = (
     battle.time_left
   );
 
-  // Debug battle state
+  // Check for level up
+  const newXP = state.user.xp + rewards.xp_earned;
+  const newLevel = LevelSystem.calculate_level(newXP);
+  
+  console.debug('[Battle Debug] Level Check:', {
+    currentXP: state.user.xp,
+    earnedXP: rewards.xp_earned,
+    newXP,
+    currentLevel: state.user.level,
+    newLevel
+  });
+
+  // Create lootbox if leveled up
+  if (newLevel > state.user.level) {
+    console.debug('[Battle Debug] Level Up Detected:', {
+      from: state.user.level,
+      to: newLevel
+    });
+
+    const levelUpRewards = LevelSystem.get_level_rewards(newLevel);
+    const rarity = newLevel >= 50 ? 'legendary' : newLevel >= 30 ? 'epic' : newLevel >= 10 ? 'rare' : 'common';
+
+    // Create pending lootbox
+    try {
+      const lootbox = await ProgressService.createPendingLootbox(
+        state.user.id,
+        'level_up',
+        levelUpRewards,
+        rarity
+      );
+      console.debug('[Battle Debug] Lootbox Created:', lootbox);
+    } catch (error) {
+      console.error('[Battle Debug] Failed to create lootbox:', error);
+    }
+  }
+
   console.debug('[Battle Debug] Battle Results:', {
     score: newScore,
     isVictory,

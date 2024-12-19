@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
 import { TournamentService } from '@/services/tournamentService';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/useToast';

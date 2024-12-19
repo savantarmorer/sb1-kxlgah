@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { FeedbackModal } from '../FeedbackModal';
 import { FeedbackService } from '@/services/feedbackService';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '../../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 
 jest.mock('@/services/feedbackService');

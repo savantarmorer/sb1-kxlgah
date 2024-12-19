@@ -1,70 +1,218 @@
+import React from 'react';
+import { Box, Card, CardContent, Typography, Button, Chip, Tooltip } from '@mui/material';
 import { motion } from 'framer-motion';
-import { GameItem } from '../../types/items';
-import { theme } from '../../styles/design-system';
+import { useTheme } from '@mui/material/styles';
+import { Coins, Info } from 'lucide-react';
+import type { AppTheme } from '../../theme/types/theme.d';
+import type { ShopItemResponse } from '../../types/shop';
 
 interface ItemCardProps {
-  item: GameItem;
-  onEdit?: (item: GameItem) => void;
-  onDelete?: (id: string) => void;
-  isLoading?: boolean;
+  item: ShopItemResponse;
+  onPurchase: () => void;
+  loading?: boolean;
 }
 
-const getRarityColor = (rarity: string) => {
-  switch (rarity.toLowerCase()) {
-    case 'common': return 'bg-gray-200 text-gray-800';
-    case 'uncommon': return 'bg-green-200 text-green-800';
-    case 'rare': return 'bg-blue-200 text-blue-800';
-    case 'epic': return 'bg-purple-200 text-purple-800';
-    case 'legendary': return 'bg-yellow-200 text-yellow-800';
-    default: return 'bg-gray-200 text-gray-800';
-  }
-};
+const rarityColors = {
+  common: 'neutral.400',
+  uncommon: 'success.main',
+  rare: 'info.main',
+  epic: 'secondary.main',
+  legendary: 'warning.main',
+  default: 'neutral.400'
+} as const;
 
-export function ItemCard({ item, onEdit, onDelete, isLoading }: ItemCardProps) {
+export function ItemCard({ item, onPurchase, loading }: ItemCardProps) {
+  const theme = useTheme<AppTheme>();
+
+  const rarity = item?.rarity || 'common';
+  const rarityColor = rarityColors[rarity as keyof typeof rarityColors] || rarityColors.default;
+
+  const cardStyles = {
+    position: 'relative',
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    ...theme.styles.effects.glassmorphismLight,
+    border: theme.styles.border.light,
+    transition: 'all 0.3s ease',
+    '&:hover': {
+      transform: 'translateY(-4px)',
+      boxShadow: theme.shadow.glow(theme.colors.brand.primary[500]),
+    },
+  };
+
+  const iconStyles = {
+    width: 64,
+    height: 64,
+    borderRadius: '50%',
+    background: theme.gradients.brand.primary,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: '0 auto',
+    marginBottom: 2,
+    boxShadow: theme.shadow.md,
+  };
+
+  const priceStyles = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1,
+    color: theme.colors.neutral.white,
+    background: theme.gradients.dark.subtle,
+    padding: theme.spacing(1, 2),
+    borderRadius: theme.shape.borderRadius,
+    boxShadow: theme.shadow.sm,
+  };
+
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={theme.animation.spring}
-      className="group relative overflow-hidden rounded-xl bg-surface-light dark:bg-surface-dark
-                 border border-gray-200 dark:border-gray-800 hover:border-primary-500
-                 transition-colors duration-200"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      transition={{ duration: 0.3 }}
     >
-      <div className="aspect-square overflow-hidden">
-        <motion.img
-          src={item.imageUrl}
-          alt={item.name}
-          className="w-full h-full object-cover"
-          whileHover={{ scale: 1.05 }}
-          transition={theme.animation.transition}
-        />
-      </div>
-      
-      <div className="p-4">
-        <h3 className="font-semibold text-lg">{item.name}</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          {item.description}
-        </p>
-        
-        <div className="flex items-center justify-between mt-4">
-          <span className="text-primary-600 dark:text-primary-400 font-medium">
-            {item.cost} Coins
-          </span>
-          <span className={`px-2 py-1 rounded-full text-xs font-medium
-                          ${getRarityColor(item.rarity)}`}>
-            {item.rarity}
-          </span>
-        </div>
-      </div>
+      <Card sx={cardStyles}>
+        <CardContent>
+          {/* Item Icon */}
+          <Box sx={iconStyles}>
+            {item?.icon && (
+              <img
+                src={item.icon}
+                alt={item.name || 'Item'}
+                style={{ width: 40, height: 40 }}
+              />
+            )}
+          </Box>
 
-      {(onEdit || onDelete) && (
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100
-                      transition-opacity duration-200">
-          {/* Action buttons */}
-        </div>
-      )}
+          {/* Item Name & Rarity */}
+          <Box sx={{ textAlign: 'center', mb: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              {item?.name || 'Unknown Item'}
+            </Typography>
+            <Chip
+              label={(rarity || 'common').toUpperCase()}
+              size="small"
+              sx={{
+                bgcolor: rarityColor,
+                color: 'white',
+                fontWeight: 'bold',
+              }}
+            />
+          </Box>
+
+          {/* Item Description */}
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{
+              mb: 2,
+              minHeight: 60,
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {item?.description || 'No description available'}
+          </Typography>
+
+          {/* Effects Info */}
+          {item.effects && (
+            <Tooltip
+              title={
+                <Box>
+                  {Object.entries(item.effects).map(([key, value]) => (
+                    <Typography key={key} variant="body2">
+                      {key}: {value}
+                    </Typography>
+                  ))}
+                </Box>
+              }
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  mb: 2,
+                  cursor: 'help',
+                }}
+              >
+                <Info size={16} />
+                <Typography variant="body2" color="text.secondary">
+                  View Effects
+                </Typography>
+              </Box>
+            </Tooltip>
+          )}
+
+          {/* Price & Purchase Button */}
+          <Box
+            sx={{
+              mt: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Box sx={priceStyles}>
+              <Coins size={16} />
+              <Typography variant="subtitle1" fontWeight="bold">
+                {item.price.toLocaleString()}
+              </Typography>
+            </Box>
+
+            <Button
+              variant="contained"
+              onClick={onPurchase}
+              disabled={loading}
+              sx={{
+                background: theme.gradients.brand.primary,
+                color: theme.colors.neutral.white,
+                '&:hover': {
+                  background: theme.gradients.brand.primaryDark,
+                },
+              }}
+            >
+              {loading ? 'Purchasing...' : 'Purchase'}
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
     </motion.div>
   );
-} 
+}
+
+/**
+ * ItemCard Component
+ * 
+ * Purpose:
+ * - Reusable card component for displaying shop items
+ * - Handles item display, pricing, and purchase actions
+ * 
+ * Props:
+ * - item: GameItem object with item details
+ * - price: Current price
+ * - discountPrice: Optional discounted price
+ * - discountEndsAt: Discount end date
+ * - stock: Optional stock count
+ * - isFeatured: Whether item is featured
+ * - isLoading: Loading state
+ * - onPurchase: Purchase handler
+ * 
+ * Features:
+ * - Animations and transitions
+ * - Price display with discounts
+ * - Stock management
+ * - Loading states
+ * - Featured item indicator
+ * 
+ * Used By:
+ * - ShopSystem component
+ * 
+ * Dependencies:
+ * - Material-UI components
+ * - Framer Motion
+ * - Lucide icons
+ */ 

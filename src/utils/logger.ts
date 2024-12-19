@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient.ts.old';
+import { supabase } from '../lib/supabaseClient.ts';
 
 export enum LogLevel {
   INFO = 'INFO',

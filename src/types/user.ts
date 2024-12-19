@@ -54,29 +54,15 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  avatar_url?: string;
   level: number;
   xp: number;
   coins: number;
-  streak: number;
-  streakMultiplier?: number;
-  rewardMultipliers?: {
-    xp: number;
-    coins: number;
-  };
-  avatar_url?: string;
-  battle_rating: number;
-  battle_stats?: DBbattle_stats;
-  created_at?: string;
-  updated_at?: string;
-  is_bot?: boolean;
-  is_online?: boolean;
-  study_time?: number;
-  xp_progress?: number;
-  constitutional_score?: number;
-  civil_score?: number;
-  criminal_score?: number;
-  administrative_score?: number;
   gems?: number;
+  streak?: number;
+  display_title?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface UserUpdateData extends Partial<User> {

@@ -1,10 +1,13 @@
 import React, { createContext, useContext, useReducer, useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { gameReducer } from './game/reducer';
 import type { GameState } from '../types/game';
 import type { GameAction } from './game/types';
 import type { BattleQuestion, BattleStatus } from '../types/battle';
 import { initialGameState } from './game/initialState';
+import LoadingScreen from '../components/LoadingScreen';
+import { supabase } from '../lib/supabase';
 
 interface GameContextType {
   state: GameState;
@@ -33,15 +36,93 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [state, dispatch] = useReducer(gameReducer, initialGameState);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
-  const { user } = useAuth();
+  const { user: authUser, isLoading: authLoading, initialized: authInitialized } = useAuth();
 
   useEffect(() => {
-    if (user && !initialized) {
-      dispatch({ type: 'INITIALIZE_USER', payload: user });
-      setInitialized(true);
-      setLoading(false);
-    }
-  }, [user, initialized]);
+    let mounted = true;
+
+    const initializeGameState = async () => {
+      if (!mounted) return;
+
+      if (authInitialized) {
+        if (authUser) {
+          try {
+            const { data: userProfile, error } = await supabase
+              .from('profiles')
+              .select(`
+                *,
+                battle_stats!user_id(*),
+                user_inventory!user_id(*),
+                user_achievements!user_id(*)
+              `)
+              .eq('id', authUser.id)
+              .single();
+
+            if (error) {
+              dispatch({ 
+                type: 'SET_ERROR', 
+                payload: 'Failed to load user profile. Please try again.' 
+              });
+              console.error('Failed to initialize game state:', error);
+              return;
+            }
+
+            dispatch({ 
+              type: 'INITIALIZE_USER', 
+              payload: userProfile 
+            });
+
+            setInitialized(true);
+          } catch (error) {
+            dispatch({ 
+              type: 'SET_ERROR', 
+              payload: 'An unexpected error occurred. Please refresh the page.' 
+            });
+            console.error('Failed to initialize game state:', error);
+          }
+        } else {
+          dispatch({ type: 'RESET_STATE' });
+          setInitialized(false);
+        }
+        setLoading(false);
+      }
+    };
+
+    initializeGameState();
+
+    return () => {
+      mounted = false;
+    };
+  }, [authUser?.id, authInitialized, dispatch]);
+
+  if (authLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (!authInitialized) {
+    return <LoadingScreen message="Initializing..." />;
+  }
+
+  if (!authUser && !state.error) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (state.error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-red-600 mb-2">Failed to load game data</h2>
+          <p className="text-gray-600">{state.error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const getCurrentQuestion = (): BattleQuestion | null => {
     if (!state.battle?.questions || state.battle.current_question >= state.battle.questions.length) {

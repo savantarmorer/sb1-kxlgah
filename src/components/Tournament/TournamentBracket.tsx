@@ -9,7 +9,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { TournamentMatch, BracketAnimation } from '@/types/tournament';
 import { Users, Timer, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface TournamentBracketProps {
   tournament_id: string;

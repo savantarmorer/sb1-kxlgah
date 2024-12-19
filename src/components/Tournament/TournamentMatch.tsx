@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTournamentMatch } from '@/hooks/useTournamentMatch';
 import { Button } from '@/components/ui/Button';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
 import { TournamentMatch as TournamentMatchType } from '@/types/tournament';
 
 interface TournamentMatchProps {
