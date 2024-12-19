@@ -47,24 +47,24 @@ export default function ShopSystem() {
       setLoading(true);
       setError(null);
 
-    const { data, error } = await supabase
-      .from('shop_items')
-      .select(`
-        *,
-        item:items (
-          id,
-          name,
-          description,
-          type,
-          rarity,
-          effects,
-          metadata,
-          icon,
-          icon_color
-        )
-      `)
-      .eq('is_available', true)
-      .order('is_featured', { ascending: false });
+      const { data, error } = await supabase
+        .from('shop_items')
+        .select(`
+          *,
+          item:items (
+            id,
+            name,
+            description,
+            type,
+            rarity,
+            effects,
+            metadata,
+            icon,
+            icon_color
+          )
+        `)
+        .eq('is_available', true)
+        .order('is_featured', { ascending: false });
 
       if (error) throw error;
 
@@ -145,7 +145,7 @@ export default function ShopSystem() {
 
   return (
     <Box sx={styles.container}>
-        {/* Header */}
+      {/* Header */}
       <Box sx={styles.header}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
           Shop
@@ -154,11 +154,11 @@ export default function ShopSystem() {
         {/* User Stats */}
         <Box sx={styles.userStats}>
           <Box sx={styles.statBox}>
-                <Coins size={24} className="text-yellow-500" />
-                <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+            <Coins size={24} className="text-yellow-500" />
+            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
               {state.user?.coins.toLocaleString() || 0}
-                </Typography>
-              </Box>
+            </Typography>
+          </Box>
 
           <Box sx={styles.statBox}>
             <Trophy size={24} className="text-purple-500" />
@@ -189,11 +189,11 @@ export default function ShopSystem() {
         </Box>
       </Box>
 
-        {/* Categories */}
+      {/* Categories */}
       <Box sx={styles.categoryScroll}>
         <Button
           variant={selectedCategory === null ? 'contained' : 'outlined'}
-              onClick={() => setSelectedCategory(null)}
+          onClick={() => setSelectedCategory(null)}
           sx={selectedCategory === null ? styles.categoryButtonSelected : styles.categoryButtonUnselected}
         >
           All Items
@@ -234,15 +234,15 @@ export default function ShopSystem() {
               loading={loading}
             />
           ))}
-        </Box>
+      </Box>
 
       {/* Regular Items */}
       <Box sx={styles.sectionTitle}>
         <Package className="icon" size={24} />
         <Typography variant="h5" className="text">
           All Items
-                          </Typography>
-                        </Box>
+        </Typography>
+      </Box>
 
       <Box sx={styles.itemGrid}>
         {filteredItems
@@ -253,10 +253,9 @@ export default function ShopSystem() {
               item={item}
               onPurchase={() => handlePurchase(item)}
               loading={loading}
-                              />
-                            </Tooltip>
-                          ))}
-                        </Box>
+            />
+          ))}
+      </Box>
 
       {/* Admin Panel */}
       <Dialog
@@ -274,4 +273,45 @@ export default function ShopSystem() {
       </Dialog>
     </Box>
   );
-} 
+}
+
+/**
+ * ShopSystem Component
+ * 
+ * Purpose:
+ * - Displays available shop items to users
+ * - Handles item purchases
+ * - Provides admin access to shop management
+ * 
+ * Dependencies:
+ * - useGame: For accessing game state and dispatch
+ * - useAdmin: For admin access control
+ * - useNotification: For user feedback
+ * - supabase: For database operations
+ * 
+ * Features:
+ * - Item filtering by category
+ * - Purchase handling
+ * - Admin management interface
+ * - Responsive design
+ * - Loading states
+ * - Error handling
+ * - Manual refresh
+ * 
+ * State Management:
+ * - Local state for UI
+ * - Global state through GameContext
+ * - Database sync with Supabase
+ * 
+ * Used By:
+ * - Main game interface
+ * - Navigation system
+ * 
+ * Scalability:
+ * - Modular component structure
+ * - Separated admin functionality
+ * - Type-safe operations
+ * - Efficient state updates
+ * - Error boundaries
+ * - Loading state management
+ */ 

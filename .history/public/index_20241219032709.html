@@ -1,0 +1,37 @@
+    <!-- Service Worker Registration -->
+    <script>
+      // Function to remove loading indicator
+      function removeLoading() {
+        const loading = document.getElementById('loading');
+        if (loading && !loading.classList.contains('fade-out')) {
+          loading.classList.add('fade-out');
+          setTimeout(() => {
+            loading.remove();
+          }, 300);
+        }
+      }
+
+      // Remove loading on DOMContentLoaded
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(removeLoading, 500); // Small delay to ensure smooth transition
+      });
+
+      // Fallback timeout
+      setTimeout(removeLoading, 2000);
+
+      // Additional check when React mounts
+      const root = document.getElementById('root');
+      const observer = new MutationObserver((mutations) => {
+        if (mutations.some(m => m.addedNodes.length > 0)) {
+          removeLoading();
+          observer.disconnect();
+        }
+      });
+
+      observer.observe(root, {
+        childList: true,
+        subtree: true
+      });
+    </script>
+  </body>
+</html> 

@@ -21,41 +21,47 @@ export function useLevelSystem() {
     };
   }
 
+  // After null check, we can safely assert user is non-null
+  const user = state.user!;
+
   // Memoize level calculations
   const currentCalculatedLevel = useMemo(() => 
-    LevelSystem.calculate_level(state.user.xp),
-    [state.user.xp]
+    LevelSystem.calculate_level(user.xp),
+    [user.xp]
   );
 
   // Handle level up
   useEffect(() => {
-    if (currentCalculatedLevel > state.user.level && !hasLeveledUp.current) {
+    if (currentCalculatedLevel > user.level && !hasLeveledUp.current) {
       hasLeveledUp.current = true;
       const rewards = LevelSystem.get_level_rewards(currentCalculatedLevel);
       
+      // First show the notification
+      showSuccess(t('levelUp.title', { level: currentCalculatedLevel }));
+
+      // Then dispatch level up with rewards and show lootbox
       dispatch({
         type: 'LEVEL_UP',
         payload: {
           level: currentCalculatedLevel,
-          rewards
+          rewards,
+          showReward: true
         }
       });
-
-      showSuccess(t('levelUp.title', { level: currentCalculatedLevel }));
     }
-  }, [currentCalculatedLevel, state.user.level, dispatch, showSuccess, t]);
+  }, [currentCalculatedLevel, user.level, dispatch, showSuccess, t]);
 
   // Reset level up flag when level changes
   useEffect(() => {
     hasLeveledUp.current = false;
-  }, [state.user.level]);
+  }, [user.level]);
 
   // Return memoized values
   return useMemo(() => ({
-    current_level: state.user.level,
-    current_xp: state.user.xp,
-    progress: LevelSystem.calculate_progress(state.user.xp),
-    xp_to_next_level: LevelSystem.calculate_xp_to_next_level(state.user.xp),
-    total_xp_for_current_level: LevelSystem.calculate_total_xp_for_level(state.user.level)
-  }), [state.user.level, state.user.xp]);
+    current_level: user.level,
+    current_xp: user.xp,
+    progress: LevelSystem.calculate_progress(user.xp),
+    xp_to_next_level: LevelSystem.calculate_xp_to_next_level(user.xp),
+    total_xp_for_current_level: LevelSystem.calculate_total_xp_for_level(user.level)
+  }), [user.level, user.xp]);
 }

@@ -1,223 +1,143 @@
-import { createTheme, ThemeOptions } from '@mui/material/styles';
-import { PaletteOptions } from '@mui/material/styles/createPalette';
+import { createTheme, alpha, Theme } from '@mui/material/styles';
+import { PaletteMode } from '@mui/material';
 
-// Custom brand colors
-const brandColors = {
-  primary: {
-    50: '#eef2ff',
-    100: '#e0e7ff',
-    200: '#c7d2fe',
-    300: '#a5b4fc',
-    400: '#818cf8',
-    500: '#6366f1',
-    600: '#4f46e5',
-    700: '#4338ca',
-    800: '#3730a3',
-    900: '#312e81',
+const getDesignTokens = (mode: PaletteMode) => ({
+  palette: {
+    mode,
+    primary: {
+      main: '#8257e6',
+      light: '#9466ff',
+      dark: '#633BBC',
+      contrastText: '#ffffff',
+    },
+    secondary: {
+      main: '#2998ff',
+      light: '#64B5F6',
+      dark: '#1E88E5',
+      contrastText: '#ffffff',
+    },
+    error: {
+      main: '#FF5252',
+      light: '#FF867F',
+      dark: '#D32F2F',
+      contrastText: '#ffffff',
+    },
+    warning: {
+      main: '#FFA726',
+      light: '#FFB74D',
+      dark: '#F57C00',
+      contrastText: '#ffffff',
+    },
+    info: {
+      main: '#64B5F6',
+      light: '#90CAF9',
+      dark: '#42A5F5',
+      contrastText: '#ffffff',
+    },
+    success: {
+      main: '#66BB6A',
+      light: '#81C784',
+      dark: '#388E3C',
+      contrastText: '#ffffff',
+    },
+    grey: {
+      50: mode === 'dark' ? '#fafafa' : '#fafafa',
+      100: mode === 'dark' ? '#f5f5f5' : '#f5f5f5',
+      200: mode === 'dark' ? '#eeeeee' : '#eeeeee',
+      300: mode === 'dark' ? '#e0e0e0' : '#e0e0e0',
+      400: mode === 'dark' ? '#bdbdbd' : '#bdbdbd',
+      500: mode === 'dark' ? '#9e9e9e' : '#9e9e9e',
+      600: mode === 'dark' ? '#757575' : '#757575',
+      700: mode === 'dark' ? '#616161' : '#616161',
+      800: mode === 'dark' ? '#424242' : '#424242',
+      900: mode === 'dark' ? '#212121' : '#212121',
+      A100: mode === 'dark' ? '#f5f5f5' : '#f5f5f5',
+      A200: mode === 'dark' ? '#eeeeee' : '#eeeeee',
+      A400: mode === 'dark' ? '#bdbdbd' : '#bdbdbd',
+      A700: mode === 'dark' ? '#616161' : '#616161',
+    },
+    ...(mode === 'dark' ? {
+      background: {
+        default: '#121214',
+        paper: '#1a1b1e',
+      },
+      text: {
+        primary: '#ffffff',
+        secondary: alpha('#ffffff', 0.7),
+        disabled: alpha('#ffffff', 0.5),
+      },
+      divider: alpha('#ffffff', 0.12),
+      action: {
+        active: '#ffffff',
+        hover: alpha('#ffffff', 0.08),
+        selected: alpha('#ffffff', 0.16),
+        disabled: alpha('#ffffff', 0.3),
+        disabledBackground: alpha('#ffffff', 0.12),
+      },
+    } : {
+      background: {
+        default: '#f8f9fa',
+        paper: '#ffffff',
+      },
+      text: {
+        primary: '#1a1b1e',
+        secondary: alpha('#1a1b1e', 0.7),
+        disabled: alpha('#1a1b1e', 0.5),
+      },
+      divider: alpha('#1a1b1e', 0.12),
+      action: {
+        active: '#1a1b1e',
+        hover: alpha('#1a1b1e', 0.04),
+        selected: alpha('#1a1b1e', 0.08),
+        disabled: alpha('#1a1b1e', 0.26),
+        disabledBackground: alpha('#1a1b1e', 0.12),
+      },
+    }),
   },
-  secondary: {
-    50: '#f0fdfa',
-    100: '#ccfbf1',
-    200: '#99f6e4',
-    300: '#5eead4',
-    400: '#2dd4bf',
-    500: '#14b8a6',
-    600: '#0d9488',
-    700: '#0f766e',
-    800: '#115e59',
-    900: '#134e4a',
-  },
-  accent: {
-    50: '#faf5ff',
-    100: '#f3e8ff',
-    200: '#e9d5ff',
-    300: '#d8b4fe',
-    400: '#c084fc',
-    500: '#a855f7',
-    600: '#9333ea',
-    700: '#7e22ce',
-    800: '#6b21a8',
-    900: '#581c87',
-  }
-};
-
-// Custom shadows
-const shadows = [
-  'none',
-  '0 1px 2px 0 rgb(0 0 0 / 0.05)',
-  '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-  '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-  '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
-  '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
-];
-
-// Light theme palette
-const lightPalette: PaletteOptions = {
-  mode: 'light',
-  primary: {
-    main: brandColors.primary[600],
-    light: brandColors.primary[400],
-    dark: brandColors.primary[800],
-    contrastText: '#ffffff',
-    ...brandColors.primary
-  },
-  secondary: {
-    main: brandColors.secondary[600],
-    light: brandColors.secondary[400],
-    dark: brandColors.secondary[800],
-    contrastText: '#ffffff',
-    ...brandColors.secondary
-  },
-  error: {
-    main: '#dc2626',
-    light: '#ef4444',
-    dark: '#b91c1c',
-    contrastText: '#ffffff',
-  },
-  warning: {
-    main: '#d97706',
-    light: '#f59e0b',
-    dark: '#b45309',
-    contrastText: '#ffffff',
-  },
-  info: {
-    main: '#2563eb',
-    light: '#3b82f6',
-    dark: '#1d4ed8',
-    contrastText: '#ffffff',
-  },
-  success: {
-    main: '#059669',
-    light: '#10b981',
-    dark: '#047857',
-    contrastText: '#ffffff',
-  },
-  grey: {
-    50: '#f9fafb',
-    100: '#f3f4f6',
-    200: '#e5e7eb',
-    300: '#d1d5db',
-    400: '#9ca3af',
-    500: '#6b7280',
-    600: '#4b5563',
-    700: '#374151',
-    800: '#1f2937',
-    900: '#111827',
-  },
-  text: {
-    primary: '#111827',
-    secondary: '#4b5563',
-    disabled: '#9ca3af',
-  },
-  background: {
-    default: '#f9fafb',
-    paper: '#ffffff',
-  },
-  divider: '#e5e7eb',
-};
-
-// Dark theme palette
-const darkPalette: PaletteOptions = {
-  mode: 'dark',
-  primary: {
-    main: brandColors.primary[400],
-    light: brandColors.primary[300],
-    dark: brandColors.primary[600],
-    contrastText: '#ffffff',
-    ...brandColors.primary
-  },
-  secondary: {
-    main: brandColors.secondary[400],
-    light: brandColors.secondary[300],
-    dark: brandColors.secondary[600],
-    contrastText: '#ffffff',
-    ...brandColors.secondary
-  },
-  error: {
-    main: '#ef4444',
-    light: '#f87171',
-    dark: '#dc2626',
-    contrastText: '#ffffff',
-  },
-  warning: {
-    main: '#f59e0b',
-    light: '#fbbf24',
-    dark: '#d97706',
-    contrastText: '#ffffff',
-  },
-  info: {
-    main: '#3b82f6',
-    light: '#60a5fa',
-    dark: '#2563eb',
-    contrastText: '#ffffff',
-  },
-  success: {
-    main: '#10b981',
-    light: '#34d399',
-    dark: '#059669',
-    contrastText: '#ffffff',
-  },
-  grey: {
-    50: '#f9fafb',
-    100: '#f3f4f6',
-    200: '#e5e7eb',
-    300: '#d1d5db',
-    400: '#9ca3af',
-    500: '#6b7280',
-    600: '#4b5563',
-    700: '#374151',
-    800: '#1f2937',
-    900: '#111827',
-  },
-  text: {
-    primary: '#f9fafb',
-    secondary: '#d1d5db',
-    disabled: '#6b7280',
-  },
-  background: {
-    default: '#111827',
-    paper: '#1f2937',
-  },
-  divider: '#374151',
-};
-
-// Theme configuration
-const themeConfig: ThemeOptions = {
-  palette: lightPalette,
   shape: {
-    borderRadius: 8,
+    borderRadius: 12,
   },
   typography: {
-    fontFamily: '"Inter", system-ui, -apple-system, sans-serif',
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
     h1: {
-      fontSize: '2.5rem',
       fontWeight: 700,
+      fontSize: '2.5rem',
       lineHeight: 1.2,
     },
     h2: {
-      fontSize: '2rem',
       fontWeight: 700,
+      fontSize: '2rem',
       lineHeight: 1.2,
     },
     h3: {
-      fontSize: '1.5rem',
-      fontWeight: 600,
+      fontWeight: 700,
+      fontSize: '1.75rem',
       lineHeight: 1.2,
     },
     h4: {
-      fontSize: '1.25rem',
-      fontWeight: 600,
+      fontWeight: 700,
+      fontSize: '1.5rem',
       lineHeight: 1.2,
     },
     h5: {
-      fontSize: '1.125rem',
       fontWeight: 600,
+      fontSize: '1.25rem',
       lineHeight: 1.2,
     },
     h6: {
-      fontSize: '1rem',
       fontWeight: 600,
+      fontSize: '1rem',
       lineHeight: 1.2,
+    },
+    subtitle1: {
+      fontSize: '1rem',
+      lineHeight: 1.5,
+      fontWeight: 500,
+    },
+    subtitle2: {
+      fontSize: '0.875rem',
+      lineHeight: 1.5,
+      fontWeight: 500,
     },
     body1: {
       fontSize: '1rem',
@@ -229,62 +149,94 @@ const themeConfig: ThemeOptions = {
     },
     button: {
       textTransform: 'none',
-      fontWeight: 500,
+      fontWeight: 600,
     },
   },
-  shadows: shadows as any,
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
           borderRadius: 8,
           textTransform: 'none',
-          fontWeight: 500,
-          padding: '0.5rem 1rem',
+          fontWeight: 600,
+          padding: '8px 16px',
+          boxShadow: 'none',
+          '&:hover': {
+            boxShadow: 'none',
+          },
         },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          backgroundImage: 'none',
+        contained: {
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          '&:hover': {
+            boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+          },
         },
       },
     },
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
-          border: '1px solid',
-          borderColor: lightPalette.divider,
+          borderRadius: 16,
+          boxShadow: mode === 'dark'
+            ? '0 4px 20px rgba(0,0,0,0.25)'
+            : '0 4px 20px rgba(0,0,0,0.1)',
         },
       },
     },
-    MuiCardContent: {
+    MuiChip: {
       styleOverrides: {
         root: {
-          padding: '1.5rem',
-          '&:last-child': {
-            paddingBottom: '1.5rem',
-          },
+          borderRadius: 8,
+          fontWeight: 500,
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          borderRadius: 16,
+          boxShadow: mode === 'dark'
+            ? '0 8px 32px rgba(0,0,0,0.4)'
+            : '0 8px 32px rgba(0,0,0,0.1)',
+        },
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+        },
+      },
+    },
+    MuiLinearProgress: {
+      styleOverrides: {
+        root: {
+          borderRadius: 4,
+          overflow: 'hidden',
+        },
+      },
+    },
+    MuiTooltip: {
+      styleOverrides: {
+        tooltip: {
+          borderRadius: 8,
+          backgroundColor: mode === 'dark'
+            ? alpha('#ffffff', 0.9)
+            : alpha('#1a1b1e', 0.9),
+          color: mode === 'dark' ? '#1a1b1e' : '#ffffff',
+          fontSize: '0.75rem',
+          fontWeight: 500,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
         },
       },
     },
   },
-};
-
-// Create theme instances
-export const lightTheme = createTheme({
-  ...themeConfig,
-  palette: lightPalette,
 });
 
-export const darkTheme = createTheme({
-  ...themeConfig,
-  palette: darkPalette,
-});
+export const lightTheme = createTheme(getDesignTokens('light'));
+export const darkTheme = createTheme(getDesignTokens('dark'));
 
-export type AppTheme = typeof lightTheme;
+export type AppTheme = Theme;
 
 // Default export
 export default lightTheme; 
