@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient.ts.old';
+import { supabase } from '../lib/supabase';
 import type { GameDispatch } from '../contexts/GameContext';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 

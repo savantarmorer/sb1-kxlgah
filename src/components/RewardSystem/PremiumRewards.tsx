@@ -18,7 +18,7 @@ import { use_language } from '../../contexts/LanguageContext';
 import LootBox from '../LootBox';
 import Button from '../Button';
 import type { Reward } from '../../types';
-import { supabase } from '../../lib/supabaseClient.ts.old';
+import { supabase } from '../../lib/supabase';
 
 interface PremiumReward {
   id: string;

@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient.ts.old';
+import { supabase } from '../lib/supabase';
 import { UserProgressDB, battle_statsDB } from '../types/battle';
 import { LevelSystem } from '../lib/levelSystem';
 

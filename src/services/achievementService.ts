@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient.ts.old';
+import { supabase } from '../lib/supabase';
 import { Achievement, AchievementProgress, TriggerCondition, AchievementRarity } from '../types/achievements';
 
 interface UserAchievementRow {

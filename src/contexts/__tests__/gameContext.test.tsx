@@ -4,7 +4,7 @@ import { GameProvider, useGame } from '../GameContext';
 import { LEVEL_CONFIG } from '../../lib/gameConfig';
 import type { Achievement, AchievementRarity } from '../../types/achievements';
 import type { Reward } from '../../types/rewards';
-import { supabase } from '../../lib/supabaseClient.ts.old';
+import { supabase } from '../../lib/supabase';
 
 // Set up environment variables for testing
 process.env.VITE_SUPABASE_URL = 'http://localhost:54321';

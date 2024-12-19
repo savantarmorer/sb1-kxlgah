@@ -25,7 +25,7 @@
  *    - Track achievements
  */
 
-import { supabase } from '../lib/supabaseClient.ts.old';
+import { supabase } from '../lib/supabase';
 import { 
   BattleQuestion, 
   BattleResults, 

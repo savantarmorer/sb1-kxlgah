@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useCallback, ReactNode, useEffect } from 'react';
 import { Achievement } from '../types/achievements';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import AchievementNotification from '../components/Achievements/AchievementNotification';
+import { NotificationSystem } from '../utils/notifications';
 
 interface NotificationContextType {
   showSuccess: (message: string) => void;
@@ -48,46 +49,90 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
               title: 'Achievement Unlocked!',
               text: `I just unlocked ${achievement.title} in CepaC Play!`,
               url: window.location.href,
-            }).catch(console.error);
+            });
           }}
         />
       ),
       {
-        position: "bottom-right",
+        position: 'top-center',
         autoClose: 5000,
-        closeOnClick: false,
+        hideProgressBar: false,
+        closeOnClick: true,
         pauseOnHover: true,
-        draggable: false,
-        className: "achievement-toast"
+        draggable: true,
       }
     );
   }, []);
 
-  const showNotification = (notification: NotificationOptions) => {
-    toast(notification.content);
-  };
+  const showNotification = useCallback(({ content, type = 'info' }: NotificationOptions) => {
+    switch (type) {
+      case 'success':
+        toast.success(content);
+        break;
+      case 'error':
+        toast.error(content);
+        break;
+      case 'warning':
+        toast.warning(content);
+        break;
+      case 'achievement':
+        toast(content, {
+          position: 'top-center',
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+        break;
+      default:
+        toast.info(content);
+    }
+  }, []);
+
+  // Initialize NotificationSystem handlers
+  useEffect(() => {
+    NotificationSystem.getInstance().setHandlers({
+      success: showSuccess,
+      error: showError,
+      warning: showWarning,
+      info: showInfo,
+      achievementUnlock: notifyAchievementUnlock
+    });
+  }, [showSuccess, showError, showWarning, showInfo, notifyAchievementUnlock]);
 
   const value = {
     showSuccess,
     showError,
     showWarning,
     showInfo,
-    notifyAchievementUnlock,
-    showNotification
+    showNotification,
+    notifyAchievementUnlock
   };
 
   return (
     <NotificationContext.Provider value={value}>
-      <ToastContainer />
       {children}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
     </NotificationContext.Provider>
   );
 }
 
-export function useNotification() {
+export const useNotification = () => {
   const context = useContext(NotificationContext);
   if (!context) {
     throw new Error('useNotification must be used within a NotificationProvider');
   }
   return context;
-} 
+}; 

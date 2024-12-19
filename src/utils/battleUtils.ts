@@ -2,7 +2,7 @@ import { LevelSystem } from '../lib/levelSystem';
 import { BATTLE_CONFIG } from '../config/battleConfig';
 import type { BattleResults, BattleRewards, BattleScore } from '../types/battle';
 import type { GameState } from '../types/game';
-import { supabase } from '../lib/supabaseClient.ts.old';
+import { supabase } from '../lib/supabase';
 
 /**
  * Simulates opponent answer with 60% chance of being correct
@@ -120,7 +120,7 @@ export const calculateBattleResults = (
     newScore.player,
     battle.questions.length,
     state.battle_stats?.difficulty || 1,
-    state.user.streak,
+    state.user?.streak || 0,
     battle.time_left
   );
 
@@ -142,10 +142,10 @@ export const calculateBattleResults = (
     score: newScore,
     rewards,
     stats: {
-      correct_answers: battle.player_answers.filter(a => a).length + (isCorrect ? 1 : 0),
-      total_questions: battle.questions.length,
       time_taken: BATTLE_CONFIG.time_per_question - battle.time_left,
-      average_time: (BATTLE_CONFIG.time_per_question - battle.time_left) / (battle.current_question + 1)
+      total_questions: battle.questions.length,
+      average_time: (BATTLE_CONFIG.time_per_question - battle.time_left) / (battle.current_question + 1),
+      correct_answers: battle.player_answers.filter(a => a).length + (isCorrect ? 1 : 0)
     }
   };
 };

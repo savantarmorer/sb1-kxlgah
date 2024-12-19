@@ -10,12 +10,23 @@ interface NotificationHandlers {
 
 export class NotificationSystem {
   private static instance: NotificationSystem;
+  private initialized = false;
   private handlers: NotificationHandlers = {
-    success: () => {},
-    error: () => {},
-    warning: () => {},
-    info: () => {},
-    achievementUnlock: () => {}
+    success: (message: string) => {
+      console.warn('NotificationSystem not initialized:', message);
+    },
+    error: (message: string) => {
+      console.warn('NotificationSystem not initialized:', message);
+    },
+    warning: (message: string) => {
+      console.warn('NotificationSystem not initialized:', message);
+    },
+    info: (message: string) => {
+      console.warn('NotificationSystem not initialized:', message);
+    },
+    achievementUnlock: (achievement: Achievement) => {
+      console.warn('NotificationSystem not initialized:', achievement);
+    }
   };
 
   private constructor() {}
@@ -29,26 +40,52 @@ export class NotificationSystem {
 
   setHandlers(handlers: Partial<NotificationHandlers>) {
     this.handlers = { ...this.handlers, ...handlers };
+    this.initialized = true;
   }
 
   static showSuccess(message: string) {
-    NotificationSystem.getInstance().handlers.success(message);
+    const instance = NotificationSystem.getInstance();
+    if (!instance.initialized) {
+      console.warn('NotificationSystem not initialized:', message);
+      return;
+    }
+    instance.handlers.success(message);
   }
 
   static showError(message: string) {
-    NotificationSystem.getInstance().handlers.error(message);
+    const instance = NotificationSystem.getInstance();
+    if (!instance.initialized) {
+      console.warn('NotificationSystem not initialized:', message);
+      return;
+    }
+    instance.handlers.error(message);
   }
 
   static showWarning(message: string) {
-    NotificationSystem.getInstance().handlers.warning(message);
+    const instance = NotificationSystem.getInstance();
+    if (!instance.initialized) {
+      console.warn('NotificationSystem not initialized:', message);
+      return;
+    }
+    instance.handlers.warning(message);
   }
 
   static showInfo(message: string) {
-    NotificationSystem.getInstance().handlers.info(message);
+    const instance = NotificationSystem.getInstance();
+    if (!instance.initialized) {
+      console.warn('NotificationSystem not initialized:', message);
+      return;
+    }
+    instance.handlers.info(message);
   }
 
   static notifyAchievementUnlock(achievement: Achievement) {
-    NotificationSystem.getInstance().handlers.achievementUnlock(achievement);
+    const instance = NotificationSystem.getInstance();
+    if (!instance.initialized) {
+      console.warn('NotificationSystem not initialized:', achievement);
+      return;
+    }
+    instance.handlers.achievementUnlock(achievement);
   }
 }
 
