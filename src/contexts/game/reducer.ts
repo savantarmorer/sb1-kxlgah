@@ -170,12 +170,25 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
 
     case 'UNLOCK_ACHIEVEMENTS':
       if (!state.user) return state;
+      
+      // Create a map of existing achievements by ID
+      const existingAchievements = new Map(
+        (state.achievements || []).map(achievement => [achievement.id, achievement])
+      );
+      
+      // Update or add new achievements
+      action.payload.forEach(achievement => {
+        if (achievement && achievement.id) {
+          existingAchievements.set(achievement.id, {
+            ...existingAchievements.get(achievement.id),
+            ...achievement
+          });
+        }
+      });
+      
       return {
         ...state,
-        achievements: [
-          ...(state.achievements || []),
-          ...action.payload
-        ]
+        achievements: Array.from(existingAchievements.values())
       };
 
     case 'UPDATE_QUESTS':

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useGame } from '../contexts/GameContext';
 import { AchievementService } from '../services/achievementService';
 import { Achievement } from '../types/achievements';
@@ -7,12 +7,23 @@ import { toast } from 'react-hot-toast';
 export function useAchievements() {
   const { state, dispatch } = useGame();
 
-  const initializeAchievements = async () => {
+  const initializeAchievements = useCallback(async () => {
     if (!state.user?.id) return;
     
-    const achievements = await AchievementService.getUserAchievements(state.user.id);
-    dispatch({ type: 'UNLOCK_ACHIEVEMENTS', payload: achievements });
-  };
+    try {
+      const achievements = await AchievementService.getUserAchievements(state.user.id);
+      dispatch({ type: 'UNLOCK_ACHIEVEMENTS', payload: achievements });
+    } catch (error) {
+      console.error('Error initializing achievements:', error);
+    }
+  }, [state.user?.id, dispatch]);
+
+  // Auto-initialize achievements when user is available
+  useEffect(() => {
+    if (state.user?.id && (!state.achievements || state.achievements.length === 0)) {
+      initializeAchievements();
+    }
+  }, [state.user?.id, state.achievements, initializeAchievements]);
 
   const checkTrigger = useCallback(async (triggerType: string, value: number) => {
     if (!state.user?.id) return;
@@ -62,7 +73,7 @@ export function useAchievements() {
   }, [state.user?.id, state.achievements, dispatch]);
 
   return {
-    achievements: state.achievements,
+    achievements: state.achievements || [],
     initializeAchievements,
     checkTrigger,
     claimAchievement,
