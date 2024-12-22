@@ -1,0 +1,32 @@
+1|-- First drop the existing function
+2|DROP FUNCTION IF EXISTS public.get_random_battle_questions(integer, text);
+3|
+4|-- Then create the new function
+5|CREATE OR REPLACE FUNCTION public.get_random_battle_questions(
+6|    num_questions INTEGER,
+7|    question_category TEXT DEFAULT 'general'  -- Renamed parameter to avoid conflict
+8|)
+9|RETURNS TABLE (
+10|    id UUID,
+11|    question TEXT,
+12|    options JSONB,
+13|    correct_answer TEXT,
+14|    explanation TEXT,
+15|    category TEXT,
+16|    difficulty INTEGER,
+17|    created_at TIMESTAMPTZ,
+18|    updated_at TIMESTAMPTZ
+19|) AS $$
+20|BEGIN
+21|    RETURN QUERY
+22|    SELECT q.*
+23|    FROM questions q
+24|    WHERE q.category = question_category  -- Use renamed parameter
+25|    AND q.active = true
+26|    ORDER BY RANDOM()
+27|    LIMIT num_questions;
+28|END;
+29|$$ LANGUAGE plpgsql;
+30|
+31|-- Grant access to authenticated users
+32|GRANT EXECUTE ON FUNCTION public.get_random_battle_questions(INTEGER, TEXT) TO authenticated; 
