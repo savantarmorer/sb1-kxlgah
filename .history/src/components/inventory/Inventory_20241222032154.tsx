@@ -1,3 +1,11 @@
+import { useGame } from '../../contexts/GameContext';
+import { GameItem, ItemType, ItemRarity, ItemEffect, InventoryItem } from '../../types/items';
+import { Box, Grid, Typography, Button, Card, CardContent, CardActions, Chip, CircularProgress, useTheme } from '@mui/material';
+import { styled } from '@mui/material/styles';
+import type { AppTheme } from '../../theme/theme';
+import { Package, Info } from 'lucide-react';
+import { ItemIcon } from '../common/ItemIcon';
+import { RarityChip } from '../common/RarityChip';
 import { PageContainer } from '../Layout/PageContainer';
 
 export function Inventory() {

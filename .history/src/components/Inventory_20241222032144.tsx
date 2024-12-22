@@ -2,10 +2,11 @@ import React from 'react';
 import { useInventory } from '../hooks/useInventory';
 import { useGame } from '../contexts/GameContext';
 import { GameItem, ItemType, ItemRarity, ItemEffect, InventoryItem } from '../types/items';
-import { Box, Grid, Typography, Button, Card, CardContent, CardActions, Chip, CircularProgress } from '@mui/material';
+import { Box, Grid, Typography, Button, Card, CardContent, CardActions, Chip, CircularProgress, useTheme } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import type { AppTheme } from '../theme/theme';
-import { Package } from 'lucide-react';
+import { Package, Info } from 'lucide-react';
+import { ItemIcon } from './common/ItemIcon';
 
 interface ThemeProps {
   theme: AppTheme;
@@ -61,42 +62,161 @@ const InventoryItemCard: React.FC<ItemCardProps> = ({
   onEquip,
   onUnequip
 }) => {
+  const theme = useTheme();
+
+  console.log('[InventoryItemCard] Rendering item:', {
+    item,
+    imageUrl: item.imageUrl,
+    effects: item.effects
+  });
+
   return (
     <ItemCard rarity={item.rarity}>
       <CardContent>
-        <Typography variant="h6" component="div">
-          {item.name}
-        </Typography>
-        <Box display="flex" gap={1} mb={1}>
-          <RarityChip label={item.rarity} size="small" rarity={item.rarity} />
-          <Chip label={item.type} size="small" />
-          {isEquipped && <Chip label="Equipped" color="primary" size="small" />}
+        {/* Item Icon */}
+        <Box sx={{ 
+          width: 64,
+          height: 64,
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto',
+          marginBottom: theme.spacing(2),
+          boxShadow: theme.shadows[2],
+        }}>
+          <ItemIcon item={item} size={48} />
         </Box>
-        <Typography variant="body2" color="text.secondary">
+
+        {/* Item Name & Rarity */}
+        <Box sx={{ textAlign: 'center', mb: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            {item.name}
+          </Typography>
+          <RarityChip label={item.rarity} size="small" rarity={item.rarity} />
+        </Box>
+
+        {/* Item Description */}
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{
+            mb: 2,
+            minHeight: 60,
+            display: '-webkit-box',
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
           {item.description}
         </Typography>
-        <Typography variant="body2" color="text.secondary" mt={1}>
-          Quantity: {quantity}
-        </Typography>
+
+        {/* Effects Info */}
+        {Array.isArray(item.effects) && item.effects.length > 0 && (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              mb: 2,
+              cursor: 'help',
+            }}
+          >
+            <Info size={16} />
+            <Typography variant="body2" color="text.secondary">
+              {item.effects.filter(effect => effect && typeof effect === 'object').map((effect, index, filteredEffects) => (
+                <span key={index}>
+                  {effect.type}: {typeof effect.value === 'number' ? effect.value.toString() : JSON.stringify(effect.value)}
+                  {effect.duration ? ` (${effect.duration}s)` : ''}
+                  {index < filteredEffects.length - 1 ? ', ' : ''}
+                </span>
+              ))}
+            </Typography>
+          </Box>
+        )}
+
+        {/* Quantity */}
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            Quantity: {quantity}
+          </Typography>
+        </Box>
       </CardContent>
-      <CardActions>
+
+      {/* Action Buttons */}
+      <CardActions sx={{ 
+        mt: 'auto',
+        display: 'flex',
+        gap: 1,
+        flexDirection: 'column',
+        p: 2
+      }}>
         {item.type === ItemType.CONSUMABLE && (
-          <Button size="small" onClick={() => onUse(item)}>
+          <Button 
+            variant="contained" 
+            onClick={() => onUse(item)}
+            fullWidth
+            sx={{
+              background: `linear-gradient(135deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`,
+              color: theme.palette.secondary.contrastText,
+              '&:hover': {
+                background: `linear-gradient(135deg, ${theme.palette.secondary.dark}, ${theme.palette.secondary.main})`,
+              },
+            }}
+          >
             Use
           </Button>
         )}
         {(item.type === ItemType.EQUIPMENT || item.type === ItemType.COSMETIC) && (
           isEquipped ? (
-            <Button size="small" onClick={() => onUnequip(item)}>
+            <Button 
+              variant="outlined" 
+              onClick={() => onUnequip(item)}
+              fullWidth
+            >
               Unequip
             </Button>
           ) : (
-            <Button size="small" onClick={() => onEquip(item)}>
+            <Button 
+              variant="contained" 
+              onClick={() => onEquip(item)}
+              fullWidth
+              sx={{
+                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                color: theme.palette.primary.contrastText,
+                '&:hover': {
+                  background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+                },
+              }}
+            >
               Equip
             </Button>
           )
         )}
       </CardActions>
+
+      {/* Equipment Status */}
+      {isEquipped && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: theme.spacing(2),
+            right: theme.spacing(2),
+            bgcolor: 'success.main',
+            color: 'success.contrastText',
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+            fontSize: '0.75rem',
+            fontWeight: 'bold',
+            backdropFilter: 'blur(4px)',
+            boxShadow: 1,
+          }}
+        >
+          Equipped
+        </Box>
+      )}
     </ItemCard>
   );
 };
