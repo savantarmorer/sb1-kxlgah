@@ -106,6 +106,24 @@ export const SAMPLE_ITEMS: Item[] = [
         duration: 3600
       }
     ]
+  },
+  {
+    id: 'elimination-potion',
+    name: 'Elimination Potion',
+    description: 'Eliminates a wrong answer from the options',
+    type: ItemType.CONSUMABLE,
+    rarity: ItemRarity.UNCOMMON,
+    basePrice: 150,
+    imageUrl: '/images/items/potion-purple.png',
+    effects: [
+      {
+        type: 'eliminate_wrong_answer',
+        value: 1,
+        metadata: {
+          battle_only: true
+        }
+      }
+    ]
   }
 ];
 

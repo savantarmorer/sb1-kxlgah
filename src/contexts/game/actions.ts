@@ -146,35 +146,91 @@ export const gameActions = {
     dispatch: Dispatch<GameAction>
   ): Promise<void> => {
     try {
-      if (!state.user) {
+      if (!state.user?.id) {
         console.error('No user found in state');
         return;
       }
 
+      const user = state.user; // Store user in a const to avoid null checks
+
       dispatch({ type: 'SET_LOADING', payload: true });
 
-      if (type === 'purchase' && state.user.coins < cost) {
+      if (type === 'purchase' && user.coins < cost) {
         throw new Error('Insufficient coins');
       }
 
-      const updatedInventory = state.inventory?.items ? [...state.inventory.items] : [];
-      const existingItem = updatedInventory.find(i => i.id === item.id);
+      // Create a copy of the inventory and filter out items with 0 quantity
+      const currentInventory = state.inventory?.items?.filter(i => i.quantity > 0) || [];
+      const updatedInventory = [...currentInventory];
+      const existingItemIndex = updatedInventory.findIndex(i => i.id === item.id);
 
-      if (existingItem) {
-        existingItem.quantity += quantity;
-      } else {
+      // Log the current state for debugging
+      console.log('[handleItemTransaction] Current state:', {
+        type,
+        itemId: item.id,
+        existingItemIndex,
+        currentQuantity: existingItemIndex >= 0 ? updatedInventory[existingItemIndex]?.quantity : 0,
+        updatedInventory
+      });
+
+      if (existingItemIndex >= 0) {
+        // Update existing item quantity
+        const currentItem = updatedInventory[existingItemIndex];
+        if (!currentItem) {
+          console.error('[handleItemTransaction] Item found but undefined:', {
+            index: existingItemIndex,
+            itemId: item.id
+          });
+          throw new Error('Item not found in inventory');
+        }
+
+        const newQuantity = type === 'purchase' 
+          ? currentItem.quantity + quantity
+          : currentItem.quantity - quantity;
+
+        if (newQuantity <= 0) {
+          // Remove item if quantity is 0 or less
+          updatedInventory.splice(existingItemIndex, 1);
+        } else {
+          // Update quantity
+          updatedInventory[existingItemIndex] = {
+            ...currentItem,
+            quantity: newQuantity
+          };
+        }
+      } else if (type === 'purchase') {
+        // Add new item only for purchases
         updatedInventory.push({
           ...item,
+          id: item.id,
+          itemId: item.id,
           quantity,
           acquired_at: new Date().toISOString(),
           equipped: false
         });
+      } else {
+        console.error('[handleItemTransaction] Cannot use/update non-existent item:', {
+          type,
+          itemId: item.id
+        });
+        throw new Error('Item not found in inventory');
       }
+
+      // Filter out any items with 0 quantity before updating state
+      const finalInventory = updatedInventory.filter(item => item.quantity > 0);
+
+      // Log the updated state for debugging
+      console.log('[handleItemTransaction] Updated state:', {
+        type,
+        itemId: item.id,
+        updatedInventory: finalInventory,
+        removedItems: updatedInventory.length - finalInventory.length
+      });
 
       // Update inventory in state
       dispatch({
         type: 'UPDATE_INVENTORY',
-        payload: { items: updatedInventory }
+        payload: { items: finalInventory }
       });
 
       if (type === 'purchase') {
@@ -188,18 +244,57 @@ export const gameActions = {
       }
 
       // Update inventory in database
-      await supabase
-        .from('user_inventory')
-        .upsert(updatedInventory.map(item => ({
-          user_id: state.user?.id,
-          item_id: item.id,
-          quantity: item.quantity,
-          acquired_at: item.acquired_at
-        })));
+      if (type === 'use' && existingItemIndex >= 0 && updatedInventory[existingItemIndex]?.quantity <= 0) {
+        // Delete item from database if quantity is 0
+        const { error: deleteError } = await supabase
+          .from('user_inventory')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('item_id', item.id);
+
+        if (deleteError) throw deleteError;
+      } else {
+        try {
+          // Use upsert for both new items and updates
+          const { error: upsertError } = await supabase
+            .from('user_inventory')
+            .upsert({
+              user_id: user.id,
+              item_id: item.id,
+              quantity: type === 'purchase' ? quantity : (existingItemIndex >= 0 ? updatedInventory[existingItemIndex]?.quantity || 0 : 0),
+              equipped: false,
+              acquired_at: new Date().toISOString()
+            }, {
+              onConflict: 'user_id,item_id'
+            });
+
+          if (upsertError) {
+            console.error('[handleItemTransaction] Upsert error:', upsertError);
+            throw upsertError;
+          }
+
+          // Update user coins in database if it's a purchase
+          if (type === 'purchase') {
+            const { error: coinError } = await supabase
+              .from('profiles')
+              .update({ 
+                coins: user.coins - cost,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', user.id);
+
+            if (coinError) throw coinError;
+          }
+        } catch (dbError: any) {
+          console.error('[handleItemTransaction] Database error:', dbError);
+          throw dbError;
+        }
+      }
 
     } catch (error) {
       console.error('Error handling item transaction:', error);
       dispatch({ type: 'SET_ERROR', payload: 'Failed to process item transaction' });
+      throw error;
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }

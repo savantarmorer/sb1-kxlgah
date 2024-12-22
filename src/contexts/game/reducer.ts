@@ -206,7 +206,7 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       return {
         ...state,
         inventory: {
-          items: action.payload.items,
+          items: action.payload.items.filter(item => item.quantity > 0),
           equipped: action.payload.equipped || []
         }
       };

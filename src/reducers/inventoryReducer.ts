@@ -34,15 +34,18 @@ export function inventoryReducer(
       const existingItem = state.items.find(i => i.itemId === item.id);
 
       if (existingItem) {
+        const updatedItems = state.items.map(i =>
+          i.itemId === item.id
+            ? { ...i, quantity: i.quantity + quantity }
+            : i
+        );
         return {
           ...state,
-          items: state.items.map(i =>
-            i.itemId === item.id
-              ? { ...i, quantity: i.quantity + quantity }
-              : i
-          )
+          items: updatedItems.filter(i => i.quantity > 0)
         };
       }
+
+      if (quantity <= 0) return state;
 
       return {
         ...state,
@@ -84,19 +87,22 @@ export function inventoryReducer(
           i.itemId === item_id
             ? { ...i, quantity: newQuantity }
             : i
-        )
+        ).filter(i => i.quantity > 0)
       };
     }
 
     case 'UPDATE_ITEM': {
       const { item_id, updates } = action.payload;
+      const updatedItems = state.items.map(i =>
+        i.itemId === item_id
+          ? { ...i, ...updates }
+          : i
+      );
+      
+      // Filter out items with 0 or negative quantity
       return {
         ...state,
-        items: state.items.map(i =>
-          i.itemId === item_id
-            ? { ...i, ...updates }
-            : i
-        )
+        items: updatedItems.filter(i => i.quantity > 0)
       };
     }
 
@@ -108,7 +114,7 @@ export function inventoryReducer(
           i.itemId === item_id
             ? { ...i, equipped: true, lastUsed: new Date() }
             : i
-        )
+        ).filter(i => i.quantity > 0)
       };
     }
 
@@ -120,7 +126,7 @@ export function inventoryReducer(
           i.itemId === item_id
             ? { ...i, equipped: false }
             : i
-        )
+        ).filter(i => i.quantity > 0)
       };
     }
 

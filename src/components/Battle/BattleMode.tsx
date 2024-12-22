@@ -6,6 +6,7 @@ import Confetti from 'react-confetti';
 import { BATTLE_CONFIG } from '../../config/battleConfig';
 import { LevelSystem } from '../../lib/levelSystem';
 import { BattleLobby } from './BattleLobby';
+import { supabase } from '../../lib/supabase.ts';
 // Types
 import type { 
   BattleQuestion, 
@@ -18,6 +19,7 @@ import type {
 } from '../../types/battle';
 import { BattlePhase } from '../../types/battle';
 import type { InventoryItem } from '../../types/items';
+import type { GameItem } from '../../contexts/game/types';
 
 // Components
 import { BattleResults as BattleResultsComponent } from './BattleResults';
@@ -33,11 +35,11 @@ import { useBattle } from '../../hooks/useBattle';
 import { useGame } from '../../contexts/GameContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useInventory } from '../../hooks/useInventory';
+import { gameActions } from '../../contexts/game/actions';
 
 // Utils
 import { calculateBattleRewards, determineBattleStatus } from '../../utils/battleUtils';
 import { handle_battle_results } from '../../services/battleService';
-import { supabase } from '../../lib/supabase.ts';
 import type { Profile } from '../../types/database';
 
 interface BattleModeProps {
@@ -462,6 +464,17 @@ export function BattleMode({ on_close }: BattleModeProps) {
       return;
     }
 
+    // Check if the item still exists in the inventory
+    const inventoryItem = state.inventory.items.find(i => i.id === item.id);
+    if (!inventoryItem || inventoryItem.quantity <= 0) {
+      console.warn('[BattleMode] Item not found in inventory or quantity is 0:', {
+        itemId: item.id,
+        itemName: item.name
+      });
+      showError(t('battle.item_not_available'));
+      return;
+    }
+
     console.log('[BattleMode] Using item:', {
       item_id: item.id,
       item_name: item.name,
@@ -474,9 +487,39 @@ export function BattleMode({ on_close }: BattleModeProps) {
     });
 
     try {
-      // Use the item first
-      await useItem(item);
-      console.log('[BattleMode] Item used successfully');
+      // Convert InventoryItem to GameItem format
+      const gameItem: GameItem = {
+        id: item.id,
+        name: item.name,
+        description: item.description || '',
+        type: item.type,
+        rarity: item.rarity,
+        effects: item.effects || [],
+        cost: 0, // No cost for using
+        imageUrl: item.imageUrl?.startsWith('http') 
+          ? item.imageUrl 
+          : `/images/items/${item.imageUrl || item.id}.png`,
+        is_active: item.is_active ?? true,
+        metadata: item.metadata || {},
+        requirements: {},
+        icon: undefined,
+        icon_color: undefined,
+        effect_multiplier: undefined,
+        allowed_combinations: undefined,
+        shopData: {
+          featured: false
+        }
+      };
+
+      // Use handleItemTransaction to update the item quantity
+      await gameActions.handleItemTransaction(
+        state,
+        gameItem,
+        1, // quantity to use
+        'use',
+        0, // no cost for using
+        dispatch
+      );
 
       // Apply battle effects
       if (Array.isArray(item.effects)) {
@@ -510,7 +553,7 @@ export function BattleMode({ on_close }: BattleModeProps) {
                 
                 // If there are no more wrong answers to eliminate, show error
                 if (wrongAnswers.length === 0) {
-                  showError('No more wrong answers to eliminate');
+                  showError(t('battle.no_wrong_answers'));
                   return;
                 }
                 
@@ -546,14 +589,14 @@ export function BattleMode({ on_close }: BattleModeProps) {
             case 'time_bonus':
               // Add time to the current question
               const newTimeLeft = Math.min(
-                battle_state.time_left + effect.value,
+                battle_state.time_left + (effect.value || 10),
                 battle_state.time_per_question
               );
               
               // Update the time left
               dispatch({
-                type: 'SET_BATTLE_STATUS',
-                payload: 'active'
+                type: 'SET_BATTLE_TIME',
+                payload: newTimeLeft
               });
               dispatch({
                 type: 'UPDATE_BATTLE_PROGRESS',
@@ -561,7 +604,7 @@ export function BattleMode({ on_close }: BattleModeProps) {
                   streak_bonus: battle_state.rewards?.streak_bonus || 1,
                   xp_gained: battle_state.rewards?.xp_earned || 0,
                   coins_earned: battle_state.rewards?.coins_earned || 0,
-                  time_bonus: effect.value
+                  time_bonus: effect.value || 10
                 }
               });
               break;
@@ -572,19 +615,10 @@ export function BattleMode({ on_close }: BattleModeProps) {
               if (questionWithHint) {
                 // Show hint for current question
                 dispatch({
-                  type: 'ANSWER_QUESTION',
+                  type: 'SHOW_HINT',
                   payload: {
-                    answer: '',
-                    is_correct: false
-                  }
-                });
-                // Then update the question state
-                dispatch({
-                  type: 'UPDATE_BATTLE_PROGRESS',
-                  payload: {
-                    streak_bonus: battle_state.rewards?.streak_bonus || 1,
-                    xp_gained: battle_state.rewards?.xp_earned || 0,
-                    coins_earned: battle_state.rewards?.coins_earned || 0
+                    questionId: questionWithHint.id,
+                    hint: questionWithHint.hint || t('battle.no_hint_available')
                   }
                 });
               }
@@ -592,13 +626,9 @@ export function BattleMode({ on_close }: BattleModeProps) {
 
             case 'battle_boost':
               // Apply score multiplier
-              const boost = 1 + effect.value / 100;
+              const boost = 1 + (effect.value || 10) / 100;
               
               // Update the score
-              dispatch({
-                type: 'SET_BATTLE_STATUS',
-                payload: 'active'
-              });
               dispatch({
                 type: 'UPDATE_BATTLE_PROGRESS',
                 payload: {

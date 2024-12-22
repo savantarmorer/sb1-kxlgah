@@ -7,13 +7,14 @@ import { useNotification } from '../../contexts/NotificationContext';
 import { useGame } from '../../contexts/GameContext';
 import { useAdmin } from '../../hooks/useAdmin';
 import { ShopItemResponse } from '../../types/shop';
-import { ItemType } from '../../types/items';
+import { ItemType, GameItem } from '../../types/items';
 import { Coins, Star, Package, Sparkles, Crown, Shield, Zap, Settings, Trophy, RefreshCw } from 'lucide-react';
 import { Button } from '../Button';
 import { ShopManager } from '../admin/ShopManager';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { ItemCard } from './ItemCard';
 import { Loader } from '../Loader';
+import { gameActions } from '../../contexts/game/actions';
 
 const styles = {
   container: {
@@ -103,38 +104,25 @@ export default function ShopSystem() {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    loadShopItems();
-  }, []);
-
-  const loadShopItems = async () => {
+  const fetchShopItems = async () => {
     try {
       setLoading(true);
       setError(null);
-
-      const { data, error } = await supabase
+      
+      const { data: shopItems, error } = await supabase
         .from('shop_items')
         .select(`
           *,
-          item:items (
-            id,
-            name,
-            description,
-            type,
-            rarity,
-            effects,
-            metadata,
-            icon,
-            icon_color
-          )
+          item:items (*)
         `)
         .eq('is_available', true)
-        .order('is_featured', { ascending: false });
+        .order('is_featured', { ascending: false })
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-
-      setShopItems(data || []);
+      setShopItems(shopItems as ShopItemResponse[]);
     } catch (error: any) {
+      console.error('[ShopSystem] Error fetching shop items:', error);
       const errorMessage = error.message || 'Failed to load shop items';
       setError(new Error(errorMessage));
       showError(errorMessage);
@@ -143,6 +131,11 @@ export default function ShopSystem() {
       setIsInitialLoading(false);
     }
   };
+
+  // Fetch shop items on mount
+  useEffect(() => {
+    void fetchShopItems();
+  }, []);
 
   const handlePurchase = async (shopItem: ShopItemResponse) => {
     try {
@@ -162,10 +155,48 @@ export default function ShopSystem() {
         return;
       }
 
-      // Purchase logic here...
+      // Convert shop item to game item format
+      const gameItem: GameItem = {
+        id: shopItem.item_id,
+        name: shopItem.item?.name || '',
+        description: shopItem.item?.description || '',
+        type: shopItem.item?.type || 'CONSUMABLE',
+        rarity: shopItem.item?.rarity || 'COMMON',
+        cost: shopItem.price,
+        effects: shopItem.item?.effects || [],
+        imageUrl: shopItem.item?.imageUrl || '',
+        is_active: true,
+        metadata: shopItem.item?.metadata || {},
+        requirements: {},
+        icon: shopItem.item?.icon ?? undefined,
+        icon_color: shopItem.item?.icon_color ?? undefined,
+        shopData: {
+          featured: shopItem.is_featured,
+          discount: shopItem.discount_price ?? undefined,
+          endDate: shopItem.discount_ends_at ?? undefined
+        }
+      };
+
+      // Call handleItemTransaction to process the purchase
+      await gameActions.handleItemTransaction(
+        state,
+        gameItem,
+        1, // quantity
+        'purchase',
+        currentPrice,
+        dispatch
+      );
+
       showSuccess('Item purchased successfully!');
+      
+      // Refresh shop items after successful purchase
+      await fetchShopItems();
     } catch (error: any) {
-      showError(error.message || 'Failed to purchase item');
+      console.error('[ShopSystem] Purchase error:', error);
+      showError(error.message || 'Failed to purchase item. Please try again.');
+      
+      // Refresh state to ensure consistency
+      await fetchShopItems();
     } finally {
       setLoading(false);
     }
@@ -199,7 +230,7 @@ export default function ShopSystem() {
         </Typography>
         <Button
           variant="primary"
-          onClick={() => loadShopItems()}
+          onClick={() => fetchShopItems()}
           startIcon={<RefreshCw />}
         >
           Try Again

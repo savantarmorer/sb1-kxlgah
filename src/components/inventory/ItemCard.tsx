@@ -6,11 +6,12 @@ import {
   Box,
   IconButton,
   Tooltip,
-  Chip
+  Chip,
+  Button
 } from '@mui/material';
-import { Shield, Zap, Crown, Info, Star, Package, Sparkles } from 'lucide-react';
 import type { InventoryItem } from '../../types/items';
 import { ItemType } from '../../types/items';
+import { ItemIcon } from '../common/ItemIcon';
 
 interface ItemCardProps {
   item: InventoryItem;
@@ -29,18 +30,6 @@ const rarityColors = {
 };
 
 export function ItemCard({ item, onEquip, onUnequip, onUse, onSelect }: ItemCardProps) {
-  const iconMap = {
-    [ItemType.EQUIPMENT]: Shield,
-    [ItemType.CONSUMABLE]: Zap,
-    [ItemType.COSMETIC]: Crown,
-    [ItemType.MATERIAL]: Star,
-    [ItemType.QUEST]: Package,
-    [ItemType.LOOTBOX]: Package,
-    [ItemType.BOOSTER]: Sparkles
-  };
-
-  const ItemIcon = iconMap[item.type] || Shield;
-
   return (
     <Card 
       sx={{ 
@@ -56,7 +45,7 @@ export function ItemCard({ item, onEquip, onUnequip, onUse, onSelect }: ItemCard
     >
       <CardContent>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-          <ItemIcon size={20} color={rarityColors[item.rarity]} />
+          <ItemIcon item={item} size={24} />
           <Typography variant="h6" component="div">
             {item.name}
           </Typography>
@@ -83,33 +72,37 @@ export function ItemCard({ item, onEquip, onUnequip, onUse, onSelect }: ItemCard
           />
         </Box>
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          {onEquip && (
-            <Tooltip title="Equip">
-              <IconButton onClick={onEquip} size="small">
-                <Shield size={18} />
-              </IconButton>
-            </Tooltip>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {onEquip && !item.equipped && (
+            <Button 
+              variant="contained" 
+              size="small" 
+              onClick={onEquip}
+              fullWidth
+            >
+              Equip
+            </Button>
           )}
-          {onUnequip && (
-            <Tooltip title="Unequip">
-              <IconButton onClick={onUnequip} size="small" color="error">
-                <Shield size={18} />
-              </IconButton>
-            </Tooltip>
+          {onUnequip && item.equipped && (
+            <Button 
+              variant="outlined" 
+              size="small" 
+              onClick={onUnequip}
+              fullWidth
+            >
+              Unequip
+            </Button>
           )}
           {onUse && (
-            <Tooltip title="Use">
-              <IconButton onClick={onUse} size="small" color="primary">
-                <Zap size={18} />
-              </IconButton>
-            </Tooltip>
+            <Button 
+              variant="contained" 
+              size="small" 
+              onClick={onUse}
+              fullWidth
+            >
+              Use
+            </Button>
           )}
-          <Tooltip title="Details">
-            <IconButton onClick={onSelect} size="small">
-              <Info size={18} />
-            </IconButton>
-          </Tooltip>
         </Box>
       </CardContent>
     </Card>

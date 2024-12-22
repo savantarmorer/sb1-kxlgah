@@ -7,6 +7,7 @@ import type { Theme } from '@mui/material/styles';
 import type { ShopItemResponse } from '../../types/shop';
 import type { ItemEffect } from '../../types/items';
 import { ItemRarity } from '../../types/items';
+import { ItemIcon } from '../common/ItemIcon';
 
 interface ItemCardProps {
   item: ShopItemResponse;
@@ -110,13 +111,7 @@ export function ItemCard({ item, onPurchase, loading }: ItemCardProps) {
         <CardContent>
           {/* Item Icon */}
           <Box sx={iconStyles}>
-            {item.item.imageUrl && (
-              <img
-                src={item.item.imageUrl}
-                alt={item.item.name}
-                style={{ width: 40, height: 40 }}
-              />
-            )}
+            <ItemIcon item={item.item} size={40} />
           </Box>
 
           {/* Item Name & Rarity */}
