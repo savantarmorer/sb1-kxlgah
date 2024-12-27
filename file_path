@@ -1,0 +1,43 @@
+interface Quest {
+  id: string;
+  title: string;
+  description: string;
+  type: QuestType;
+  status: QuestStatus;
+  category: string;
+  xp_reward: number;
+  coin_reward: number;
+  requirements: QuestRequirement[];
+  progress: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Example quest with the 'rewards' property
+export const SAMPLE_QUESTS: Quest[] = [
+  {
+    id: 'quest-battle-1',
+    title: 'Battle Novice',
+    description: 'Win your first 3 battles to prove your worth',
+    type: QuestType.BATTLE,
+    status: QuestStatus.AVAILABLE,
+    category: 'battle',
+    xp_reward: 500,
+    coin_reward: 1000,
+    requirements: [
+      {
+        type: QuestType.BATTLE,
+        amount: 0,
+        target: 3,
+        current: 0,
+        description: 'Win battles'
+      }
+    ],
+    progress: 0,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  // ... other quests with 'rewards' added similarly ...
+]; 

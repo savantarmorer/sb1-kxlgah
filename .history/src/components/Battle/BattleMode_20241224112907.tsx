@@ -1,0 +1,486 @@
+import React, { useState, useCallback, useEffect } from 'react';
+import { Box, Container, useTheme, alpha, Typography } from '@mui/material';
+import { motion, AnimatePresence } from 'framer-motion';
+import Confetti from 'react-confetti';
+import { useNavigate } from 'react-router-dom';
+import { useGame } from '../../contexts/GameContext';
+import { useNotification } from '../../contexts/NotificationContext';
+import { supabase } from '../../lib/supabase';
+import { 
+  BattleQuestion, 
+  BattlePhase,
+  PlayerState,
+  BattleAction,
+  initialPlayerState,
+  ACTION_ADVANTAGES
+} from '../../types/battle';
+import { BATTLE_CONFIG } from '../../config/battleConfig';
+import { BattleHeader } from './BattleHeader';
+import { BattleArena } from './BattleArena';
+import { BattleTimer } from './BattleTimer';
+import { BattleFooter } from './BattleFooter';
+import { PreBattleLobby } from './PreBattleLobby';
+import { QuestionDisplay } from './QuestionDisplay';
+import { BattleResults } from './BattleResults';
+import { BattleActions } from './BattleActions';
+import { BattleAnimation } from './BattleAnimation';
+import { BattleCard } from './BattleCard';
+import { BattleHand } from './BattleHand';
+import { createDeck, drawCards, calculateDamage, getAICardSelection } from '../../utils/cardUtils';
+import type { Card } from '../../utils/cardUtils';
+import { Button } from '../ui/Button';
+import { CardDistribution } from './CardDistribution';
+
+type BattleMode = 'all' | 'constitutional' | 'criminal' | 'civil';
+
+interface BattleModeProps {
+  mode?: BattleMode;
+}
+
+const INITIAL_HAND_SIZE = 4;
+const CARD_WIDTH = 120;
+
+// Update the battle phases
+const BATTLE_PHASES = {
+  PREPARING: 'PREPARING',
+  DEALING: 'DEALING',
+  CARD_SELECTION: 'CARD_SELECTION',
+  CARD_REVEAL: 'CARD_REVEAL',
+  QUESTION: 'QUESTION',
+  RESOLUTION: 'RESOLUTION',
+  COMPLETED: 'COMPLETED',
+  ERROR: 'ERROR'
+} as const;
+
+// Define phase type to ensure type safety
+type BattlePhaseType = typeof BATTLE_PHASES[keyof typeof BATTLE_PHASES];
+
+interface BattleResultState {
+  attacker: 'player' | 'opponent';
+  damage: number;
+  shieldBlock?: number;
+  shieldBreak?: number;
+}
+
+interface BattleCompletionResult {
+  victory: boolean;
+  score: {
+    player: number;
+    opponent: number;
+  };
+  rewards: {
+    xp_earned: number;
+    coins_earned: number;
+    streak_bonus: number;
+    time_bonus: number;
+  };
+}
+
+export default function BattleMode({ mode = 'all' }: BattleModeProps) {
+  const theme = useTheme();
+  const navigate = useNavigate();
+  const { state } = useGame();
+  const { showError } = useNotification();
+  
+  // Existing state
+  const [botAvatar, setBotAvatar] = useState<string>('/avatars/judge2.png');
+  const [phase, setPhase] = useState<BattlePhaseType>(BATTLE_PHASES.PREPARING);
+  const [currentQuestion, setCurrentQuestion] = useState<BattleQuestion | null>(null);
+  const [questions, setQuestions] = useState<BattleQuestion[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [timeLeft, setTimeLeft] = useState<number>(BATTLE_CONFIG.time_per_question);
+  const [score, setScore] = useState({ player: 0, opponent: 0 });
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [isAnswerCorrect, setIsAnswerCorrect] = useState<boolean | null>(null);
+  const [streak, setStreak] = useState(0);
+  const [selectedMode, setSelectedMode] = useState<BattleMode>(mode);
+  const [playerState, setPlayerState] = useState<PlayerState>({ ...initialPlayerState });
+  const [opponentState, setOpponentState] = useState<PlayerState>({ ...initialPlayerState });
+  const [showAnswerReveal, setShowAnswerReveal] = useState(false);
+  const [showBattleAnimation, setShowBattleAnimation] = useState(false);
+  const [battleResult, setBattleResult] = useState<BattleResultState | null>(null);
+
+  // Card system state
+  const [playerHand, setPlayerHand] = useState<Card[]>([]);
+  const [opponentHand, setOpponentHand] = useState<Card[]>([]);
+  const [playerDeck, setPlayerDeck] = useState<Card[]>([]);
+  const [opponentDeck, setOpponentDeck] = useState<Card[]>([]);
+  const [selectedCard, setSelectedCard] = useState<string | undefined>(undefined);
+  const [opponentSelectedCard, setOpponentSelectedCard] = useState<string | undefined>(undefined);
+
+  // Timer for card selection
+  const [selectionTimeLeft, setSelectionTimeLeft] = useState(10);
+
+  // Handle card distribution completion
+  const handleDistributionComplete = useCallback(() => {
+    setPhase(BATTLE_PHASES.CARD_SELECTION);
+    setSelectionTimeLeft(10);
+  }, []);
+
+  // Selection timer effect with proper phase check
+  useEffect(() => {
+    if (phase !== BATTLE_PHASES.CARD_SELECTION || selectedCard) return;
+
+    const timer = setInterval(() => {
+      setSelectionTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          // Auto-select a random card if time runs out
+          const availableCards = playerHand.filter(c => !selectedCard);
+          if (availableCards.length > 0) {
+            const randomCard = availableCards[Math.floor(Math.random() * availableCards.length)];
+            handleCardSelect(randomCard.id);
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [phase, selectedCard, playerHand]);
+
+  // Modified handleCardSelect with proper phase management
+  const handleCardSelect = useCallback((cardId: string) => {
+    if (selectedCard || phase !== BATTLE_PHASES.CARD_SELECTION) return;
+    
+    setSelectedCard(cardId);
+    
+    // AI opponent selects a card
+    const playerCard = playerHand.find(c => c.id === cardId);
+    const opponentCard = getAICardSelection(opponentHand, playerCard, opponentState.health);
+    setOpponentSelectedCard(opponentCard.id);
+
+    // Move to card reveal phase
+    setPhase(BATTLE_PHASES.CARD_REVEAL);
+    
+    // After reveal animation, move to question phase
+    setTimeout(() => {
+      setPhase(BATTLE_PHASES.QUESTION);
+      // Reset selection timer
+      setSelectionTimeLeft(10);
+    }, 2000);
+  }, [phase, selectedCard, playerHand, opponentHand, opponentState.health]);
+
+  // Modified handleAnswer with proper phase transitions
+  const handleAnswer = useCallback(async (answer: string) => {
+    if (!currentQuestion || !selectedCard || !opponentSelectedCard) return;
+
+    setSelectedAnswer(answer);
+    const isCorrect = answer === currentQuestion.correct_answer;
+    setIsAnswerCorrect(isCorrect);
+
+    // Move to resolution phase
+    setPhase(BATTLE_PHASES.RESOLUTION);
+
+    const playerCard = playerHand.find(c => c.id === selectedCard)!;
+    const opponentCard = opponentHand.find(c => c.id === opponentSelectedCard)!;
+
+    if (isCorrect) {
+      // Player attacks
+      const { damage, effects } = calculateDamage(playerCard, opponentCard);
+      setShowBattleAnimation(true);
+      setBattleResult({
+        attacker: 'player',
+        damage,
+        shieldBlock: opponentCard.action === 'defense' ? opponentCard.power : 0
+      });
+
+      setOpponentState(prev => ({
+        ...prev,
+        health: Math.max(0, prev.health - damage)
+      }));
+    } else {
+      // Opponent attacks
+      const { damage, effects } = calculateDamage(opponentCard, playerCard);
+      setShowBattleAnimation(true);
+      setBattleResult({
+        attacker: 'opponent',
+        damage,
+        shieldBlock: playerCard.action === 'defense' ? playerCard.power : 0
+      });
+
+      setPlayerState(prev => ({
+        ...prev,
+        health: Math.max(0, prev.health - damage)
+      }));
+    }
+  }, [currentQuestion, selectedCard, opponentSelectedCard, playerHand, opponentHand]);
+
+  // Handle attack animation completion and card cleanup
+  const handleAttackAnimationComplete = useCallback(() => {
+    // Remove used cards and draw new ones
+    setPlayerHand(prev => prev.filter(c => c.id !== selectedCard));
+    setOpponentHand(prev => prev.filter(c => c.id !== opponentSelectedCard));
+
+    // Draw new cards
+    if (playerDeck.length > 0) {
+      const { drawn: playerDrawn, remaining: playerRemaining } = drawCards(playerDeck, 1);
+      setPlayerHand(prev => [...prev, ...playerDrawn]);
+      setPlayerDeck(playerRemaining);
+    }
+    if (opponentDeck.length > 0) {
+      const { drawn: opponentDrawn, remaining: opponentRemaining } = drawCards(opponentDeck, 1);
+      setOpponentHand(prev => [...prev, ...opponentDrawn]);
+      setOpponentDeck(opponentRemaining);
+    }
+
+    // Reset animation states
+    setShowBattleAnimation(false);
+    setBattleResult(null);
+
+    // Check if game should end
+    if (playerState.health <= 0 || opponentState.health <= 0) {
+      setPhase(BATTLE_PHASES.COMPLETED);
+    } else {
+      // Move to next card selection
+      setPhase(BATTLE_PHASES.CARD_SELECTION);
+      setSelectionTimeLeft(10);
+    }
+  }, [playerDeck, opponentDeck, selectedCard, opponentSelectedCard, playerState.health, opponentState.health]);
+
+  // Initialize battle with cards
+  const initializeBattle = useCallback(async () => {
+    try {
+      setPhase(BATTLE_PHASES.DEALING);
+      
+      // Initialize decks
+      const newPlayerDeck = createDeck();
+      const newOpponentDeck = createDeck();
+
+      // Draw initial hands
+      const { drawn: pHand, remaining: pDeck } = drawCards(newPlayerDeck, INITIAL_HAND_SIZE);
+      const { drawn: oHand, remaining: oDeck } = drawCards(newOpponentDeck, INITIAL_HAND_SIZE);
+
+      setPlayerHand(pHand);
+      setOpponentHand(oHand);
+      setPlayerDeck(pDeck);
+      setOpponentDeck(oDeck);
+
+      // Existing initialization
+      let query = supabase
+        .from('battle_questions')
+        .select('*')
+        .limit(BATTLE_CONFIG.questions_per_battle);
+
+      if (selectedMode !== 'all') {
+        query = query.eq('category', selectedMode);
+      }
+
+      const { data: questions, error } = await query.order('id', { ascending: false });
+
+      if (error) throw error;
+      
+      if (!questions || questions.length === 0) {
+        throw new Error(`No questions available for ${selectedMode} mode`);
+      }
+
+      const shuffledQuestions = [...questions].sort(() => Math.random() - 0.5);
+
+      setQuestions(shuffledQuestions);
+      setCurrentQuestion(shuffledQuestions[0]);
+      setCurrentQuestionIndex(0);
+      setTimeLeft(BATTLE_CONFIG.time_per_question);
+      setScore({ player: 0, opponent: 0 });
+      setSelectedAnswer(null);
+      setIsAnswerCorrect(null);
+      setStreak(0);
+      
+      // Start dealing animation
+      setPhase(BATTLE_PHASES.DEALING);
+    } catch (error) {
+      console.error('Error initializing battle:', error);
+      showError('Failed to initialize battle');
+      setPhase(BATTLE_PHASES.ERROR);
+    }
+  }, [showError, selectedMode]);
+
+  const handleBattleCompletion = useCallback(async (results: BattleCompletionResult) => {
+    console.log('[BattleMode] Battle completed. Calculating results.');
+    
+    // Update battle result state with attack information
+    setBattleResult({
+      attacker: results.victory ? 'player' : 'opponent',
+      damage: results.score.player * 10, // Example damage calculation
+      shieldBlock: 0,
+      shieldBreak: 0
+    });
+    
+    setShowConfetti(results.victory);
+    
+    console.log('[BattleMode] Battle results:', results);
+    
+    // Update battle stats and user progress
+    try {
+      // Implement your battle completion logic here
+      // await updateBattleStats(results);
+    } catch (error) {
+      console.error('[BattleMode] Error handling battle completion:', error);
+      showError('Failed to save battle results');
+    }
+  }, [showError]);
+
+  useEffect(() => {
+    if (phase === BATTLE_PHASES.COMPLETED) {
+      const results: BattleCompletionResult = {
+        victory: playerState.health > opponentState.health,
+        score: {
+          player: score.player,
+          opponent: score.opponent
+        },
+        rewards: {
+          xp_earned: score.player * 100,
+          coins_earned: score.player * 50,
+          streak_bonus: streak * 10,
+          time_bonus: timeLeft
+        }
+      };
+      handleBattleCompletion(results);
+    }
+  }, [phase, playerState.health, opponentState.health, score, streak, timeLeft, handleBattleCompletion]);
+
+  return (
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <BattleHeader />
+
+      <Box sx={{ 
+        position: 'relative',
+        minHeight: '60vh',
+        bgcolor: 'background.paper',
+        borderRadius: 4,
+        boxShadow: 1,
+        overflow: 'hidden'
+      }}>
+        <AnimatePresence mode="wait">
+          {phase === BATTLE_PHASES.PREPARING && (
+            <PreBattleLobby
+              onBattleStart={initializeBattle}
+              onCancel={() => navigate(-1)}
+              onModeSelect={setSelectedMode}
+              selectedMode={selectedMode}
+            />
+          )}
+
+          {phase === BATTLE_PHASES.DEALING && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <CardDistribution
+                playerHand={playerHand}
+                opponentHand={opponentHand}
+                onComplete={handleDistributionComplete}
+              />
+            </motion.div>
+          )}
+
+          {(phase === BATTLE_PHASES.CARD_SELECTION || phase === BATTLE_PHASES.CARD_REVEAL) && (
+            <Box sx={{ 
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr 1fr',
+              gap: 2,
+              height: '100%',
+              p: 4,
+              maxWidth: 1200,
+              mx: 'auto'
+            }}>
+              {/* Time Remaining */}
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 2 }}>
+                  {selectionTimeLeft}s
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Select your card
+                </Typography>
+              </Box>
+
+              {/* Player Hand */}
+              <BattleHand
+                cards={playerHand}
+                selectedCard={selectedCard}
+                onCardSelect={handleCardSelect}
+                isSelectable={phase === BATTLE_PHASES.CARD_SELECTION}
+              />
+
+              {/* Opponent Hand (face down) */}
+              <Box sx={{ 
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 2,
+                opacity: phase === BATTLE_PHASES.CARD_REVEAL ? 1 : 0.5
+              }}>
+                {opponentHand.map((card) => (
+                  <BattleCard
+                    key={card.id}
+                    {...card}
+                    isFlipped={phase !== BATTLE_PHASES.CARD_REVEAL}
+                    isSelected={card.id === opponentSelectedCard}
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
+
+          {phase === BATTLE_PHASES.QUESTION && currentQuestion && (
+            <Box sx={{ p: 4 }}>
+              <QuestionDisplay
+                question={currentQuestion}
+                on_answer={handleAnswer}
+                selected_answer={selectedAnswer}
+                is_correct={isAnswerCorrect}
+                time_left={timeLeft}
+              />
+            </Box>
+          )}
+
+          {phase === BATTLE_PHASES.COMPLETED && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <BattleResults
+                score={score}
+                streak={streak}
+                on_play_again={initializeBattle}
+                on_exit={() => navigate('/battle')}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Box>
+
+      <BattleFooter
+        battleStats={{
+          wins: state.battleStats?.wins || 0,
+          rating: state.battleRatings?.rating || BATTLE_CONFIG.matchmaking.default_rating
+        }}
+        phase={phase}
+      />
+
+      {showBattleAnimation && battleResult && (
+        <BattleAnimation
+          attacker={battleResult.attacker}
+          damage={battleResult.damage}
+          playerAvatar={state.user?.avatar_url}
+          opponentAvatar={botAvatar}
+          shieldBlock={battleResult.shieldBlock}
+          shieldBreak={battleResult.shieldBreak}
+          onComplete={handleAttackAnimationComplete}
+        />
+      )}
+
+      {showConfetti && (
+        <Confetti
+          width={window.innerWidth}
+          height={window.innerHeight}
+          recycle={false}
+          numberOfPieces={200}
+          gravity={0.3}
+        />
+      )}
+    </Container>
+  );
+}

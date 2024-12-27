@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="CepaC Play - Learn and practice law through gamification" />
+    
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    
+    <!-- Preload Critical Assets -->
+    <link rel="preload" href="/gavel.svg" as="image" type="image/svg+xml" />
+    <link rel="preload" href="/src/main.tsx" as="script" type="module" />
+    
+    <title>CepaC Play</title>
+
+    <!-- Prevent Flash of Unstyled Content -->
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      
+      body {
+        background: #f9fafb;
+        margin: 0;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #111827;
+        }
+      }
+
+      #root {
+        opacity: 1;
+      }
+
+      .loading {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f9fafb;
+        transition: opacity 0.3s ease-in-out;
+        z-index: 9999;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .loading {
+          background: #111827;
+        }
+      }
+
+      .loading.fade-out {
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Loading Indicator -->
+    <div id="loading" class="loading">
+      <svg width="50" height="50" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg" stroke="currentColor">
+        <g fill="none" fill-rule="evenodd">
+          <g transform="translate(1 1)" stroke-width="2">
+            <circle stroke-opacity=".5" cx="18" cy="18" r="18"/>
+            <path d="M36 18c0-9.94-8.06-18-18-18">
+              <animateTransform
+                attributeName="transform"
+                type="rotate"
+                from="0 18 18"
+                to="360 18 18"
+                dur="1s"
+                repeatCount="indefinite"/>
+            </path>
+          </g>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Loading Handler -->
+    <script>
+      // Function to remove loading indicator
+      function removeLoading() {
+        const loading = document.getElementById('loading');
+        if (loading && !loading.classList.contains('fade-out')) {
+          loading.classList.add('fade-out');
+          setTimeout(() => {
+            loading.remove();
+          }, 300);
+        }
+      }
+
+      // Remove loading on DOMContentLoaded
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(removeLoading, 500); // Small delay to ensure smooth transition
+      });
+
+      // Fallback timeout
+      setTimeout(removeLoading, 2000);
+
+      // Additional check when React mounts
+      const root = document.getElementById('root');
+      const observer = new MutationObserver((mutations) => {
+        if (mutations.some(m => m.addedNodes.length > 0)) {
+          removeLoading();
+          observer.disconnect();
+        }
+      });
+
+      observer.observe(root, {
+        childList: true,
+        subtree: true
+      });
+    </script>
+
+    <!-- Module Scripts -->
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html> 

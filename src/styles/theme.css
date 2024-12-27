@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-app-background text-app-text-primary;
+  }
+}
+
+@layer components {
+  /* Card base styles */
+  .card {
+    @apply bg-app-card border border-app-border rounded-xl shadow-lg transition-all duration-200;
+  }
+  
+  .card-hover {
+    @apply hover:bg-app-card-hover hover:border-app-border-light hover:shadow-glow-primary hover:shadow-app-primary/20;
+  }
+
+  /* Button styles */
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-gradient-to-r from-app-primary to-app-primary-dark text-white
+           hover:from-app-primary-hover hover:to-app-primary
+           active:from-app-primary-dark active:to-app-primary-hover;
+  }
+
+  .btn-secondary {
+    @apply btn bg-gradient-to-r from-app-secondary to-app-secondary-dark text-white
+           hover:from-app-secondary-hover hover:to-app-secondary
+           active:from-app-secondary-dark active:to-app-secondary-hover;
+  }
+
+  .btn-outline {
+    @apply btn border-2 border-app-border text-app-text-secondary
+           hover:border-app-border-light hover:bg-app-card-hover
+           active:bg-app-card-active;
+  }
+
+  /* Input styles */
+  .input {
+    @apply bg-app-card border border-app-border rounded-lg px-4 py-2
+           focus:outline-none focus:ring-2 focus:ring-app-primary/50 focus:border-app-primary
+           placeholder:text-app-text-muted text-app-text-primary;
+  }
+
+  /* Badge styles */
+  .badge {
+    @apply px-2 py-1 rounded-full text-sm font-medium;
+  }
+
+  .badge-primary {
+    @apply badge bg-app-primary/20 text-app-primary-light border border-app-primary/30;
+  }
+
+  .badge-secondary {
+    @apply badge bg-app-secondary/20 text-app-secondary-light border border-app-secondary/30;
+  }
+
+  .badge-success {
+    @apply badge bg-app-success/20 text-app-success-light border border-app-success/30;
+  }
+
+  .badge-warning {
+    @apply badge bg-app-warning/20 text-app-warning-light border border-app-warning/30;
+  }
+
+  .badge-error {
+    @apply badge bg-app-error/20 text-app-error-light border border-app-error/30;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r;
+  }
+
+  .gradient-text-primary {
+    @apply gradient-text from-app-gradient-primary-start to-app-gradient-primary-end;
+  }
+
+  .gradient-text-secondary {
+    @apply gradient-text from-app-gradient-secondary-start to-app-gradient-secondary-end;
+  }
+
+  /* Animated backgrounds */
+  .gradient-animate {
+    @apply bg-gradient-to-r animate-gradient-x;
+  }
+
+  .gradient-animate-y {
+    @apply bg-gradient-to-b animate-gradient-y;
+  }
+
+  .gradient-animate-xy {
+    @apply bg-gradient-to-br animate-gradient-xy;
+  }
+
+  /* Card variations */
+  .card-gradient {
+    @apply bg-gradient-card from-app-gradient-dark-start to-app-gradient-dark-end;
+  }
+
+  .card-glass {
+    @apply bg-app-card/80 backdrop-blur-lg;
+  }
+
+  /* Section headers */
+  .section-title {
+    @apply text-2xl font-bold gradient-text-primary mb-4;
+  }
+
+  .section-subtitle {
+    @apply text-lg text-app-text-secondary mb-2;
+  }
+
+  /* Navigation */
+  .nav-link {
+    @apply text-app-text-secondary hover:text-app-text-primary transition-colors;
+  }
+
+  .nav-link-active {
+    @apply text-app-primary font-medium;
+  }
+
+  /* Lists */
+  .list-item {
+    @apply py-2 border-b border-app-border last:border-0;
+  }
+
+  /* Scrollbar */
+  .custom-scrollbar {
+    @apply scrollbar-thin scrollbar-track-app-background scrollbar-thumb-app-border
+           hover:scrollbar-thumb-app-border-light;
+  }
+} 

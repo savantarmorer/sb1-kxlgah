@@ -1,0 +1,1 @@
+export type BattleAction = 'attack' | 'defense' | 'counter' | 'special'; 

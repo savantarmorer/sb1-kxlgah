@@ -1,0 +1,396 @@
+/**
+ * Battle Service - Core Game System Documentation
+ * 
+ * This service manages all aspects of the quiz battle system, including:
+ * - Question management for battles
+ * - Battle results and rewards processing
+ * - Player statistics tracking
+ * - Opponent matching and bot creation
+ * - Rating calculations
+ * 
+ * How it works with other parts of the system:
+ * 1. Game Context (GameContext.tsx) uses this service to:
+ *    - Start new battles
+ *    - Process battle results
+ *    - Update player progress
+ * 
+ * 2. Battle Components use this to:
+ *    - Get questions for battles
+ *    - Handle player answers
+ *    - Show results and rewards
+ * 
+ * 3. Profile System uses this to:
+ *    - Display player statistics
+ *    - Show battle history
+ *    - Track achievements
+ */
+
+import { supabase } from '../lib/supabase';
+import { 
+  BattleState,
+  BattleStateEnum,
+  BattleAction,
+  GameAction,
+  BattleInitPayload,
+  BattleRewards,
+  BattleQuestion
+} from '../types/battle';
+import { BATTLE_CONFIG } from '../config/battleConfig';
+import { Logger } from '../utils/logger';
+import { CircuitBreaker } from '../utils/circuitBreaker';
+import { ProgressService } from '../services/progressService';
+import { LevelSystem } from '../lib/levelSystem';
+import { GameState } from '@/contexts/game/types';
+import { BattleRatingService } from '../services/battleRatingService';
+import { Dispatch } from 'react';
+
+// Database Table Interfaces
+interface BattleHistoryDB {
+  id?: string;
+  user_id: string;
+  opponent_id: string | null;
+  winner_id: string | null;
+  score_player: number;
+  score_opponent: number;
+  xp_earned: number;
+  coins_earned: number;
+  streak_bonus: number;
+  created_at?: string;
+  is_bot_opponent: boolean;
+  game_mode: 'cards';
+}
+
+interface BattleStatsDB {
+  user_id: string;
+  total_battles: number;
+  wins: number;
+  losses: number;
+  win_streak: number;
+  highest_streak: number;
+  total_xp_earned: number;
+  total_coins_earned: number;
+  difficulty: number;
+  updated_at: string;
+}
+
+export class BattleService {
+  private static logger = new Logger('BattleService');
+  private static circuit_breaker = new CircuitBreaker();
+
+  public static async getCurrentGameState(user_id: string): Promise<GameState> {
+    try {
+      // Fetch user profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user_id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      // Fetch battle stats
+      const { data: battleStats, error: statsError } = await supabase
+        .from('battle_stats')
+        .select('*')
+        .eq('user_id', user_id)
+        .single();
+
+      if (statsError && statsError.code !== 'PGRST116') throw statsError;
+
+      // Fetch active battle if exists
+      const { data: activeBattle, error: battleError } = await supabase
+        .from('active_battles')
+        .select('*')
+        .eq('user_id', user_id)
+        .single();
+
+      if (battleError && battleError.code !== 'PGRST116') throw battleError;
+
+      return {
+        user: profile,
+        battle: activeBattle ? {
+          status: activeBattle.status,
+          phase: activeBattle.phase || BattleStateEnum.IDLE,
+          score: activeBattle.score,
+          player_role: activeBattle.player_role,
+          opponent_role: activeBattle.opponent_role,
+          current_round: activeBattle.current_round,
+          total_rounds: activeBattle.total_rounds,
+          lastPlayedCards: activeBattle.lastPlayedCards,
+          in_progress: activeBattle.in_progress,
+          error: null,
+          rewards: activeBattle.rewards,
+          metadata: activeBattle.metadata,
+          playerDeck: activeBattle.playerDeck || [],
+          opponentDeck: activeBattle.opponentDeck || [],
+          winner: activeBattle.winner || null
+        } : null,
+        battle_stats: battleStats || {
+          total_battles: 0,
+          wins: 0,
+          losses: 0,
+          win_streak: 0,
+          highest_streak: 0,
+          total_xp_earned: 0,
+          total_coins_earned: 0,
+          difficulty: 1
+        },
+        recentXPGains: [],
+        leaderboard: [],
+        login_history: [],
+        achievements: [],
+        quests: {
+          active: [],
+          completed: []
+        },
+        inventory: {
+          items: [],
+          equipped: []
+        },
+        statistics: {
+          total_xp: profile.xp || 0,
+          total_coins: profile.coins || 0,
+          battles_won: battleStats?.wins || 0,
+          battles_lost: battleStats?.losses || 0,
+          current_streak: battleStats?.win_streak || 0,
+          highest_streak: battleStats?.highest_streak || 0,
+          quests_completed: 0,
+          achievements_unlocked: 0
+        },
+        error: null,
+        loading: false,
+        syncing: false,
+        showLevelUpReward: false,
+        current_levelRewards: [],
+        activeEffects: []
+      };
+    } catch (error) {
+      console.error('Error fetching game state:', error);
+      throw error;
+    }
+  }
+
+  public static async handleBattleStateUpdate(
+    battleState: BattleState & { user_id: string },
+    action: GameAction,
+    dispatch: Dispatch<GameAction>
+  ): Promise<void> {
+    try {
+      if (action.type === 'PLAY_CARD') {
+        const { playerCard, opponentCard } = action.payload;
+        const newScore = {
+          player: battleState.score.player + (playerCard.power > opponentCard.power ? 1 : 0),
+          opponent: battleState.score.opponent + (opponentCard.power > playerCard.power ? 1 : 0)
+        };
+
+        // Update active battle in database
+        await supabase
+          .from('active_battles')
+          .upsert({
+            user_id: battleState.user_id,
+            status: newScore.player >= 3 || newScore.opponent >= 3 
+              ? BattleStateEnum.COMPLETED 
+              : BattleStateEnum.CARD_SELECTION,
+            score: newScore,
+            current_round: battleState.current_round + 1,
+            lastPlayedCards: {
+              player: playerCard,
+              opponent: opponentCard
+            }
+          });
+
+        // If battle is completed, record results
+        if (newScore.player >= 3 || newScore.opponent >= 3) {
+          const victory = newScore.player >= 3;
+          const rewards: BattleRewards = {
+            xp_earned: victory ? 100 : 50,
+            coins_earned: victory ? 50 : 25,
+            streak_bonus: victory ? 10 : 0,
+            time_bonus: 0,
+            total_xp: victory ? 100 : 50,
+            total_coins: victory ? 50 : 25,
+            metadata: {
+              correct_answers: newScore.player,
+              total_questions: battleState.total_rounds,
+              average_time: 0,
+              max_streak: victory ? battleState.current_round : 0,
+              damage_dealt: 0,
+              damage_taken: 0,
+              shield_gained: 0
+            }
+          };
+
+          await this.record_battle_results(
+            battleState.user_id,
+            battleState,
+            victory,
+            rewards
+          );
+
+          dispatch({
+            type: 'END_BATTLE'
+          });
+        } else {
+          dispatch({
+            type: 'PLAY_CARD',
+            payload: {
+              playerCard,
+              opponentCard
+            }
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating battle state:', error);
+      throw error;
+    }
+  }
+
+  private static async record_battle_results(
+    user_id: string,
+    battle_state: BattleState,
+    victory: boolean,
+    rewards: BattleRewards
+  ): Promise<void> {
+    try {
+      // Record battle history
+      await supabase
+        .from('battle_history')
+        .insert({
+          user_id,
+          opponent_id: null,
+          winner_id: victory ? user_id : null,
+          score_player: battle_state.score.player,
+          score_opponent: battle_state.score.opponent,
+          xp_earned: rewards.xp_earned,
+          coins_earned: rewards.coins_earned,
+          streak_bonus: rewards.streak_bonus,
+          is_bot_opponent: true,
+          game_mode: 'cards'
+        });
+
+      // Update battle stats
+      const { data: stats } = await supabase
+        .from('battle_stats')
+        .select('*')
+        .eq('user_id', user_id)
+        .single();
+
+      const updatedStats = {
+        user_id,
+        total_battles: (stats?.total_battles || 0) + 1,
+        wins: (stats?.wins || 0) + (victory ? 1 : 0),
+        losses: (stats?.losses || 0) + (victory ? 0 : 1),
+        win_streak: victory ? (stats?.win_streak || 0) + 1 : 0,
+        highest_streak: victory 
+          ? Math.max(stats?.highest_streak || 0, (stats?.win_streak || 0) + 1)
+          : stats?.highest_streak || 0,
+        total_xp_earned: (stats?.total_xp_earned || 0) + rewards.xp_earned,
+        total_coins_earned: (stats?.total_coins_earned || 0) + rewards.coins_earned,
+        difficulty: stats?.difficulty || 1,
+        updated_at: new Date().toISOString()
+      };
+
+      await supabase
+        .from('battle_stats')
+        .upsert(updatedStats);
+
+      // Update user profile
+      await supabase
+        .from('profiles')
+        .update({
+          xp: `xp + ${rewards.xp_earned}`,
+          coins: `coins + ${rewards.coins_earned}`
+        })
+        .eq('id', user_id);
+
+      // Clear active battle
+      await supabase
+        .from('active_battles')
+        .delete()
+        .eq('user_id', user_id);
+
+    } catch (error) {
+      console.error('Error recording battle results:', error);
+      throw error;
+    }
+  }
+
+  public static async fetch_battle_questions(options: {
+    difficulty?: 'easy' | 'medium' | 'hard';
+    category?: string;
+    count?: number;
+  }): Promise<BattleQuestion[]> {
+    try {
+      const { difficulty = 'medium', category, count = 5 } = options;
+
+      // Build query
+      let query = supabase
+        .from('battle_questions')
+        .select('*')
+        .eq('difficulty', difficulty)
+        .limit(count);
+
+      // Only add category filter if it's defined and not empty
+      if (category && category.trim() !== '') {
+        query = query.eq('category', category);
+      }
+
+      // Add random ordering - in Supabase we use this syntax
+      query = query.order('id', { ascending: false });
+
+      const { data: questions, error } = await query;
+
+      if (error) throw error;
+
+      if (!questions || questions.length < count) {
+        throw new Error('Not enough questions available for battle');
+      }
+
+      // Shuffle the results in memory since we can't use RANDOM() in Supabase
+      const shuffled = questions.sort(() => Math.random() - 0.5);
+
+      return shuffled;
+    } catch (error) {
+      console.error('Error fetching battle questions:', error);
+      throw error;
+    }
+  }
+
+  public static async get_opponent(opponent_id?: string) {
+    if (!opponent_id) {
+      // Return default bot opponent
+      return {
+        id: 'bot',
+        name: 'Bot Opponent',
+        avatar_url: '/bot-avatar.png',
+        is_bot: true,
+        rating: 1000,
+        level: 1
+      };
+    }
+
+    try {
+      // Fetch real opponent from database
+      const { data: opponent, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', opponent_id)
+        .single();
+
+      if (error) throw error;
+
+      return {
+        id: opponent.id,
+        name: opponent.name,
+        avatar_url: opponent.avatar_url,
+        is_bot: false,
+        rating: opponent.rating || 1000,
+        level: opponent.level || 1
+      };
+    } catch (error) {
+      console.error('Error fetching opponent:', error);
+      throw error;
+    }
+  }
+}

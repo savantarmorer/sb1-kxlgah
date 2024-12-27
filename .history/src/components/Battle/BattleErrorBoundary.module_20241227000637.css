@@ -1,0 +1,44 @@
+.battleErrorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.battleErrorContainer h2 {
+  color: var(--text-error);
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.battleErrorContainer p {
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+}
+
+.battleErrorActions {
+  display: flex;
+  gap: 1rem;
+}
+
+.battleErrorActions button {
+  min-width: 120px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.battleErrorActions button:first-child {
+  background-color: var(--primary);
+  color: white;
+}
+
+.battleErrorActions button:last-child {
+  background-color: var(--background-tertiary);
+  color: var(--text-primary);
+} 

@@ -1,0 +1,52 @@
+import React from 'react';
+import { Box } from '@mui/material';
+import { useGame } from '../../contexts/GameContext';
+import { GameEngine } from '../../game-engine';
+import { createDeck } from '../../utils/cardUtils';
+import type { BattleState } from '../../types/battle';
+
+interface BattleModeProps {
+  on_close?: () => void;
+}
+
+export default function BattleMode({ on_close }: BattleModeProps) {
+  const { state: gameState } = useGame();
+  const battle = gameState.battle as BattleState | null;
+
+  // Initialize decks based on roles, defaulting to 'promotoria' if not set
+  const playerDeck = createDeck(battle?.player_role || 'promotoria');
+  const opponentDeck = createDeck(battle?.opponent_role || 'defesa');
+
+  const handleGameOver = (winnerId: string) => {
+    if (winnerId === 'player') {
+      // Handle player victory
+      console.log('Player wins!');
+    } else {
+      // Handle opponent victory
+      console.log('Opponent wins!');
+    }
+    on_close?.();
+  };
+
+  return (
+    <Box
+      sx={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        p: 2,
+      }}
+    >
+      <GameEngine
+        playerName={gameState.user?.name || 'Player'}
+        opponentName={battle?.metadata?.is_bot ? 'Bot Opponent' : 'Opponent'}
+        playerDeck={playerDeck}
+        opponentDeck={opponentDeck}
+        onGameOver={handleGameOver}
+      />
+    </Box>
+  );
+}

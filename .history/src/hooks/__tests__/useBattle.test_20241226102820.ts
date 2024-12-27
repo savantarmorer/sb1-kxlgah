@@ -1,0 +1,222 @@
+import { renderHook } from '@testing-library/react-hooks';
+import { useBattle } from '../useBattle';
+import { BattleStateEnum } from '../../types/battle';
+import React from 'react';
+
+// Mock state
+const mockGameState = {
+  battle: {
+    phase: BattleStateEnum.PREPARING,
+    status: 'IN_PROGRESS',
+    questions: [
+      {
+        id: '1',
+        question: 'Test question',
+        answers: ['A', 'B', 'C', 'D'],
+        correct_answer: 0
+      }
+    ],
+    current_question: 0,
+    total_questions: 1,
+    time_left: 30,
+    time_per_question: 30,
+    score: 0,
+    player_answers: [],
+    opponent: {
+      id: '2',
+      name: 'Test Opponent',
+      email: 'opponent@test.com'
+    },
+    in_progress: true,
+    player_state: {
+      health: 50,
+      shield: 0,
+      isReady: false
+    },
+    opponent_state: {
+      health: 50,
+      shield: 0,
+      isReady: false
+    },
+    metadata: {
+      player_deck: [],
+      opponent_deck: []
+    },
+    rewards: {
+      xp_earned: 100,
+      coins_earned: 50,
+      streak_bonus: 0,
+      time_bonus: 0,
+      total_xp: 100,
+      total_coins: 50
+    }
+  },
+  user: {
+    id: '1',
+    name: 'Test User',
+    email: 'test@test.com',
+    level: 1,
+    xp: 0,
+    coins: 0,
+    streak: 0
+  },
+  battle_stats: {
+    total_battles: 0,
+    wins: 0,
+    losses: 0,
+    draws: 0,
+    current_streak: 0,
+    best_streak: 0,
+    total_xp_earned: 0,
+    total_coins_earned: 0
+  }
+};
+
+const mockGameContext = {
+  state: mockGameState,
+  dispatch: jest.fn(),
+  loading: false,
+  initialized: true,
+  getCurrentQuestion: () => mockGameState.battle.questions[0],
+  getBattleStatus: () => mockGameState.battle.status,
+  getBattleProgress: () => ({
+    currentQuestion: mockGameState.battle.current_question,
+    totalQuestions: mockGameState.battle.total_questions,
+    timeLeft: mockGameState.battle.time_left,
+    score: { player: 0, opponent: 0 }
+  }),
+  getRewards: () => mockGameState.battle.rewards
+};
+
+const mockAuthContext = {
+  user: {
+    id: '1',
+    name: 'Test User',
+    email: 'test@test.com'
+  },
+  isAuthenticated: true,
+  isLoading: false,
+  initialized: true
+};
+
+// Mock the hooks
+jest.mock('../../contexts/GameContext', () => {
+  const GameContext = React.createContext(mockGameContext);
+  return {
+    ...jest.requireActual('../../contexts/GameContext'),
+    useGame: () => React.useContext(GameContext),
+    GameContext,
+    GameProvider: ({ children }: { children: React.ReactNode }) => (
+      React.createElement(GameContext.Provider, { value: mockGameContext }, children)
+    )
+  };
+});
+
+jest.mock('../../contexts/AuthContext', () => {
+  const AuthContext = React.createContext(mockAuthContext);
+  return {
+    ...jest.requireActual('../../contexts/AuthContext'),
+    useAuth: () => React.useContext(AuthContext),
+    AuthContext,
+    AuthProvider: ({ children }: { children: React.ReactNode }) => (
+      React.createElement(AuthContext.Provider, { value: mockAuthContext }, children)
+    )
+  };
+});
+
+jest.mock('../../contexts/NotificationContext', () => ({
+  useNotification: () => ({
+    showSuccess: jest.fn(),
+    showError: jest.fn(),
+    showInfo: jest.fn()
+  })
+}));
+
+jest.mock('../../contexts/LanguageContext', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key
+  })
+}));
+
+jest.mock('../useBattleSound', () => ({
+  useBattleSound: () => ({
+    play_sound: jest.fn(),
+    stop_sound: jest.fn()
+  })
+}));
+
+jest.mock('../useAchievements', () => ({
+  useAchievements: () => ({
+    check_achievements: jest.fn()
+  })
+}));
+
+describe('useBattle Hook', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('initializes with correct state', () => {
+    const { result } = renderHook(() => useBattle());
+
+    expect(result.current.phase).toBe(BattleStateEnum.IDLE);
+    expect(result.current.playerState).toEqual({
+      health: BATTLE_CONFIG.initial_health,
+      shield: 0,
+      isReady: false
+    });
+    expect(result.current.opponentState).toEqual({
+      health: BATTLE_CONFIG.initial_health,
+      shield: 0,
+      isReady: false
+    });
+  });
+
+  it('transitions from PREPARING to ACTIVE correctly', async () => {
+    const { result, waitForNextUpdate } = renderHook(() => useBattle());
+
+    act(() => {
+      result.current.setPhaseWithValidation(BattleStateEnum.PREPARING);
+    });
+
+    expect(result.current.phase).toBe(BattleStateEnum.PREPARING);
+
+    // Simulate battle initialization
+    await act(async () => {
+      await result.current.initializeBattle({ /* options */ });
+    });
+
+    expect(result.current.phase).toBe(BattleStateEnum.ACTIVE);
+  });
+
+  it('handles invalid phase transitions gracefully', async () => {
+    const { result } = renderHook(() => useBattle());
+
+    // Attempt to transition from IDLE directly to RESOLUTION
+    act(() => {
+      result.current.setPhaseWithValidation(BattleStateEnum.RESOLUTION);
+    });
+
+    // Assuming validation prevents this transition, phase should remain IDLE or set to ERROR
+    expect([BattleStateEnum.IDLE, BattleStateEnum.ERROR]).toContain(result.current.phase);
+  });
+
+  it('completes the battle and transitions to COMPLETED phase', async () => {
+    const { result } = renderHook(() => useBattle());
+
+    act(() => {
+      result.current.setPhaseWithValidation(BattleStateEnum.ACTIVE);
+    });
+
+    expect(result.current.phase).toBe(BattleStateEnum.ACTIVE);
+
+    // Simulate battle completion
+    act(() => {
+      result.current.setPhaseWithValidation(BattleStateEnum.COMPLETED);
+    });
+
+    expect(result.current.phase).toBe(BattleStateEnum.COMPLETED);
+  });
+
+  // Additional test cases...
+}); 
